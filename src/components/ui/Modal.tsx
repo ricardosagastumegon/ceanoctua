@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 
 type ModalProps = {
   open: boolean;
@@ -16,10 +16,57 @@ const sizeMap = {
 };
 
 export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Confirm-on-close when the embedded form has unsaved changes.
+  // We treat any input/select/textarea descendant whose value differs
+  // from its initial defaultValue as "dirty".
+  const tryClose = useCallback(() => {
+    const body = bodyRef.current;
+    if (!body) return onClose();
+    const inputs = body.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      'input, textarea, select',
+    );
+    let dirty = false;
+    for (const el of inputs) {
+      if (el.disabled) continue;
+      if (el instanceof HTMLInputElement) {
+        if (el.type === 'hidden' || el.readOnly) continue;
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          if (el.checked !== el.defaultChecked) {
+            dirty = true;
+            break;
+          }
+        } else if (el.value !== el.defaultValue) {
+          dirty = true;
+          break;
+        }
+      } else if (el instanceof HTMLTextAreaElement) {
+        if (el.readOnly) continue;
+        if (el.value !== el.defaultValue) {
+          dirty = true;
+          break;
+        }
+      } else if (el instanceof HTMLSelectElement) {
+        // <select> no expone defaultValue; comparamos value vs option default selected.
+        const def = Array.from(el.options).find((o) => o.defaultSelected)?.value ?? el.options[0]?.value ?? '';
+        if (el.value !== def) {
+          dirty = true;
+          break;
+        }
+      }
+    }
+    if (dirty) {
+      const ok = window.confirm('Tienes cambios sin guardar. ¿Cerrar de todas formas?');
+      if (!ok) return;
+    }
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') tryClose();
     };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -28,14 +75,14 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open, tryClose]);
 
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-dark/60 px-4 py-8"
-      onClick={onClose}
+      onClick={tryClose}
       role="presentation"
     >
       <div
@@ -55,14 +102,16 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
           )}
           <button
             type="button"
-            onClick={onClose}
+            onClick={tryClose}
             aria-label="Cerrar"
             className="rounded-full px-2 py-1 text-dark-2 hover:bg-sand-l hover:text-dark"
           >
             ✕
           </button>
         </div>
-        <div className="overflow-y-auto px-6 py-5">{children}</div>
+        <div ref={bodyRef} className="overflow-y-auto px-6 py-5">
+          {children}
+        </div>
       </div>
     </div>
   );

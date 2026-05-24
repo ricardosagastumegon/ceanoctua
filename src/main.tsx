@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
 import { MissingConfig } from '@/app/MissingConfig';
+import { NetworkBanner } from '@/components/ui/NetworkBanner';
 import { router } from '@/app/router';
 import './index.css';
 
@@ -23,6 +24,7 @@ if (!isSupabaseConfigured) {
 } else {
   root.render(
     <React.StrictMode>
+      <NetworkBanner />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>

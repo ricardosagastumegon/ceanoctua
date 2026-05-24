@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { stripServerGenerated } from '@/lib/createCrudHooks';
 import type { Database } from '@/types/database';
 
 export type Constancia = Database['public']['Tables']['miel_constancias']['Row'];
@@ -18,11 +19,10 @@ export const mielApi = {
   },
   async create(input: ConstanciaInsert): Promise<Constancia> {
     // Do not send correlativo — server default 'MSJ-####' from seq_miel_corr.
-    const { correlativo: _ignored, ...rest } = input;
-    void _ignored;
+    const payload = stripServerGenerated(input, ['correlativo']);
     const { data, error } = await supabase
       .from('miel_constancias')
-      .insert(rest)
+      .insert(payload)
       .select('*')
       .single();
     if (error) throw error;

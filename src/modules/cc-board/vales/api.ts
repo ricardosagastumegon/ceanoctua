@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { stripServerGenerated } from '@/lib/createCrudHooks';
 import type { Database } from '@/types/database';
 
 export type Vale = Database['public']['Tables']['caja_chica_vales']['Row'];
@@ -17,9 +18,8 @@ export const valesApi = {
     return data ?? [];
   },
   async create(input: ValeInsert): Promise<Vale> {
-    const { serial: _ignored, ...rest } = input;
-    void _ignored;
-    const { data, error } = await supabase.from('caja_chica_vales').insert(rest).select('*').single();
+    const payload = stripServerGenerated(input, ['serial']);
+    const { data, error } = await supabase.from('caja_chica_vales').insert(payload).select('*').single();
     if (error) throw error;
     return data;
   },

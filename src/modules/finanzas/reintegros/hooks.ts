@@ -1,32 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { reintegrosApi, type ReintegroInsert, type ReintegroUpdate } from './api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createCrudHooks } from '@/lib/createCrudHooks';
+import { reintegrosApi, type ReintegroInsert } from './api';
 
-const keys = { all: ['reintegros'] as const };
+const h = createCrudHooks('reintegros', reintegrosApi);
 
-export function useReintegros() {
-  return useQuery({ queryKey: keys.all, queryFn: () => reintegrosApi.list() });
-}
+export const useReintegros = h.useList;
+export const useUpdateReintegro = h.useUpdate;
+export const useDeleteReintegro = h.useDelete;
+
+// Custom create: linking a reintegro to a consumo invalidates the consumo
+// cache too, so the consumo row shows ✓ enlazado immediately.
 export function useCreateReintegro() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ReintegroInsert) => reintegrosApi.create(input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: keys.all });
+      void qc.invalidateQueries({ queryKey: h.queryKey });
       void qc.invalidateQueries({ queryKey: ['tc_consumos'] });
     },
-  });
-}
-export function useUpdateReintegro() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: ReintegroUpdate }) => reintegrosApi.update(id, patch),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
-  });
-}
-export function useDeleteReintegro() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => reintegrosApi.remove(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
   });
 }

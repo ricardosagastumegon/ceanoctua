@@ -1,36 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ceaTodosApi, type CeaTodoInsert, type CeaTodoUpdate } from './api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createCrudHooks } from '@/lib/createCrudHooks';
+import { ceaTodosApi } from './api';
 
-const keys = { all: ['cea_todos'] as const };
+const h = createCrudHooks('cea_todos', ceaTodosApi);
 
-export function useCeaTodos() {
-  return useQuery({ queryKey: keys.all, queryFn: () => ceaTodosApi.list() });
-}
-export function useCreateCeaTodo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CeaTodoInsert) => ceaTodosApi.create(input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
-  });
-}
-export function useUpdateCeaTodo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: CeaTodoUpdate }) => ceaTodosApi.update(id, patch),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
-  });
-}
+export const useCeaTodos = h.useList;
+export const useCreateCeaTodo = h.useCreate;
+export const useUpdateCeaTodo = h.useUpdate;
+export const useDeleteCeaTodo = h.useDelete;
+
+// Custom: toggle done — not part of the standard CRUD shape.
 export function useToggleCeaTodo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) => ceaTodosApi.toggleDone(id, done),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
-  });
-}
-export function useDeleteCeaTodo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => ceaTodosApi.remove(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: h.queryKey }),
   });
 }

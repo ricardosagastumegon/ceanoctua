@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { stripServerGenerated } from '@/lib/createCrudHooks';
 import type { Database } from '@/types/database';
 
 export type Firma = Database['public']['Tables']['firmas']['Row'];
@@ -66,7 +67,8 @@ export const firmasApi = {
   },
 
   async create(input: FirmaInsert, miembroIds: string[]): Promise<Firma> {
-    const { data, error } = await supabase.from('firmas').insert(input).select('*').single();
+    const payload = stripServerGenerated(input, ['serial']);
+    const { data, error } = await supabase.from('firmas').insert(payload).select('*').single();
     if (error) throw error;
     if (miembroIds.length > 0) {
       await syncSigners(data.id, miembroIds);

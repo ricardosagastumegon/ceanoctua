@@ -187,6 +187,9 @@ export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Pro
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (editingRowIdx !== null) {
+      return setError('Tienes una compra en edición. Click en "✓ Guardar" en la fila o "Cancelar" antes de finalizar.');
+    }
     if (!v.fecha) return setError('La fecha es obligatoria.');
     if (!v.motivo.trim()) return setError('El motivo es obligatorio.');
     if (!v.solicitado.trim()) return setError('Debes indicar quién solicitó.');

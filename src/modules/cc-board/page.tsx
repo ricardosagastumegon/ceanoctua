@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { CajaChicaPage } from './CajaChicaPage';
 
 export default function CcBoardPage() {
-  return <Placeholder name="CC Board" />;
+  return <CajaChicaPage />;
 }

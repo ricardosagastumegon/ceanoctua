@@ -15,6 +15,7 @@ import ArriazaPage from '@/modules/arriaza/page';
 import CeaPage from '@/modules/cea/page';
 import AdminPage from '@/modules/admin/page';
 import MielSjPage from '@/modules/miel-sj/page';
+import FinanzasPage from '@/modules/finanzas/page';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: 'cea', element: <CeaPage /> },
       { path: 'admin', element: <AdminPage /> },
       { path: 'miel-sj', element: <MielSjPage /> },
+      { path: 'finanzas', element: <FinanzasPage /> },
     ],
   },
 ]);

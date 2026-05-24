@@ -22,6 +22,7 @@ const tabs: Tab[] = [
   { to: '/cc-board', label: 'CC Board',    roles: ['admin', 'asistente'] },
   { to: '/arriaza',  label: 'Arriaza T&T', roles: ['admin', 'asistente'] },
   { to: '/cea',      label: 'CEA',         roles: ['admin', 'asistente'] },
+  { to: '/finanzas', label: '💰 Finanzas', roles: ['admin', 'asistente'] },
   { to: '/admin',    label: '⚙ Admin',     roles: ['admin'] },
   { to: '/miel-sj',  label: '🍯 Miel SJ',  roles: ['admin', 'asistente'] },
 ];

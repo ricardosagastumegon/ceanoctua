@@ -860,6 +860,333 @@ export type Database = {
         ];
       };
 
+      // ====================================================
+      // Financial module (Fase 9)
+      // ====================================================
+      caja_chica_vales: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          serial: string | null;
+          fecha: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number;
+          vale_a: string;
+          empleado_id: string | null;
+          entidad: string | null;
+          entidad_id: string | null;
+          concepto: string | null;
+          lugar: string | null;
+          estado: Database['public']['Enums']['vale_status'];
+          notas: string | null;
+          liquidacion_id: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          serial?: string | null;
+          fecha?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto: number;
+          vale_a: string;
+          empleado_id?: string | null;
+          entidad?: string | null;
+          entidad_id?: string | null;
+          concepto?: string | null;
+          lugar?: string | null;
+          estado?: Database['public']['Enums']['vale_status'];
+          notas?: string | null;
+          liquidacion_id?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number;
+          vale_a?: string;
+          empleado_id?: string | null;
+          entidad?: string | null;
+          entidad_id?: string | null;
+          concepto?: string | null;
+          lugar?: string | null;
+          estado?: Database['public']['Enums']['vale_status'];
+          notas?: string | null;
+          liquidacion_id?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      caja_chica_liquidaciones: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          fecha: string;
+          periodo: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto_total: number;
+          responsable: string | null;
+          empleado_id: string | null;
+          notas: string | null;
+          estado: string;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          fecha: string;
+          periodo?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto_total?: number;
+          responsable?: string | null;
+          empleado_id?: string | null;
+          notas?: string | null;
+          estado?: string;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string;
+          periodo?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto_total?: number;
+          responsable?: string | null;
+          empleado_id?: string | null;
+          notas?: string | null;
+          estado?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      tc_consumos: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          origen: string | null;
+          voucher_num: string | null;
+          fecha: string;
+          empresa: string | null;
+          card_id: string;
+          tarjeta_id: string | null;
+          proveedor: string;
+          proveedor_id: string | null;
+          concepto: string;
+          monto: number;
+          moneda: Database['public']['Enums']['currency'];
+          autorizo: string | null;
+          autorizador_id: string | null;
+          reintegro_id: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          origen?: string | null;
+          voucher_num?: string | null;
+          fecha: string;
+          empresa?: string | null;
+          card_id: string;
+          tarjeta_id?: string | null;
+          proveedor: string;
+          proveedor_id?: string | null;
+          concepto: string;
+          monto: number;
+          moneda: Database['public']['Enums']['currency'];
+          autorizo?: string | null;
+          autorizador_id?: string | null;
+          reintegro_id?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          origen?: string | null;
+          fecha?: string;
+          empresa?: string | null;
+          card_id?: string;
+          tarjeta_id?: string | null;
+          proveedor?: string;
+          proveedor_id?: string | null;
+          concepto?: string;
+          monto?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          autorizo?: string | null;
+          autorizador_id?: string | null;
+          reintegro_id?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      reintegros: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          fecha: string;
+          empresa: string;
+          tc_empresa: string | null;
+          card_id: string;
+          consumo_id: string | null;
+          monto: number;
+          moneda: Database['public']['Enums']['currency'];
+          autorizo: string | null;
+          autorizador_id: string | null;
+          notas: string | null;
+          estado: Database['public']['Enums']['reintegro_status'];
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          fecha: string;
+          empresa: string;
+          tc_empresa?: string | null;
+          card_id: string;
+          consumo_id?: string | null;
+          monto: number;
+          moneda: Database['public']['Enums']['currency'];
+          autorizo?: string | null;
+          autorizador_id?: string | null;
+          notas?: string | null;
+          estado?: Database['public']['Enums']['reintegro_status'];
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string;
+          empresa?: string;
+          tc_empresa?: string | null;
+          card_id?: string;
+          consumo_id?: string | null;
+          monto?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          autorizo?: string | null;
+          autorizador_id?: string | null;
+          notas?: string | null;
+          estado?: Database['public']['Enums']['reintegro_status'];
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      pagos: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          fecha: string;
+          proveedor: string | null;
+          proveedor_id: string | null;
+          entidad: string | null;
+          entidad_id: string | null;
+          nit: string | null;
+          concepto: string | null;
+          monto: number;
+          moneda: Database['public']['Enums']['currency'];
+          cotizacion: number | null;
+          pct_anticipo: number | null;
+          pct_pendiente: number | null;
+          tipo: Database['public']['Enums']['pago_tipo'];
+          referencia: string | null;
+          banco: string | null;
+          autorizo: string | null;
+          autorizador_id: string | null;
+          notas: string | null;
+          estado: Database['public']['Enums']['pago_estado'];
+          consumo_id: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          fecha: string;
+          proveedor?: string | null;
+          proveedor_id?: string | null;
+          entidad?: string | null;
+          entidad_id?: string | null;
+          nit?: string | null;
+          concepto?: string | null;
+          monto: number;
+          moneda?: Database['public']['Enums']['currency'];
+          cotizacion?: number | null;
+          pct_anticipo?: number | null;
+          pct_pendiente?: number | null;
+          tipo?: Database['public']['Enums']['pago_tipo'];
+          referencia?: string | null;
+          banco?: string | null;
+          autorizo?: string | null;
+          autorizador_id?: string | null;
+          notas?: string | null;
+          estado?: Database['public']['Enums']['pago_estado'];
+          consumo_id?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string;
+          proveedor?: string | null;
+          proveedor_id?: string | null;
+          entidad?: string | null;
+          entidad_id?: string | null;
+          nit?: string | null;
+          concepto?: string | null;
+          monto?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          cotizacion?: number | null;
+          pct_anticipo?: number | null;
+          pct_pendiente?: number | null;
+          tipo?: Database['public']['Enums']['pago_tipo'];
+          referencia?: string | null;
+          banco?: string | null;
+          autorizo?: string | null;
+          autorizador_id?: string | null;
+          notas?: string | null;
+          estado?: Database['public']['Enums']['pago_estado'];
+          consumo_id?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      vouchers: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          serial: string | null;
+          fecha: string;
+          consumo_id: string | null;
+          concepto: string | null;
+          monto: number | null;
+          moneda: Database['public']['Enums']['currency'] | null;
+          estado: string | null;
+          pagado_por: string | null;
+          notas: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          serial?: string | null;
+          fecha: string;
+          consumo_id?: string | null;
+          concepto?: string | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          estado?: string | null;
+          pagado_por?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string;
+          consumo_id?: string | null;
+          concepto?: string | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          estado?: string | null;
+          pagado_por?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       firma_miembros: {
         Row: {
           firma_id: string;
@@ -925,6 +1252,10 @@ export type Database = {
       task_status: 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
       firma_status: 'en_espera' | 'firmado' | 'stand_by' | 'denegada';
       firma_urgencia: 'urgente' | 'importante' | 'programado';
+      vale_status: 'Creado' | 'Aprobado' | 'Liquidado' | 'Anulado' | 'EnLiquidacion' | 'Pagado' | 'Reintegrado' | 'Cancelado';
+      reintegro_status: 'generada' | 'firmada' | 'presentada' | 'procesada' | 'reintegrada';
+      pago_estado: 'Programado' | 'Aprobado' | 'Pagado' | 'Conciliado' | 'Anulado' | 'Devuelto';
+      pago_tipo: 'transferencia' | 'cheque' | 'efectivo' | 'tarjeta' | 'otro';
       trip_type: 'personal' | 'trabajo' | 'familia' | 'salud' | 'otro';
       trip_status: 'planificado' | 'en_curso' | 'completado' | 'cancelado';
       evento_tipo: 'reunion' | 'cumpleanos' | 'aniversario' | 'viaje' | 'religioso' | 'otro';

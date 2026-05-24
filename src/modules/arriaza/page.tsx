@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { AttPage } from './AttPage';
 
 export default function ArriazaPage() {
-  return <Placeholder name="Arriaza T&T" />;
+  return <AttPage />;
 }

@@ -1,5 +1,1 @@
-import { Placeholder } from '../Placeholder';
-
-export default function MielSjPage() {
-  return <Placeholder name="Miel SJ" />;
-}
+export { default } from '@/modules/miel/page';

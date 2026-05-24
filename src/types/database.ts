@@ -521,6 +521,345 @@ export type Database = {
         Relationships: [];
       };
 
+      // ====================================================
+      // Miel SJ (Fase 8)
+      // ====================================================
+      miel_constancias: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          correlativo: string | null;
+          fecha: string;
+          nombre: string;
+          direccion: string | null;
+          cant475: number;
+          precio475: number;
+          cant1000: number;
+          precio1000: number;
+          envio: boolean;
+          envio_dir: string | null;
+          envio_costo: number;
+          total: number;
+          moneda: Database['public']['Enums']['currency'];
+          notas: string | null;
+          entregado: string | null;
+          recibido: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          correlativo?: string | null;
+          fecha: string;
+          nombre: string;
+          direccion?: string | null;
+          cant475?: number;
+          precio475?: number;
+          cant1000?: number;
+          precio1000?: number;
+          envio?: boolean;
+          envio_dir?: string | null;
+          envio_costo?: number;
+          total?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          notas?: string | null;
+          entregado?: string | null;
+          recibido?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string;
+          nombre?: string;
+          direccion?: string | null;
+          cant475?: number;
+          precio475?: number;
+          cant1000?: number;
+          precio1000?: number;
+          envio?: boolean;
+          envio_dir?: string | null;
+          envio_costo?: number;
+          total?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          notas?: string | null;
+          entregado?: string | null;
+          recibido?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      // ====================================================
+      // Arriaza T&T (Fase 8)
+      // ====================================================
+      att_viajes: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          miembro_id: string | null;
+          titulo: string;
+          destino: string | null;
+          pais: string | null;
+          ciudad: string | null;
+          fecha_ini: string | null;
+          fecha_fin: string | null;
+          estado: Database['public']['Enums']['trip_status'];
+          proposito: string | null;
+          other_reason: string | null;
+          paidby: string | null;
+          acompanantes: string | null;
+          notas: string | null;
+          lat: number | null;
+          lng: number | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          miembro_id?: string | null;
+          titulo: string;
+          destino?: string | null;
+          pais?: string | null;
+          ciudad?: string | null;
+          fecha_ini?: string | null;
+          fecha_fin?: string | null;
+          estado?: Database['public']['Enums']['trip_status'];
+          proposito?: string | null;
+          other_reason?: string | null;
+          paidby?: string | null;
+          acompanantes?: string | null;
+          notas?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+        };
+        Update: AuditUpdate & {
+          miembro_id?: string | null;
+          titulo?: string;
+          destino?: string | null;
+          pais?: string | null;
+          ciudad?: string | null;
+          fecha_ini?: string | null;
+          fecha_fin?: string | null;
+          estado?: Database['public']['Enums']['trip_status'];
+          proposito?: string | null;
+          other_reason?: string | null;
+          paidby?: string | null;
+          acompanantes?: string | null;
+          notas?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+        };
+        Relationships: [];
+      };
+      att_tickets: {
+        Row: {
+          id: string;
+          legacy_id: number | null;
+          viaje_id: string;
+          aerolinea: string | null;
+          codigo_reserva: string | null;
+          numero_ticket: string | null;
+          numero_vuelo: string | null;
+          tipo_vuelo: string | null;
+          origen: string | null;
+          destino: string | null;
+          fecha_salida: string | null;
+          fecha_llegada: string | null;
+          asiento: string | null;
+          clase: string | null;
+          monto: number | null;
+          moneda: Database['public']['Enums']['currency'] | null;
+          notas: string | null;
+          comentarios: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          legacy_id?: number | null;
+          viaje_id: string;
+          aerolinea?: string | null;
+          codigo_reserva?: string | null;
+          numero_ticket?: string | null;
+          numero_vuelo?: string | null;
+          tipo_vuelo?: string | null;
+          origen?: string | null;
+          destino?: string | null;
+          fecha_salida?: string | null;
+          fecha_llegada?: string | null;
+          asiento?: string | null;
+          clase?: string | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          notas?: string | null;
+          comentarios?: string | null;
+        };
+        Update: {
+          aerolinea?: string | null;
+          codigo_reserva?: string | null;
+          numero_ticket?: string | null;
+          numero_vuelo?: string | null;
+          tipo_vuelo?: string | null;
+          origen?: string | null;
+          destino?: string | null;
+          fecha_salida?: string | null;
+          fecha_llegada?: string | null;
+          asiento?: string | null;
+          clase?: string | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          notas?: string | null;
+          comentarios?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_tickets_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+      att_hoteles: {
+        Row: {
+          id: string;
+          legacy_id: number | null;
+          viaje_id: string;
+          nombre: string;
+          location: string | null;
+          direccion: string | null;
+          ciudad: string | null;
+          pais: string | null;
+          checkin: string | null;
+          checkout: string | null;
+          nights: number | null;
+          confirmacion: string | null;
+          room: string | null;
+          rate: number | null;
+          monto: number | null;
+          moneda: Database['public']['Enums']['currency'] | null;
+          ota: string | null;
+          pay: string | null;
+          services: string | null;
+          cancel_policy: string | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          legacy_id?: number | null;
+          viaje_id: string;
+          nombre: string;
+          location?: string | null;
+          direccion?: string | null;
+          ciudad?: string | null;
+          pais?: string | null;
+          checkin?: string | null;
+          checkout?: string | null;
+          nights?: number | null;
+          confirmacion?: string | null;
+          room?: string | null;
+          rate?: number | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          ota?: string | null;
+          pay?: string | null;
+          services?: string | null;
+          cancel_policy?: string | null;
+          notas?: string | null;
+        };
+        Update: {
+          nombre?: string;
+          location?: string | null;
+          direccion?: string | null;
+          ciudad?: string | null;
+          pais?: string | null;
+          checkin?: string | null;
+          checkout?: string | null;
+          nights?: number | null;
+          confirmacion?: string | null;
+          room?: string | null;
+          rate?: number | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          ota?: string | null;
+          pay?: string | null;
+          services?: string | null;
+          cancel_policy?: string | null;
+          notas?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_hoteles_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+      att_restaurantes: {
+        Row: {
+          id: string;
+          legacy_id: number | null;
+          viaje_id: string;
+          nombre: string;
+          specialty: string | null;
+          phone: string | null;
+          email: string | null;
+          location: string | null;
+          ciudad: string | null;
+          direccion: string | null;
+          fecha: string | null;
+          hora: string | null;
+          covers: number | null;
+          conf: string | null;
+          monto: number | null;
+          moneda: Database['public']['Enums']['currency'] | null;
+          reserva: string | null;
+          detalles: string | null;
+          cancel_policy: string | null;
+          stars: number | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          legacy_id?: number | null;
+          viaje_id: string;
+          nombre: string;
+          specialty?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          location?: string | null;
+          ciudad?: string | null;
+          direccion?: string | null;
+          fecha?: string | null;
+          hora?: string | null;
+          covers?: number | null;
+          conf?: string | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          reserva?: string | null;
+          detalles?: string | null;
+          cancel_policy?: string | null;
+          stars?: number | null;
+          notas?: string | null;
+        };
+        Update: {
+          nombre?: string;
+          specialty?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          location?: string | null;
+          ciudad?: string | null;
+          direccion?: string | null;
+          fecha?: string | null;
+          hora?: string | null;
+          covers?: number | null;
+          conf?: string | null;
+          monto?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          reserva?: string | null;
+          detalles?: string | null;
+          cancel_policy?: string | null;
+          stars?: number | null;
+          notas?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_restaurantes_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
       firma_miembros: {
         Row: {
           firma_id: string;

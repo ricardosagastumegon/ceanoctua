@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { useToast } from '@/components/ui/Toast';
@@ -8,6 +8,19 @@ import { formatDate } from '@/lib/dates';
 import { useBoardMiembros, useCreateFirma, useDeleteFirma, useFirmas, useUpdateFirma } from './hooks';
 import type { FirmaInsert, FirmaWithSigners } from './api';
 import { FirmaForm } from './FirmaForm';
+
+function csvCell(s: unknown): string {
+  if (s == null) return '';
+  return `"${String(s).replace(/"/g, '""')}"`;
+}
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
 
 const statusLabel: Record<FirmaWithSigners['status_firma'], string> = {
   en_espera: 'En espera',
@@ -43,9 +56,46 @@ export function FirmasSection({ canEdit }: { canEdit: boolean }) {
   const confirm = useConfirm();
 
   const [editing, setEditing] = useState<FirmaWithSigners | null | undefined>(undefined);
+  const [reportFrom, setReportFrom] = useState('');
+  const [reportTo, setReportTo] = useState('');
 
   const codigoById = new Map<string, string>();
   for (const m of miembros.data ?? []) codigoById.set(m.id, m.codigo);
+
+  const filtered = useMemo(() => {
+    const all = query.data ?? [];
+    if (!reportFrom && !reportTo) return all;
+    return all.filter((r) => {
+      const d = r.recepcion?.slice(0, 10) ?? r.created_at.slice(0, 10);
+      if (reportFrom && d < reportFrom) return false;
+      if (reportTo && d > reportTo) return false;
+      return true;
+    });
+  }, [query.data, reportFrom, reportTo]);
+
+  function exportReport() {
+    if (filtered.length === 0) return;
+    const header = ['Serial', 'Recepción', 'Tipo', 'Urgencia', 'Estado', 'Firmantes', 'Solicitado', 'Entregado', 'Fecha firma', 'Fecha entrega', 'Quien recibe', 'Justificación'].map(csvCell).join(',');
+    const lines = filtered.map((r) => {
+      const firmantes = r.miembro_ids.map((mid) => codigoById.get(mid) ?? '?').join(' ');
+      return [
+        r.serial,
+        r.recepcion ? formatDate(r.recepcion) : '',
+        r.tipo,
+        r.urgencia ?? '',
+        r.status_firma,
+        firmantes,
+        r.solicitado ?? '',
+        r.entregado ?? '',
+        r.fecha_firma ? formatDate(r.fecha_firma) : '',
+        r.fecha_entrega ? formatDate(r.fecha_entrega) : '',
+        r.quien_recibe ?? '',
+        r.justificacion ?? '',
+      ].map(csvCell).join(',');
+    });
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    downloadCsv(`firmas_${date}.csv`, [header, ...lines].join('\n'));
+  }
 
   async function handleSave(values: FirmaInsert, miembroIds: string[]) {
     try {
@@ -80,6 +130,13 @@ export function FirmasSection({ canEdit }: { canEdit: boolean }) {
 
   const columns: DataTableColumn<FirmaWithSigners>[] = [
     {
+      key: 'serial',
+      header: 'Serial',
+      sortable: true,
+      accessor: (r) => r.serial,
+      render: (r) => <span className="font-mono text-xs text-teal-d">{r.serial ?? '—'}</span>,
+    },
+    {
       key: 'recepcion',
       header: 'Recepción',
       sortable: true,
@@ -91,7 +148,16 @@ export function FirmasSection({ canEdit }: { canEdit: boolean }) {
       header: 'Documento',
       sortable: true,
       accessor: (r) => r.tipo,
-      render: (r) => <span className="font-medium text-dark">{r.tipo}</span>,
+      render: (r) => (
+        <span className="font-medium text-dark">
+          {r.tipo}
+          {(r.fecha_firma || r.quien_recibe) && (
+            <span className="ml-2 rounded-full bg-teal-l px-1.5 py-0.5 text-[9px] font-semibold text-teal-d">
+              ✓ constancia
+            </span>
+          )}
+        </span>
+      ),
     },
     {
       key: 'urgencia',
@@ -156,8 +222,35 @@ export function FirmasSection({ canEdit }: { canEdit: boolean }) {
         )}
       </header>
 
+      {/* Reporte por rango */}
+      <div className="grid grid-cols-1 gap-2 rounded-md border border-sand bg-white p-3 sm:grid-cols-4">
+        <label className="text-xs text-dark-2">
+          Desde
+          <input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className="mt-1 block w-full rounded border border-sand px-2 py-1 text-sm" />
+        </label>
+        <label className="text-xs text-dark-2">
+          Hasta
+          <input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="mt-1 block w-full rounded border border-sand px-2 py-1 text-sm" />
+        </label>
+        <button
+          type="button"
+          onClick={() => { setReportFrom(''); setReportTo(''); }}
+          className="self-end rounded-md border border-sand px-3 py-1.5 text-xs font-semibold text-dark-2 hover:bg-sand-l"
+        >
+          Limpiar
+        </button>
+        <button
+          type="button"
+          onClick={exportReport}
+          disabled={filtered.length === 0}
+          className="self-end rounded-md border border-teal/40 px-3 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l disabled:opacity-50"
+        >
+          ⬇ Exportar CSV ({filtered.length})
+        </button>
+      </div>
+
       <DataTable<FirmaWithSigners>
-        data={query.data ?? []}
+        data={filtered}
         columns={columns}
         loading={query.isLoading}
         error={query.isError ? describeError(query.error) : null}

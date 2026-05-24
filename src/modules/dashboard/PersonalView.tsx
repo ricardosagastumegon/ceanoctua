@@ -7,6 +7,7 @@ import { businessDaysUntil, formatDate, isOverdue } from '@/lib/dates';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Card, EmptyLine, ErrorLine, KPI, LoadingLine } from './widgets';
+import { DashboardHero } from './DashboardHero';
 
 export function PersonalView({ memberCode }: { memberCode: string }) {
   const { profile } = useAuth();
@@ -51,12 +52,13 @@ export function PersonalView({ memberCode }: { memberCode: string }) {
 
   return (
     <section className="space-y-6">
+      <DashboardHero userName={profile?.nombre} activeTripsCount={proximos.length} />
       <header>
         <h1 className="font-heading text-2xl font-semibold text-dark">
-          Hola{profile?.nombre ? `, ${profile.nombre}` : ''}
+          Tu resumen como miembro <strong className="text-teal-d">{memberCode}</strong>
         </h1>
         <p className="mt-1 text-sm text-dark-2">
-          Tu resumen como miembro <strong>{memberCode}</strong>.
+          Lo asignado a {memberIdQuery.data?.nombre ?? memberCode}.
         </p>
       </header>
 

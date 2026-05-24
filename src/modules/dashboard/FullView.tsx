@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
 import { useAllTareas } from '@/modules/board/tareas/hooks';
 import { useAllViajes } from '@/modules/board/viajes/hooks';
 import { useFirmas } from '@/modules/cea/firmas/hooks';
@@ -12,6 +13,7 @@ import { useLiquidaciones } from '@/modules/cc-board/liquidaciones/hooks';
 import { businessDaysUntil, formatDate, isOverdue } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import { Card, EmptyLine, ErrorLine, KPI, LoadingLine } from './widgets';
+import { DashboardHero } from './DashboardHero';
 import type { AppRol } from '@/types';
 
 function fmt(n: number, currency: string): string {
@@ -20,6 +22,7 @@ function fmt(n: number, currency: string): string {
 }
 
 export function FullView({ rol }: { rol: AppRol }) {
+  const { profile } = useAuth();
   const tareasQ = useAllTareas();
   const viajesQ = useAllViajes();
   const firmasQ = useFirmas();
@@ -90,6 +93,7 @@ export function FullView({ rol }: { rol: AppRol }) {
 
   return (
     <section className="space-y-6">
+      <DashboardHero userName={profile?.nombre} activeTripsCount={viajesProximos.length} />
       <header>
         <h1 className="font-heading text-2xl font-semibold text-dark">Dashboard</h1>
         <p className="mt-1 text-sm text-dark-2">

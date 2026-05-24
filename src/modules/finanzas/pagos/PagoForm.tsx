@@ -3,7 +3,7 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
-import type { Pago, PagoInsert } from './api';
+import { PAGO_TIPO_LABELS, type Pago, type PagoInsert } from './api';
 import type { Database } from '@/types/database';
 import { useAutorizadores, useEntidades, useProveedores } from '@/modules/admin/hooks';
 import { useConsumos } from '../consumos/hooks';
@@ -28,6 +28,7 @@ type FormState = {
   pct_anticipo: string;
   pct_pendiente: string;
   tipo: PagoTipo;
+  tipo_label: string;
   referencia: string;
   banco: string;
   autorizo: string;
@@ -52,6 +53,7 @@ const empty: FormState = {
   pct_anticipo: '0',
   pct_pendiente: '100',
   tipo: 'transferencia',
+  tipo_label: 'Pago de Contado',
   referencia: '',
   banco: '',
   autorizo: '',
@@ -77,6 +79,7 @@ function fromRow(r: Pago | null | undefined): FormState {
     pct_anticipo: r.pct_anticipo != null ? String(r.pct_anticipo) : '0',
     pct_pendiente: r.pct_pendiente != null ? String(r.pct_pendiente) : '100',
     tipo: r.tipo,
+    tipo_label: r.tipo_label ?? 'Pago de Contado',
     referencia: r.referencia ?? '',
     banco: r.banco ?? '',
     autorizo: r.autorizo ?? '',
@@ -107,6 +110,7 @@ function toInput(s: FormState): PagoInsert {
     pct_anticipo: n(s.pct_anticipo),
     pct_pendiente: n(s.pct_pendiente),
     tipo: s.tipo,
+    tipo_label: s.tipo_label.trim() || null,
     referencia: s.referencia.trim() || null,
     banco: s.banco.trim() || null,
     autorizo: s.autorizo.trim() || null,
@@ -184,7 +188,7 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
             <option key={o} value={o}>{o}</option>
           ))}
         </Select>
-        <Select name="tipo" label="Tipo" value={v.tipo} onChange={(e) => upd('tipo', e.target.value as PagoTipo)}>
+        <Select name="tipo" label="Medio" value={v.tipo} onChange={(e) => upd('tipo', e.target.value as PagoTipo)}>
           <option value="transferencia">Transferencia</option>
           <option value="cheque">Cheque</option>
           <option value="efectivo">Efectivo</option>
@@ -192,6 +196,10 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
           <option value="otro">Otro</option>
         </Select>
       </div>
+
+      <Select name="tipo_label" label="Tipo de pago" value={v.tipo_label} onChange={(e) => upd('tipo_label', e.target.value)}>
+        {PAGO_TIPO_LABELS.map((t) => <option key={t} value={t}>{t}</option>)}
+      </Select>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select name="entidad_id" label="Entidad" value={v.entidad_id} onChange={(e) => upd('entidad_id', e.target.value)}>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { pagosApi, type PagoInsert, type PagoUpdate } from './api';
+import { pagosApi, type Pago, type PagoInsert, type PagoUpdate } from './api';
 
 const keys = { all: ['pagos'] as const };
 
@@ -24,6 +24,20 @@ export function useDeletePago() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => pagosApi.remove(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
+  });
+}
+export function useAdvancePago() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, current }: { id: string; current: Pago }) => pagosApi.advanceStep(id, current),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
+  });
+}
+export function useUploadPagoComprobante() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => pagosApi.uploadComprobante(id, file),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
   });
 }

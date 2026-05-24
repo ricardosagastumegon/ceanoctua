@@ -1,5 +1,5 @@
-import { BoardMemberPage } from '@/modules/board/BoardMemberPage';
+import { MemberSummaryPage } from '@/modules/board/MemberSummaryPage';
 
 export default function LaPage() {
-  return <BoardMemberPage codigo="LA" />;
+  return <MemberSummaryPage codigo="LA" />;
 }

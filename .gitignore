@@ -39,3 +39,6 @@ dist-ssr
 
 # OS
 Thumbs.db
+
+# Local reference materials (not part of the build)
+reference/

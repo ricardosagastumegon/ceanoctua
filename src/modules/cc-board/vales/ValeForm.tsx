@@ -10,15 +10,16 @@ import { useLiquidaciones } from '../liquidaciones/hooks';
 type Currency = Database['public']['Enums']['currency'];
 type ValeStatus = Database['public']['Enums']['vale_status'];
 
-const valeStatusOptions: { value: ValeStatus; label: string }[] = [
+// Aligned with reference HTML (8 user-facing labels).
+export const VALE_STATUS_OPTIONS: { value: ValeStatus; label: string }[] = [
   { value: 'Creado', label: 'Creado' },
-  { value: 'Aprobado', label: 'Aprobado' },
-  { value: 'EnLiquidacion', label: 'Asignado a Liquidación' },
+  { value: 'Solicitado', label: 'Solicitado' },
+  { value: 'Acreditado', label: 'Acreditado' },
+  { value: 'Asignado a Liquidación', label: 'Asignado a Liquidación' },
+  { value: 'Pendiente de Liquidar', label: 'Pendiente de Liquidar' },
+  { value: 'Pendiente de Reintegro', label: 'Pendiente de Reintegro' },
   { value: 'Liquidado', label: 'Liquidado' },
-  { value: 'Pagado', label: 'Pagado' },
   { value: 'Reintegrado', label: 'Reintegrado' },
-  { value: 'Cancelado', label: 'Cancelado' },
-  { value: 'Anulado', label: 'Anulado' },
 ];
 
 type FormState = {
@@ -35,6 +36,7 @@ type FormState = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
+
 const empty: FormState = {
   fecha: today(),
   moneda: 'GTQ',
@@ -111,38 +113,38 @@ export function ValeForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {initial?.serial && (
-        <div className="rounded-md border border-sand bg-sand-l/60 px-3 py-2 text-sm">
+        <div className="rounded-md border border-teal/40 bg-teal-l/50 px-3 py-2 text-sm">
           <span className="text-xs font-semibold uppercase tracking-wider text-dark-3">Serial: </span>
-          <span className="font-mono text-dark">{initial.serial}</span>
+          <span className="font-mono font-semibold text-teal-d">{initial.serial}</span>
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <TextInput name="fecha" label="Fecha" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} />
-        <TextInput name="monto" label="Monto *" type="number" min="0" step="0.01" value={v.monto} onChange={(e) => upd('monto', e.target.value)} required />
         <Select name="moneda" label="Moneda" value={v.moneda} onChange={(e) => upd('moneda', e.target.value as Currency)}>
-          <option value="GTQ">GTQ</option>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="GBP">GBP</option>
+          <option value="GTQ">GTQ (Q)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
         </Select>
+        <TextInput name="monto" label="Monto *" type="number" min="0" step="0.01" value={v.monto} onChange={(e) => upd('monto', e.target.value)} required hint="visible en el PDF" />
+        <TextInput name="fecha" label="Fecha" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} />
       </div>
-      <TextInput name="vale_a" label="Vale a *" value={v.vale_a} onChange={(e) => upd('vale_a', e.target.value)} required autoFocus />
+      <TextInput name="vale_a" label="Vale a (firma solicitante) *" value={v.vale_a} onChange={(e) => upd('vale_a', e.target.value)} required autoFocus />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextInput name="entidad" label="Entidad" value={v.entidad} onChange={(e) => upd('entidad', e.target.value)} />
+        <TextInput name="entidad" label="Entidad a liquidar vale" value={v.entidad} onChange={(e) => upd('entidad', e.target.value)} />
         <TextInput name="lugar" label="Lugar" value={v.lugar} onChange={(e) => upd('lugar', e.target.value)} />
       </div>
       <TextArea name="concepto" label="Concepto" value={v.concepto} onChange={(e) => upd('concepto', e.target.value)} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select name="estado" label="Estado" value={v.estado} onChange={(e) => upd('estado', e.target.value as ValeStatus)}>
-          {valeStatusOptions.map((o) => (
+          {VALE_STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </Select>
         <Select name="liquidacion_id" label="Asignar a liquidación" value={v.liquidacion_id} onChange={(e) => upd('liquidacion_id', e.target.value)}>
           <option value="">— sin liquidación —</option>
           {(liqs.data ?? []).map((l) => (
-            <option key={l.id} value={l.id}>{l.periodo ?? l.fecha} · {l.estado}</option>
+            <option key={l.id} value={l.id}>{l.serial ?? l.periodo ?? l.fecha} · {l.estado}</option>
           ))}
         </Select>
       </div>
@@ -154,7 +156,7 @@ export function ValeForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancel} className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">Cancelar</button>
         <button type="submit" disabled={submitting} className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d disabled:opacity-60">
-          {submitting ? 'Guardando…' : 'Guardar'}
+          {submitting ? 'Guardando…' : '✓ Guardar'}
         </button>
       </div>
     </form>

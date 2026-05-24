@@ -1,5 +1,5 @@
-import { BoardMemberPage } from '@/modules/board/BoardMemberPage';
+import { MemberSummaryPage } from '@/modules/board/MemberSummaryPage';
 
 export default function MaaPage() {
-  return <BoardMemberPage codigo="MAA" />;
+  return <MemberSummaryPage codigo="MAA" />;
 }

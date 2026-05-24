@@ -371,6 +371,8 @@ export type Database = {
           estado: Database['public']['Enums']['task_status'];
           done: boolean;
           notas: string | null;
+          prioridad_label: string | null;
+          estado_label: string | null;
         };
         Insert: AuditInsert & {
           id?: string;
@@ -383,6 +385,8 @@ export type Database = {
           estado?: Database['public']['Enums']['task_status'];
           done?: boolean;
           notas?: string | null;
+          prioridad_label?: string | null;
+          estado_label?: string | null;
         };
         Update: AuditUpdate & {
           asunto?: string;
@@ -393,6 +397,8 @@ export type Database = {
           estado?: Database['public']['Enums']['task_status'];
           done?: boolean;
           notas?: string | null;
+          prioridad_label?: string | null;
+          estado_label?: string | null;
         };
         Relationships: [];
       };
@@ -405,6 +411,9 @@ export type Database = {
           solicitado: string | null;
           descripcion: string | null;
           notas: string | null;
+          step_idx: number;
+          step_dates: string[];
+          deleted_at: string | null;
         };
         Insert: AuditInsert & {
           id?: string;
@@ -413,12 +422,18 @@ export type Database = {
           solicitado?: string | null;
           descripcion?: string | null;
           notas?: string | null;
+          step_idx?: number;
+          step_dates?: string[];
+          deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           asunto?: string | null;
           solicitado?: string | null;
           descripcion?: string | null;
           notas?: string | null;
+          step_idx?: number;
+          step_dates?: string[];
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -474,6 +489,7 @@ export type Database = {
         Row: {
           id: string;
           legacy_id: number | null;
+          serial: string | null;
           recepcion: string | null;
           tipo: string;
           urgencia: Database['public']['Enums']['firma_urgencia'] | null;
@@ -493,6 +509,7 @@ export type Database = {
         Insert: {
           id?: string;
           legacy_id?: number | null;
+          serial?: string | null;
           recepcion?: string | null;
           tipo: string;
           urgencia?: Database['public']['Enums']['firma_urgencia'] | null;
@@ -922,6 +939,7 @@ export type Database = {
         Row: AuditCols & {
           id: string;
           legacy_id: number | null;
+          serial: string | null;
           fecha: string;
           periodo: string | null;
           moneda: Database['public']['Enums']['currency'];
@@ -930,11 +948,23 @@ export type Database = {
           empleado_id: string | null;
           notas: string | null;
           estado: string;
+          entidad: string | null;
+          payment_method: string | null;
+          motivo: string | null;
+          producto: string | null;
+          solicitado: string | null;
+          reintegrar_a: string | null;
+          vale_serial: string | null;
+          vale_monto: number;
+          diff: number;
+          comentarios: string | null;
+          comprobante_storage_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
           id?: string;
           legacy_id?: number | null;
+          serial?: string | null;
           fecha: string;
           periodo?: string | null;
           moneda?: Database['public']['Enums']['currency'];
@@ -943,6 +973,16 @@ export type Database = {
           empleado_id?: string | null;
           notas?: string | null;
           estado?: string;
+          entidad?: string | null;
+          payment_method?: string | null;
+          motivo?: string | null;
+          producto?: string | null;
+          solicitado?: string | null;
+          reintegrar_a?: string | null;
+          vale_serial?: string | null;
+          vale_monto?: number;
+          comentarios?: string | null;
+          comprobante_storage_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -954,9 +994,61 @@ export type Database = {
           empleado_id?: string | null;
           notas?: string | null;
           estado?: string;
+          entidad?: string | null;
+          payment_method?: string | null;
+          motivo?: string | null;
+          producto?: string | null;
+          solicitado?: string | null;
+          reintegrar_a?: string | null;
+          vale_serial?: string | null;
+          vale_monto?: number;
+          comentarios?: string | null;
+          comprobante_storage_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
+      };
+
+      caja_chica_liq_rows: {
+        Row: {
+          id: string;
+          legacy_id: number | null;
+          liquidacion_id: string;
+          fecha: string | null;
+          factura: string | null;
+          proveedor: string | null;
+          concepto: string | null;
+          cantidad: number;
+          unitario: number;
+          total: number;
+          orden: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          legacy_id?: number | null;
+          liquidacion_id: string;
+          fecha?: string | null;
+          factura?: string | null;
+          proveedor?: string | null;
+          concepto?: string | null;
+          cantidad?: number;
+          unitario?: number;
+          orden?: number | null;
+        };
+        Update: {
+          fecha?: string | null;
+          factura?: string | null;
+          proveedor?: string | null;
+          concepto?: string | null;
+          cantidad?: number;
+          unitario?: number;
+          orden?: number | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'caja_chica_liq_rows_liquidacion_id_fkey'; columns: ['liquidacion_id']; referencedRelation: 'caja_chica_liquidaciones'; referencedColumns: ['id'] },
+        ];
       };
 
       tc_consumos: {
@@ -1071,6 +1163,7 @@ export type Database = {
         Row: AuditCols & {
           id: string;
           legacy_id: number | null;
+          serial: string | null;
           fecha: string;
           proveedor: string | null;
           proveedor_id: string | null;
@@ -1084,6 +1177,7 @@ export type Database = {
           pct_anticipo: number | null;
           pct_pendiente: number | null;
           tipo: Database['public']['Enums']['pago_tipo'];
+          tipo_label: string | null;
           referencia: string | null;
           banco: string | null;
           autorizo: string | null;
@@ -1091,11 +1185,15 @@ export type Database = {
           notas: string | null;
           estado: Database['public']['Enums']['pago_estado'];
           consumo_id: string | null;
+          step_idx: number;
+          step_dates: string[];
+          comprobante_storage_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
           id?: string;
           legacy_id?: number | null;
+          serial?: string | null;
           fecha: string;
           proveedor?: string | null;
           proveedor_id?: string | null;
@@ -1109,6 +1207,7 @@ export type Database = {
           pct_anticipo?: number | null;
           pct_pendiente?: number | null;
           tipo?: Database['public']['Enums']['pago_tipo'];
+          tipo_label?: string | null;
           referencia?: string | null;
           banco?: string | null;
           autorizo?: string | null;
@@ -1116,6 +1215,9 @@ export type Database = {
           notas?: string | null;
           estado?: Database['public']['Enums']['pago_estado'];
           consumo_id?: string | null;
+          step_idx?: number;
+          step_dates?: string[];
+          comprobante_storage_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1132,6 +1234,7 @@ export type Database = {
           pct_anticipo?: number | null;
           pct_pendiente?: number | null;
           tipo?: Database['public']['Enums']['pago_tipo'];
+          tipo_label?: string | null;
           referencia?: string | null;
           banco?: string | null;
           autorizo?: string | null;
@@ -1139,6 +1242,9 @@ export type Database = {
           notas?: string | null;
           estado?: Database['public']['Enums']['pago_estado'];
           consumo_id?: string | null;
+          step_idx?: number;
+          step_dates?: string[];
+          comprobante_storage_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -1252,7 +1358,20 @@ export type Database = {
       task_status: 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
       firma_status: 'en_espera' | 'firmado' | 'stand_by' | 'denegada';
       firma_urgencia: 'urgente' | 'importante' | 'programado';
-      vale_status: 'Creado' | 'Aprobado' | 'Liquidado' | 'Anulado' | 'EnLiquidacion' | 'Pagado' | 'Reintegrado' | 'Cancelado';
+      vale_status:
+        | 'Creado'
+        | 'Aprobado'
+        | 'Liquidado'
+        | 'Anulado'
+        | 'EnLiquidacion'
+        | 'Pagado'
+        | 'Reintegrado'
+        | 'Cancelado'
+        | 'Solicitado'
+        | 'Acreditado'
+        | 'Asignado a Liquidación'
+        | 'Pendiente de Liquidar'
+        | 'Pendiente de Reintegro';
       reintegro_status: 'generada' | 'firmada' | 'presentada' | 'procesada' | 'reintegrada';
       pago_estado: 'Programado' | 'Aprobado' | 'Pagado' | 'Conciliado' | 'Anulado' | 'Devuelto';
       pago_tipo: 'transferencia' | 'cheque' | 'efectivo' | 'tarjeta' | 'otro';

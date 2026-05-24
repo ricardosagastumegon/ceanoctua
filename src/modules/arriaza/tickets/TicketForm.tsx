@@ -5,6 +5,7 @@ import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { AttTicket, AttTicketInsert } from './api';
 import type { Database } from '@/types/database';
+import { TicketPaxPanel } from './TicketPaxPanel';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -141,6 +142,8 @@ export function TicketForm({ initial, submitting, onSubmit, onCancel }: CatalogF
         </Select>
       </div>
       <TextArea name="comentarios" label="Comentarios" value={v.comentarios} onChange={(e) => upd('comentarios', e.target.value)} />
+
+      {initial?.id && <TicketPaxPanel ticketId={initial.id} canEdit />}
 
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancel} className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">Cancelar</button>

@@ -5,6 +5,7 @@ import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { AttHotel, AttHotelInsert } from './api';
 import type { Database } from '@/types/database';
+import { HotelServicesPanel } from './HotelServicesPanel';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -136,9 +137,17 @@ export function HotelForm({ initial, submitting, onSubmit, onCancel }: CatalogFo
         <TextInput name="ota" label="OTA / agencia" value={v.ota} onChange={(e) => upd('ota', e.target.value)} />
         <TextInput name="pay" label="Forma de pago" value={v.pay} onChange={(e) => upd('pay', e.target.value)} />
       </div>
-      <TextArea name="services" label="Servicios" value={v.services} onChange={(e) => upd('services', e.target.value)} />
+      <TextArea name="services" label="Servicios (notas libres)" value={v.services} onChange={(e) => upd('services', e.target.value)} hint="Para servicios con monto, usa la tabla de abajo (solo después de guardar el hotel)." />
       <TextArea name="cancel_policy" label="Política de cancelación" value={v.cancel_policy} onChange={(e) => upd('cancel_policy', e.target.value)} />
       <TextArea name="notas" label="Notas" value={v.notas} onChange={(e) => upd('notas', e.target.value)} />
+
+      {initial?.id && (
+        <HotelServicesPanel
+          hotelId={initial.id}
+          moneda={v.moneda || initial.moneda || 'GTQ'}
+          canEdit
+        />
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancel} className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">Cancelar</button>

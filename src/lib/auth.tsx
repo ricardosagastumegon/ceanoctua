@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -53,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Cache last loaded user id so token refreshes (same user) don't re-fetch.
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -61,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setSession(data.session);
       if (data.session) {
+        lastUserIdRef.current = data.session.user.id;
         const p = await loadProfile(data.session.user.id);
         if (mounted) setProfile(p);
       }
@@ -70,6 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!mounted) return;
       setSession(newSession);
+      const newUserId = newSession?.user.id ?? null;
+      if (newUserId === lastUserIdRef.current && newSession) {
+        // Token refresh of the same user — skip refetch of profile.
+        return;
+      }
+      lastUserIdRef.current = newUserId;
       if (newSession) {
         const p = await loadProfile(newSession.user.id);
         if (mounted) setProfile(p);

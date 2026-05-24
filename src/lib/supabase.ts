@@ -6,7 +6,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
-if (!isSupabaseConfigured) {
+if (!isSupabaseConfigured && import.meta.env.DEV) {
   console.warn(
     '[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY missing. Copy .env.example to .env.',
   );

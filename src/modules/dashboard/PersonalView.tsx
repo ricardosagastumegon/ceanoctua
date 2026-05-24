@@ -45,7 +45,7 @@ export function PersonalView({ memberCode }: { memberCode: string }) {
 
   const eventos = eventosQ.data ?? [];
   const proximosEventos = eventos
-    .filter((e) => e.fecha && new Date(e.fecha) >= new Date())
+    .filter((e) => e.fecha && !isOverdue(e.fecha))
     .slice(0, 5);
 
   const memberPath = `/${memberCode.toLowerCase()}`;

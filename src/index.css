@@ -38,10 +38,12 @@
     visibility: visible !important;
   }
   .printable {
-    position: absolute !important;
-    inset: 0 !important;
+    /* `static` lets the browser paginate naturally across pages. `absolute`
+       traps the content into a single viewport-sized page and clips overflow. */
+    position: static !important;
     width: 100% !important;
     padding: 0 !important;
+    margin: 0 !important;
     box-shadow: none !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;

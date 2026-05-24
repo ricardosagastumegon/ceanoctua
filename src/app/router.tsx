@@ -1,21 +1,38 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from './Layout';
 import Login from './Login';
 
-import DashboardPage from '@/modules/dashboard/page';
-import MaaPage from '@/modules/maa/page';
-import JaPage from '@/modules/ja/page';
-import LaPage from '@/modules/la/page';
-import JmPage from '@/modules/jm/page';
-import AaPage from '@/modules/aa/page';
-import EgPage from '@/modules/eg/page';
-import PePage from '@/modules/pe/page';
-import CcBoardPage from '@/modules/cc-board/page';
-import ArriazaPage from '@/modules/arriaza/page';
-import CeaPage from '@/modules/cea/page';
-import AdminPage from '@/modules/admin/page';
-import MielSjPage from '@/modules/miel-sj/page';
-import FinanzasPage from '@/modules/finanzas/page';
+// Lazy-load every page so each lives in its own chunk.
+// Reduces initial bundle from ~880 KB to ~250 KB.
+const DashboardPage = lazy(() => import('@/modules/dashboard/page'));
+const MaaPage = lazy(() => import('@/modules/maa/page'));
+const JaPage = lazy(() => import('@/modules/ja/page'));
+const LaPage = lazy(() => import('@/modules/la/page'));
+const JmPage = lazy(() => import('@/modules/jm/page'));
+const AaPage = lazy(() => import('@/modules/aa/page'));
+const EgPage = lazy(() => import('@/modules/eg/page'));
+const PePage = lazy(() => import('@/modules/pe/page'));
+const CcBoardPage = lazy(() => import('@/modules/cc-board/page'));
+const ArriazaPage = lazy(() => import('@/modules/arriaza/page'));
+const CeaPage = lazy(() => import('@/modules/cea/page'));
+const AdminPage = lazy(() => import('@/modules/admin/page'));
+const MielSjPage = lazy(() => import('@/modules/miel-sj/page'));
+const FinanzasPage = lazy(() => import('@/modules/finanzas/page'));
+
+function withSuspense(node: ReactNode) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <span className="text-sm text-dark-3">Cargando módulo…</span>
+        </div>
+      }
+    >
+      {node}
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -23,20 +40,20 @@ export const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: 'maa', element: <MaaPage /> },
-      { path: 'ja', element: <JaPage /> },
-      { path: 'la', element: <LaPage /> },
-      { path: 'jm', element: <JmPage /> },
-      { path: 'aa', element: <AaPage /> },
-      { path: 'eg', element: <EgPage /> },
-      { path: 'pe', element: <PePage /> },
-      { path: 'cc-board', element: <CcBoardPage /> },
-      { path: 'arriaza', element: <ArriazaPage /> },
-      { path: 'cea', element: <CeaPage /> },
-      { path: 'admin', element: <AdminPage /> },
-      { path: 'miel-sj', element: <MielSjPage /> },
-      { path: 'finanzas', element: <FinanzasPage /> },
+      { index: true, element: withSuspense(<DashboardPage />) },
+      { path: 'maa', element: withSuspense(<MaaPage />) },
+      { path: 'ja', element: withSuspense(<JaPage />) },
+      { path: 'la', element: withSuspense(<LaPage />) },
+      { path: 'jm', element: withSuspense(<JmPage />) },
+      { path: 'aa', element: withSuspense(<AaPage />) },
+      { path: 'eg', element: withSuspense(<EgPage />) },
+      { path: 'pe', element: withSuspense(<PePage />) },
+      { path: 'cc-board', element: withSuspense(<CcBoardPage />) },
+      { path: 'arriaza', element: withSuspense(<ArriazaPage />) },
+      { path: 'cea', element: withSuspense(<CeaPage />) },
+      { path: 'admin', element: withSuspense(<AdminPage />) },
+      { path: 'miel-sj', element: withSuspense(<MielSjPage />) },
+      { path: 'finanzas', element: withSuspense(<FinanzasPage />) },
     ],
   },
 ]);

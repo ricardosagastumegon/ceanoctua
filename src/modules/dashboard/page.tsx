@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { DashboardPage } from './DashboardPage';
 
-export default function DashboardPage() {
-  return <Placeholder name="Dashboard" />;
+export default function DashboardRoutePage() {
+  return <DashboardPage />;
 }

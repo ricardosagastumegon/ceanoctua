@@ -3,6 +3,7 @@ import { tareasApi, type TareaInsert, type TareaUpdate } from './api';
 
 const keys = {
   list: (miembroId: string | undefined) => ['tareas', miembroId] as const,
+  all: ['tareas', 'all'] as const,
 };
 
 export function useTareas(miembroId: string | undefined) {
@@ -11,6 +12,10 @@ export function useTareas(miembroId: string | undefined) {
     queryFn: () => tareasApi.listByMiembro(miembroId as string),
     enabled: !!miembroId,
   });
+}
+
+export function useAllTareas() {
+  return useQuery({ queryKey: keys.all, queryFn: () => tareasApi.listAll() });
 }
 
 export function useCreateTarea(miembroId: string | undefined) {

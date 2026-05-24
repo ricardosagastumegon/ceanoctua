@@ -3,6 +3,7 @@ import { viajesApi, type ViajeInsert, type ViajeUpdate } from './api';
 
 const keys = {
   list: (miembroId: string | undefined) => ['viajes', miembroId] as const,
+  all: ['viajes', 'all'] as const,
   checklist: (viajeId: string | undefined) => ['viaje_checklist', viajeId] as const,
 };
 
@@ -12,6 +13,10 @@ export function useViajes(miembroId: string | undefined) {
     queryFn: () => viajesApi.listByMiembro(miembroId as string),
     enabled: !!miembroId,
   });
+}
+
+export function useAllViajes() {
+  return useQuery({ queryKey: keys.all, queryFn: () => viajesApi.listAll() });
 }
 
 export function useCreateViaje(miembroId: string | undefined) {

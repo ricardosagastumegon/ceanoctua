@@ -16,6 +16,16 @@ export const tareasApi = {
     if (error) throw error;
     return data ?? [];
   },
+  async listAll(): Promise<Tarea[]> {
+    // For dashboard. RLS filters board_member to own rows; admin/asistente see all.
+    const { data, error } = await supabase
+      .from('tareas')
+      .select('*')
+      .order('done', { ascending: true })
+      .order('fecha', { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return data ?? [];
+  },
   async create(input: TareaInsert): Promise<Tarea> {
     const { data, error } = await supabase.from('tareas').insert(input).select('*').single();
     if (error) throw error;

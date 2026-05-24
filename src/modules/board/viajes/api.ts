@@ -25,6 +25,14 @@ export const viajesApi = {
     if (error) throw error;
     return data ?? [];
   },
+  async listAll(): Promise<Viaje[]> {
+    const { data, error } = await supabase
+      .from('viajes')
+      .select('*')
+      .order('fecha_ini', { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return data ?? [];
+  },
   async create(input: ViajeInsert): Promise<Viaje> {
     const { data, error } = await supabase.from('viajes').insert(input).select('*').single();
     if (error) throw error;

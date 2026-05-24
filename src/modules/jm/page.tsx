@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { BoardMemberPage } from '@/modules/board/BoardMemberPage';
 
 export default function JmPage() {
-  return <Placeholder name="JM" />;
+  return <BoardMemberPage codigo="JM" />;
 }

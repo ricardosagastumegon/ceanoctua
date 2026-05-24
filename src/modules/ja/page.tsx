@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { BoardMemberPage } from '@/modules/board/BoardMemberPage';
 
 export default function JaPage() {
-  return <Placeholder name="JA" />;
+  return <BoardMemberPage codigo="JA" />;
 }

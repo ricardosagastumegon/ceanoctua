@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { BoardMemberPage } from '@/modules/board/BoardMemberPage';
 
 export default function EgPage() {
-  return <Placeholder name="EG" />;
+  return <BoardMemberPage codigo="EG" />;
 }

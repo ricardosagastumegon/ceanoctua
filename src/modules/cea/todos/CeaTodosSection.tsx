@@ -2,26 +2,12 @@ import { CatalogPage } from '@/modules/admin/components/CatalogPage';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { formatDate, isOverdue } from '@/lib/dates';
 import { useCeaTodos, useCreateCeaTodo, useDeleteCeaTodo, useToggleCeaTodo, useUpdateCeaTodo } from './hooks';
-import type { CeaTodo } from './api';
+import {
+  CEA_TODO_ESTADO_COLOR,
+  CEA_TODO_PRI_COLOR,
+  type CeaTodo,
+} from './api';
 import { CeaTodoForm } from './CeaTodoForm';
-
-const priorityLabel: Record<NonNullable<CeaTodo['prioridad']>, string> = {
-  baja: 'Baja',
-  media: 'Media',
-  alta: 'Alta',
-};
-const statusLabel: Record<CeaTodo['estado'], string> = {
-  pendiente: 'Pendiente',
-  en_progreso: 'En progreso',
-  completada: 'Completada',
-  cancelada: 'Cancelada',
-};
-const statusBg: Record<CeaTodo['estado'], string> = {
-  pendiente: 'bg-sand text-dark',
-  en_progreso: 'bg-blue-light text-blue',
-  completada: 'bg-teal-l text-teal-d',
-  cancelada: 'bg-rust-l text-rust',
-};
 
 export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
   const query = useCeaTodos();
@@ -42,6 +28,7 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
           disabled={!canEdit}
           onChange={(e) => void toggle.mutateAsync({ id: r.id, done: e.target.checked })}
           className="h-4 w-4 rounded border-sand text-teal focus:ring-teal disabled:opacity-50"
+          aria-label="Marcar como hecha"
         />
       ),
     },
@@ -63,20 +50,40 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
         return <span className={overdue ? 'font-semibold text-rust' : 'text-dark'}>{formatDate(r.fecha)}{overdue && ' ⚠'}</span>;
       },
     },
-    { key: 'prioridad', header: 'Prio.', sortable: true, accessor: (r) => r.prioridad, render: (r) => (r.prioridad ? priorityLabel[r.prioridad] : '—') },
     {
-      key: 'estado',
+      key: 'prioridad_label',
+      header: 'Prio.',
+      sortable: true,
+      accessor: (r) => r.prioridad_label,
+      render: (r) => {
+        const p = r.prioridad_label ?? 'Media';
+        return (
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${CEA_TODO_PRI_COLOR[p] ?? 'bg-sand text-dark-2'}`}>
+            {p}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'estado_label',
       header: 'Estado',
       sortable: true,
-      accessor: (r) => r.estado,
-      render: (r) => <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${statusBg[r.estado]}`}>{statusLabel[r.estado]}</span>,
+      accessor: (r) => r.estado_label,
+      render: (r) => {
+        const s = r.estado_label ?? 'Comentado';
+        return (
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${CEA_TODO_ESTADO_COLOR[s] ?? 'bg-sand text-dark'}`}>
+            {s}
+          </span>
+        );
+      },
     },
   ];
 
   return (
     <CatalogPage<CeaTodo, import('./api').CeaTodoInsert>
       title="To-dos del asistente"
-      description="Pendientes operativos del CEA."
+      description="Pendientes operativos del CEA con prioridad (Alta/Hold/TKIM/Media/Baja) y estado del flujo (Comentado → Solicitado → Planeado → Ejecutado → Finalizado)."
       newLabel="+ Nuevo to-do"
       modalSize="lg"
       columns={columns}

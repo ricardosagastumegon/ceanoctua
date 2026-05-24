@@ -4,40 +4,62 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { CeaTodo, CeaTodoInsert } from './api';
-import type { Database } from '@/types/database';
-
-type Priority = Database['public']['Enums']['task_priority'];
-type Status = Database['public']['Enums']['task_status'];
+import { CEA_TODO_ESTADOS, CEA_TODO_PRIORIDADES } from './api';
 
 type FormState = {
   asunto: string;
   fecha: string;
-  prioridad: Priority | '';
-  estado: Status;
+  prioridad_label: string;
+  estado_label: string;
   notas: string;
   done: boolean;
 };
 
-const empty: FormState = { asunto: '', fecha: '', prioridad: '', estado: 'pendiente', notas: '', done: false };
+const empty: FormState = {
+  asunto: '',
+  fecha: '',
+  prioridad_label: 'Media',
+  estado_label: 'Comentado',
+  notas: '',
+  done: false,
+};
 
 function fromRow(r: CeaTodo | null | undefined): FormState {
   if (!r) return empty;
   return {
     asunto: r.asunto ?? '',
     fecha: r.fecha ?? '',
-    prioridad: r.prioridad ?? '',
-    estado: r.estado,
+    prioridad_label: r.prioridad_label ?? 'Media',
+    estado_label: r.estado_label ?? 'Comentado',
     notas: r.notas ?? '',
     done: r.done,
   };
 }
 
 function toInput(s: FormState): CeaTodoInsert {
+  // Mantener prioridad/estado enums por compat con dashboards y RLS,
+  // mapeo simple: Alta/Hold/TKIM → alta ; Media → media ; Baja → baja.
+  const prioEnum =
+    s.prioridad_label === 'Alta' || s.prioridad_label === 'Hold' || s.prioridad_label === 'TKIM'
+      ? 'alta'
+      : s.prioridad_label === 'Baja'
+        ? 'baja'
+        : 'media';
+  const estadoEnum =
+    s.estado_label === 'Ejecutado' || s.estado_label === 'Finalizado'
+      ? 'completada'
+      : s.estado_label === 'Descartado'
+        ? 'cancelada'
+        : s.estado_label === 'Planeado'
+          ? 'en_progreso'
+          : 'pendiente';
   return {
     asunto: s.asunto.trim(),
     fecha: s.fecha || null,
-    prioridad: s.prioridad === '' ? null : s.prioridad,
-    estado: s.estado,
+    prioridad: prioEnum,
+    estado: estadoEnum,
+    prioridad_label: s.prioridad_label,
+    estado_label: s.estado_label,
     notas: s.notas.trim() || null,
     done: s.done,
   };
@@ -71,17 +93,11 @@ export function CeaTodoForm({ initial, submitting, onSubmit, onCancel }: Catalog
       <TextInput name="asunto" label="Asunto *" value={v.asunto} onChange={(e) => upd('asunto', e.target.value)} required autoFocus />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="fecha" label="Fecha" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} />
-        <Select name="prioridad" label="Prioridad" value={v.prioridad} onChange={(e) => upd('prioridad', e.target.value as Priority | '')}>
-          <option value="">—</option>
-          <option value="baja">Baja</option>
-          <option value="media">Media</option>
-          <option value="alta">Alta</option>
+        <Select name="prioridad_label" label="Prioridad" value={v.prioridad_label} onChange={(e) => upd('prioridad_label', e.target.value)}>
+          {CEA_TODO_PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
         </Select>
-        <Select name="estado" label="Estado" value={v.estado} onChange={(e) => upd('estado', e.target.value as Status)}>
-          <option value="pendiente">Pendiente</option>
-          <option value="en_progreso">En progreso</option>
-          <option value="completada">Completada</option>
-          <option value="cancelada">Cancelada</option>
+        <Select name="estado_label" label="Estado" value={v.estado_label} onChange={(e) => upd('estado_label', e.target.value)}>
+          {CEA_TODO_ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
         </Select>
       </div>
       <TextArea name="notas" label="Notas" value={v.notas} onChange={(e) => upd('notas', e.target.value)} />

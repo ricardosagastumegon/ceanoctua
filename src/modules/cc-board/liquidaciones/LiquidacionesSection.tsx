@@ -24,6 +24,19 @@ function fmt(n: number, currency: string): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n);
 }
 
+function csvCell(s: unknown): string {
+  if (s == null) return '';
+  return `"${String(s).replace(/"/g, '""')}"`;
+}
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 const estadoBg: Record<string, string> = {
   Generada: 'bg-sand text-dark-2',
   Autorizada: 'bg-blue-light text-blue',
@@ -184,6 +197,31 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
     },
   ];
 
+  function exportCsv() {
+    if (filtered.length === 0) return;
+    const header = ['Serial', 'Fecha', 'Solicitado', 'Motivo', 'Producto', 'Entidad', 'Forma pago', 'Moneda', 'Total', 'Vale', 'Diferencia', 'Estado', 'Vale serial']
+      .map(csvCell).join(',');
+    const lines = filtered.map((r) =>
+      [
+        r.serial,
+        formatDate(r.fecha),
+        r.solicitado,
+        r.motivo,
+        r.producto,
+        r.entidad,
+        r.payment_method,
+        r.moneda,
+        Number(r.monto_total).toFixed(2),
+        Number(r.vale_monto ?? 0).toFixed(2),
+        Number(r.diff ?? 0).toFixed(2),
+        r.estado,
+        r.vale_serial,
+      ].map(csvCell).join(','),
+    );
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    downloadCsv(`liquidaciones_${date}.csv`, [header, ...lines].join('\n'));
+  }
+
   return (
     <section className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -193,15 +231,25 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
             Agrupa compras con motivo, forma de pago y opcional vínculo a un vale.
           </p>
         </div>
-        {canEdit && (
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setEditing(null)}
-            className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
+            onClick={exportCsv}
+            disabled={filtered.length === 0}
+            className="rounded-md border border-teal/40 px-3 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l disabled:opacity-50"
           >
-            + Nueva liquidación
+            ⬇ Exportar CSV ({filtered.length})
           </button>
-        )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
+            >
+              + Nueva liquidación
+            </button>
+          )}
+        </div>
       </header>
 
       {/* KPIs */}

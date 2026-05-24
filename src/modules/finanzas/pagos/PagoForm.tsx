@@ -222,7 +222,7 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
         <TextArea name="concepto" label="Concepto" value={v.concepto} onChange={(e) => upd('concepto', e.target.value)} rows={2} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextInput name="monto" label="Monto *" type="number" min="0" step="0.01" value={v.monto} onChange={(e) => upd('monto', e.target.value)} required />
         <Select name="moneda" label="Moneda" value={v.moneda} onChange={(e) => upd('moneda', e.target.value as Currency)}>
           <option value="GTQ">GTQ</option>
@@ -230,9 +230,47 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
           <option value="EUR">EUR</option>
           <option value="GBP">GBP</option>
         </Select>
-        <TextInput name="cotizacion" label="Cotización" type="number" min="0" step="0.000001" value={v.cotizacion} onChange={(e) => upd('cotizacion', e.target.value)} hint="Tipo de cambio" />
-        <TextInput name="pct_anticipo" label="% anticipo" type="number" min="0" max="100" step="0.01" value={v.pct_anticipo} onChange={(e) => upd('pct_anticipo', e.target.value)} />
       </div>
+
+      {/* Campos de anticipo solo visibles si tipo_label contiene "Anticipo" */}
+      {v.tipo_label.includes('Anticipo') && (
+        <fieldset className="rounded-md border border-gold/40 bg-gold-light/30 p-3">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-gold">
+            Anticipo · {v.tipo_label}
+          </legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <TextInput
+              name="cotizacion"
+              label="Cotización total"
+              type="number"
+              min="0"
+              step="0.01"
+              value={v.cotizacion}
+              onChange={(e) => upd('cotizacion', e.target.value)}
+              hint="Monto del proyecto completo"
+            />
+            <TextInput
+              name="pct_anticipo"
+              label="% anticipo"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={v.pct_anticipo}
+              onChange={(e) => upd('pct_anticipo', e.target.value)}
+            />
+            <TextInput
+              name="pct_pendiente"
+              label="% pendiente"
+              type="text"
+              value={`${v.pct_pendiente}%${v.cotizacion ? ` (${v.moneda} ${(Number(v.cotizacion) * Number(v.pct_pendiente) / 100).toFixed(2)})` : ''}`}
+              onChange={() => undefined}
+              readOnly
+              hint="100 − anticipo (auto)"
+            />
+          </div>
+        </fieldset>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="referencia" label="Referencia" value={v.referencia} onChange={(e) => upd('referencia', e.target.value)} hint="N° cheque / transf" />

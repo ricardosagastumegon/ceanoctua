@@ -1,5 +1,5 @@
-import { Placeholder } from '../Placeholder';
+import { CEAPage } from './CEAPage';
 
 export default function CeaPage() {
-  return <Placeholder name="CEA" />;
+  return <CEAPage />;
 }

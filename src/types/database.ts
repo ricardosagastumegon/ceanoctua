@@ -357,6 +357,188 @@ export type Database = {
       };
 
       // ====================================================
+      // CEA module (Fase 7)
+      // ====================================================
+      cea_todos: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          asunto: string;
+          responsable: string | null;
+          empleado_id: string | null;
+          fecha: string | null;
+          prioridad: Database['public']['Enums']['task_priority'] | null;
+          estado: Database['public']['Enums']['task_status'];
+          done: boolean;
+          notas: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          asunto: string;
+          responsable?: string | null;
+          empleado_id?: string | null;
+          fecha?: string | null;
+          prioridad?: Database['public']['Enums']['task_priority'] | null;
+          estado?: Database['public']['Enums']['task_status'];
+          done?: boolean;
+          notas?: string | null;
+        };
+        Update: AuditUpdate & {
+          asunto?: string;
+          responsable?: string | null;
+          empleado_id?: string | null;
+          fecha?: string | null;
+          prioridad?: Database['public']['Enums']['task_priority'] | null;
+          estado?: Database['public']['Enums']['task_status'];
+          done?: boolean;
+          notas?: string | null;
+        };
+        Relationships: [];
+      };
+
+      lavanderia: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          asunto: string | null;
+          solicitado: string | null;
+          descripcion: string | null;
+          notas: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          asunto?: string | null;
+          solicitado?: string | null;
+          descripcion?: string | null;
+          notas?: string | null;
+        };
+        Update: AuditUpdate & {
+          asunto?: string | null;
+          solicitado?: string | null;
+          descripcion?: string | null;
+          notas?: string | null;
+        };
+        Relationships: [];
+      };
+
+      directorio: {
+        Row: AuditCols & {
+          id: string;
+          legacy_id: number | null;
+          nombre: string;
+          tipo: string | null;
+          razon: string | null;
+          nit: string | null;
+          giro: string | null;
+          tel: string | null;
+          whatsapp: string | null;
+          email: string | null;
+          web: string | null;
+          direccion: string | null;
+          notas: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          legacy_id?: number | null;
+          nombre: string;
+          tipo?: string | null;
+          razon?: string | null;
+          nit?: string | null;
+          giro?: string | null;
+          tel?: string | null;
+          whatsapp?: string | null;
+          email?: string | null;
+          web?: string | null;
+          direccion?: string | null;
+          notas?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string;
+          tipo?: string | null;
+          razon?: string | null;
+          nit?: string | null;
+          giro?: string | null;
+          tel?: string | null;
+          whatsapp?: string | null;
+          email?: string | null;
+          web?: string | null;
+          direccion?: string | null;
+          notas?: string | null;
+        };
+        Relationships: [];
+      };
+
+      firmas: {
+        Row: {
+          id: string;
+          legacy_id: number | null;
+          recepcion: string | null;
+          tipo: string;
+          urgencia: Database['public']['Enums']['firma_urgencia'] | null;
+          justificacion: string | null;
+          entregado: string | null;
+          solicitado: string | null;
+          status_firma: Database['public']['Enums']['firma_status'];
+          fecha_firma: string | null;
+          fecha_entrega: string | null;
+          quien_recibe: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          legacy_id?: number | null;
+          recepcion?: string | null;
+          tipo: string;
+          urgencia?: Database['public']['Enums']['firma_urgencia'] | null;
+          justificacion?: string | null;
+          entregado?: string | null;
+          solicitado?: string | null;
+          status_firma?: Database['public']['Enums']['firma_status'];
+          fecha_firma?: string | null;
+          fecha_entrega?: string | null;
+          quien_recibe?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          recepcion?: string | null;
+          tipo?: string;
+          urgencia?: Database['public']['Enums']['firma_urgencia'] | null;
+          justificacion?: string | null;
+          entregado?: string | null;
+          solicitado?: string | null;
+          status_firma?: Database['public']['Enums']['firma_status'];
+          fecha_firma?: string | null;
+          fecha_entrega?: string | null;
+          quien_recibe?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      firma_miembros: {
+        Row: {
+          firma_id: string;
+          miembro_id: string;
+          created_at: string;
+        };
+        Insert: {
+          firma_id: string;
+          miembro_id: string;
+        };
+        Update: never;
+        Relationships: [
+          { foreignKeyName: 'firma_miembros_firma_id_fkey'; columns: ['firma_id']; referencedRelation: 'firmas'; referencedColumns: ['id'] },
+          { foreignKeyName: 'firma_miembros_miembro_id_fkey'; columns: ['miembro_id']; referencedRelation: 'miembros_board'; referencedColumns: ['id'] },
+        ];
+      };
+
+      // ====================================================
       // Documentos (storage metadata)
       // ====================================================
       documentos: {
@@ -402,6 +584,8 @@ export type Database = {
       tc_tipo: 'corporativa' | 'presidencia';
       task_priority: 'baja' | 'media' | 'alta';
       task_status: 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
+      firma_status: 'en_espera' | 'firmado' | 'stand_by' | 'denegada';
+      firma_urgencia: 'urgente' | 'importante' | 'programado';
       trip_type: 'personal' | 'trabajo' | 'familia' | 'salud' | 'otro';
       trip_status: 'planificado' | 'en_curso' | 'completado' | 'cancelado';
       evento_tipo: 'reunion' | 'cumpleanos' | 'aniversario' | 'viaje' | 'religioso' | 'otro';

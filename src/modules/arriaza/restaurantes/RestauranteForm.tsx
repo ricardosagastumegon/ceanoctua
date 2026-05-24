@@ -5,6 +5,9 @@ import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { AttRestaurante, AttRestauranteInsert } from './api';
 import type { Database } from '@/types/database';
+import { RestaurantDinersPanel } from './RestaurantDinersPanel';
+import { RestaurantServicesPanel } from './RestaurantServicesPanel';
+import { PayRecordsPanel } from '@/modules/arriaza/shared/PayRecordsPanel';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -132,6 +135,24 @@ export function RestauranteForm({ initial, submitting, onSubmit, onCancel }: Cat
       </div>
       <TextArea name="detalles" label="Detalles" value={v.detalles} onChange={(e) => upd('detalles', e.target.value)} />
       <TextArea name="cancel_policy" label="Política de cancelación" value={v.cancel_policy} onChange={(e) => upd('cancel_policy', e.target.value)} />
+
+      {initial?.id && (
+        <>
+          <RestaurantDinersPanel restauranteId={initial.id} canEdit />
+          <RestaurantServicesPanel
+            restauranteId={initial.id}
+            moneda={v.moneda || initial.moneda || 'GTQ'}
+            canEdit
+          />
+          <PayRecordsPanel
+            tableName="att_restaurant_pay_records"
+            parentColumn="restaurante_id"
+            parentId={initial.id}
+            moneda={v.moneda || initial.moneda || 'GTQ'}
+            canEdit
+          />
+        </>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancel} className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">Cancelar</button>

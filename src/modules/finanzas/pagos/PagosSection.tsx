@@ -19,6 +19,8 @@ import {
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -49,6 +51,57 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStep, setFilterStep] = useState<string>('');
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // ---- Firmas vinculadas a estos pagos ----
+  const qc = useQueryClient();
+  const firmasByPago = useQuery({
+    queryKey: ['pagos', 'firma_counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('firmas')
+        .select('id, pago_id, status_firma')
+        .not('pago_id', 'is', null)
+        .is('deleted_at', null);
+      if (error) throw error;
+      const map = new Map<string, { count: number; firmadas: number }>();
+      for (const row of data ?? []) {
+        const pid = row.pago_id as string;
+        const prev = map.get(pid) ?? { count: 0, firmadas: 0 };
+        prev.count += 1;
+        if (row.status_firma === 'firmado') prev.firmadas += 1;
+        map.set(pid, prev);
+      }
+      return map;
+    },
+  });
+
+  const requestFirma = useMutation({
+    mutationFn: async (pago: Pago) => {
+      const insertPayload = {
+        tipo: `Pago ${pago.serial ?? pago.proveedor ?? pago.id.slice(0, 8)}`,
+        urgencia: 'importante' as const,
+        recepcion: new Date().toISOString().slice(0, 16),
+        solicitado: pago.entidad ?? pago.proveedor ?? null,
+        justificacion: pago.concepto ?? null,
+        pago_id: pago.id,
+      };
+      const { error } = await supabase.from('firmas').insert(insertPayload);
+      if (error) throw error;
+    },
+    onSuccess: async (_d, pago) => {
+      void qc.invalidateQueries({ queryKey: ['pagos', 'firma_counts'] });
+      void qc.invalidateQueries({ queryKey: ['firmas'] });
+      // Auto-avanzar el paso 0→1 (En Solicitud de Firma) si todavía está en Generado
+      if (pago.step_idx === 0) {
+        try {
+          await advance.mutateAsync({ id: pago.id, current: pago });
+        } catch {
+          /* ignored */
+        }
+      }
+      toast.success('Firma solicitada. Ábrela en CEA → Firmas para completar.');
+    },
+  });
 
   const all = query.data ?? [];
 
@@ -188,6 +241,18 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${estadoBg[p.estado]}`}>
                         {p.estado}
                       </span>
+                      {(() => {
+                        const fc = firmasByPago.data?.get(p.id);
+                        if (!fc || fc.count === 0) return null;
+                        return (
+                          <span
+                            className="rounded-full bg-purple/10 px-2 py-0.5 text-[10px] font-semibold text-purple"
+                            title={`${fc.firmadas}/${fc.count} firmadas`}
+                          >
+                            ✍️ {fc.firmadas}/{fc.count}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <h3 className="mt-1 font-medium text-dark">
                       {p.proveedor ?? '(sin proveedor)'}
@@ -220,6 +285,15 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                           → Siguiente
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => void requestFirma.mutateAsync(p)}
+                        disabled={requestFirma.isPending}
+                        className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20 disabled:opacity-60"
+                        title="Crear solicitud de firma vinculada a este pago"
+                      >
+                        ✍️ Firma
+                      </button>
                       {isLast && (
                         <span className="rounded-md bg-teal px-3 py-1 text-xs font-semibold text-white">✓ Pagado</span>
                       )}

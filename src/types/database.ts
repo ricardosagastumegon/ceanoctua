@@ -500,6 +500,7 @@ export type Database = {
           fecha_firma: string | null;
           fecha_entrega: string | null;
           quien_recibe: string | null;
+          pago_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -520,6 +521,7 @@ export type Database = {
           fecha_firma?: string | null;
           fecha_entrega?: string | null;
           quien_recibe?: string | null;
+          pago_id?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -533,9 +535,12 @@ export type Database = {
           fecha_firma?: string | null;
           fecha_entrega?: string | null;
           quien_recibe?: string | null;
+          pago_id?: string | null;
           deleted_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          { foreignKeyName: 'firmas_pago_id_fkey'; columns: ['pago_id']; referencedRelation: 'pagos'; referencedColumns: ['id'] },
+        ];
       };
 
       // ====================================================

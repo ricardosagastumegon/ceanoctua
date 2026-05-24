@@ -6,6 +6,7 @@ import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { AttHotel, AttHotelInsert } from './api';
 import type { Database } from '@/types/database';
 import { HotelServicesPanel } from './HotelServicesPanel';
+import { PayRecordsPanel } from '@/modules/arriaza/shared/PayRecordsPanel';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -142,11 +143,20 @@ export function HotelForm({ initial, submitting, onSubmit, onCancel }: CatalogFo
       <TextArea name="notas" label="Notas" value={v.notas} onChange={(e) => upd('notas', e.target.value)} />
 
       {initial?.id && (
-        <HotelServicesPanel
-          hotelId={initial.id}
-          moneda={v.moneda || initial.moneda || 'GTQ'}
-          canEdit
-        />
+        <>
+          <HotelServicesPanel
+            hotelId={initial.id}
+            moneda={v.moneda || initial.moneda || 'GTQ'}
+            canEdit
+          />
+          <PayRecordsPanel
+            tableName="att_hotel_pay_records"
+            parentColumn="hotel_id"
+            parentId={initial.id}
+            moneda={v.moneda || initial.moneda || 'GTQ'}
+            canEdit
+          />
+        </>
       )}
 
       <div className="flex justify-end gap-2 pt-2">

@@ -6,6 +6,8 @@ import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { AttTicket, AttTicketInsert } from './api';
 import type { Database } from '@/types/database';
 import { TicketPaxPanel } from './TicketPaxPanel';
+import { TicketSegmentsPanel } from './TicketSegmentsPanel';
+import { PayRecordsPanel } from '@/modules/arriaza/shared/PayRecordsPanel';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -143,7 +145,19 @@ export function TicketForm({ initial, submitting, onSubmit, onCancel }: CatalogF
       </div>
       <TextArea name="comentarios" label="Comentarios" value={v.comentarios} onChange={(e) => upd('comentarios', e.target.value)} />
 
-      {initial?.id && <TicketPaxPanel ticketId={initial.id} canEdit />}
+      {initial?.id && (
+        <>
+          <TicketPaxPanel ticketId={initial.id} canEdit />
+          <TicketSegmentsPanel ticketId={initial.id} canEdit />
+          <PayRecordsPanel
+            tableName="att_ticket_pay_records"
+            parentColumn="ticket_id"
+            parentId={initial.id}
+            moneda={v.moneda || initial.moneda || 'GTQ'}
+            canEdit
+          />
+        </>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancel} className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">Cancelar</button>

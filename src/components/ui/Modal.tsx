@@ -39,13 +39,13 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       role="presentation"
     >
       <div
-        className={`w-full ${sizeMap[size]} rounded-card bg-white shadow-xl`}
+        className={`flex max-h-[calc(100vh-4rem)] w-full ${sizeMap[size]} flex-col overflow-hidden rounded-card bg-white shadow-xl`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
       >
-        <div className="flex items-center justify-between border-b border-sand px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-sand px-6 py-4">
           {title ? (
             <h2 id="modal-title" className="font-heading text-lg font-semibold text-dark">
               {title}
@@ -62,7 +62,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             ✕
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react';
+import { useState, type ComponentType, type ReactNode } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { useToast } from '@/components/ui/Toast';
@@ -31,6 +31,8 @@ export type CatalogPageProps<TRow extends { id: string }, TInput> = {
   canEdit: boolean;
   newLabel?: string;
   modalSize?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Optional extra actions rendered before Editar/Borrar (e.g. "Ver PDF"). */
+  extraActions?: (row: TRow) => ReactNode;
 };
 
 export function CatalogPage<TRow extends { id: string }, TInput>({
@@ -52,6 +54,7 @@ export function CatalogPage<TRow extends { id: string }, TInput>({
   canEdit,
   newLabel = '+ Nuevo',
   modalSize = 'lg',
+  extraActions,
 }: CatalogPageProps<TRow, TInput>) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -121,23 +124,28 @@ export function CatalogPage<TRow extends { id: string }, TInput>({
         emptyMessage={emptyMessage ?? 'Sin registros todavía.'}
         rowKey={(r) => r.id}
         actions={
-          canEdit
+          (canEdit || extraActions)
             ? (row) => (
                 <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(row)}
-                    className="rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(row)}
-                    className="rounded-md border border-rust/40 px-3 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
-                  >
-                    Borrar
-                  </button>
+                  {extraActions?.(row)}
+                  {canEdit && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(row)}
+                        className="rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(row)}
+                        className="rounded-md border border-rust/40 px-3 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
+                      >
+                        Borrar
+                      </button>
+                    </>
+                  )}
                 </div>
               )
             : undefined

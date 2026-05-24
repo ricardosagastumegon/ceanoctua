@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
@@ -8,9 +9,11 @@ import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import { KPI } from '@/modules/dashboard/widgets';
 import { LiquidacionForm, type LiquidacionFormValues } from './LiquidacionForm';
+import { LiquidacionPrintable } from './LiquidacionPrintable';
 import {
   useCreateLiquidacion,
   useDeleteLiquidacion,
+  useLiqRows,
   useLiquidaciones,
   useUpdateLiquidacion,
 } from './hooks';
@@ -38,6 +41,8 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const confirm = useConfirm();
 
   const [editing, setEditing] = useState<Liquidacion | null | undefined>(undefined);
+  const [viewing, setViewing] = useState<Liquidacion | null>(null);
+  const viewingRows = useLiqRows(viewing?.id);
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterName, setFilterName] = useState('');
@@ -242,28 +247,36 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
         onRetry={() => void query.refetch()}
         emptyMessage="Sin liquidaciones con estos filtros."
         rowKey={(r) => r.id}
-        actions={
-          canEdit
-            ? (row) => (
-                <div className="flex justify-end gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(row)}
-                    className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(row)}
-                    className="rounded-md border border-rust/40 px-2 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
-                  >
-                    Borrar
-                  </button>
-                </div>
-              )
-            : undefined
-        }
+        actions={(row) => (
+          <div className="flex justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => setViewing(row)}
+              className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
+              title="Ver PDF"
+            >
+              👁
+            </button>
+            {canEdit && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(row)}
+                  className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(row)}
+                  className="rounded-md border border-rust/40 px-2 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
+                >
+                  ×
+                </button>
+              </>
+            )}
+          </div>
+        )}
       />
 
       {/* Footer totals */}
@@ -289,6 +302,16 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
           onCancel={() => setEditing(undefined)}
         />
       </Modal>
+
+      <PrintableModal
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing?.serial ?? 'Liquidación'}
+      >
+        {viewing && (
+          <LiquidacionPrintable liq={viewing} rows={viewingRows.data ?? []} />
+        )}
+      </PrintableModal>
     </section>
   );
 }

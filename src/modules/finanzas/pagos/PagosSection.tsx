@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { PrintableModal } from '@/components/ui/PrintableModal';
 import { StepTracker } from '@/components/ui/StepTracker';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -17,6 +18,7 @@ import {
 } from './hooks';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PagoForm } from './PagoForm';
+import { PagoPrintable } from './PagoPrintable';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -43,6 +45,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
   const confirm = useConfirm();
 
   const [editing, setEditing] = useState<Pago | null | undefined>(undefined);
+  const [viewing, setViewing] = useState<Pago | null>(null);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStep, setFilterStep] = useState<string>('');
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -197,8 +200,17 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                       {p.pct_anticipo && p.pct_anticipo > 0 && <> · Anticipo {p.pct_anticipo}%</>}
                     </p>
                   </div>
-                  {canEdit && (
-                    <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setViewing(p)}
+                      className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                      title="Ver PDF"
+                    >
+                      👁
+                    </button>
+                    {canEdit && (
+                      <>
                       {!isLast && (
                         <button
                           type="button"
@@ -246,8 +258,9 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                       >
                         ×
                       </button>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-3">
                   <StepTracker steps={PAGO_STEPS} currentIdx={p.step_idx} stepDates={p.step_dates} />
@@ -271,6 +284,14 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
           onCancel={() => setEditing(undefined)}
         />
       </Modal>
+
+      <PrintableModal
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing?.serial ?? 'Pago'}
+      >
+        {viewing && <PagoPrintable pago={viewing} />}
+      </PrintableModal>
     </section>
   );
 }

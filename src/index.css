@@ -20,3 +20,33 @@
     @apply font-heading;
   }
 }
+
+/* Print mode: only the .printable container shows. */
+@media print {
+  @page {
+    margin: 12mm;
+    size: letter;
+  }
+  body {
+    background: #ffffff !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .printable,
+  .printable * {
+    visibility: visible !important;
+  }
+  .printable {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

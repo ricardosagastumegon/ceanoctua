@@ -65,21 +65,43 @@ export type Database = {
         };
         Relationships: [];
       };
-      autorizadores: {
+      // Tabla `personas` (fase 15) — fuente única para autorizadores +
+      // miembros JD. Reemplaza la tabla autorizadores (dropped).
+      personas: {
         Row: {
           id: string;
-          legacy_id: number | null;
           nombre: string;
-          cargo: string | null;
-          empresa: string | null;
+          iniciales: string | null;
           nit: string | null;
           dir: string | null;
-          activo: boolean;
+          es_jd: boolean;
+          es_autorizador: boolean;
+          es_firmante: boolean;
+          notas: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: { id?: string; legacy_id?: number | null; nombre: string; cargo?: string | null; empresa?: string | null; nit?: string | null; dir?: string | null; activo?: boolean };
-        Update: { nombre?: string; cargo?: string | null; empresa?: string | null; nit?: string | null; dir?: string | null; activo?: boolean };
+        Insert: {
+          id?: string;
+          nombre: string;
+          iniciales?: string | null;
+          nit?: string | null;
+          dir?: string | null;
+          es_jd?: boolean;
+          es_autorizador?: boolean;
+          es_firmante?: boolean;
+          notas?: string | null;
+        };
+        Update: {
+          nombre?: string;
+          iniciales?: string | null;
+          nit?: string | null;
+          dir?: string | null;
+          es_jd?: boolean;
+          es_autorizador?: boolean;
+          es_firmante?: boolean;
+          notas?: string | null;
+        };
         Relationships: [];
       };
       empleados: {
@@ -111,10 +133,12 @@ export type Database = {
       // Identity
       // ====================================================
       miembros_board: {
-        Row: AuditCols & { id: string; codigo: string; nombre: string; rol: string | null; color: string | null; orden: number | null };
-        Insert: { id?: string; codigo: string; nombre: string; rol?: string | null; color?: string | null; orden?: number | null };
-        Update: { codigo?: string; nombre?: string; rol?: string | null; color?: string | null; orden?: number | null };
-        Relationships: [];
+        Row: AuditCols & { id: string; codigo: string; nombre: string; rol: string | null; color: string | null; orden: number | null; persona_id: string | null };
+        Insert: { id?: string; codigo: string; nombre: string; rol?: string | null; color?: string | null; orden?: number | null; persona_id?: string | null };
+        Update: { codigo?: string; nombre?: string; rol?: string | null; color?: string | null; orden?: number | null; persona_id?: string | null };
+        Relationships: [
+          { foreignKeyName: 'miembros_board_persona_id_fkey'; columns: ['persona_id']; referencedRelation: 'personas'; referencedColumns: ['id'] },
+        ];
       };
       usuarios: {
         Row: { id: string; nombre: string | null; rol: Database['public']['Enums']['app_rol']; miembro_id: string | null; activo: boolean; created_at: string; updated_at: string };
@@ -1247,7 +1271,6 @@ export type Database = {
           concepto: string;
           monto: number;
           moneda: Database['public']['Enums']['currency'];
-          autorizo: string | null;
           autorizador_id: string | null;
           reintegro_id: string | null;
           deleted_at: string | null;
@@ -1266,7 +1289,6 @@ export type Database = {
           concepto: string;
           monto: number;
           moneda: Database['public']['Enums']['currency'];
-          autorizo?: string | null;
           autorizador_id?: string | null;
           reintegro_id?: string | null;
           deleted_at?: string | null;
@@ -1282,7 +1304,6 @@ export type Database = {
           concepto?: string;
           monto?: number;
           moneda?: Database['public']['Enums']['currency'];
-          autorizo?: string | null;
           autorizador_id?: string | null;
           reintegro_id?: string | null;
           deleted_at?: string | null;
@@ -1301,7 +1322,6 @@ export type Database = {
           consumo_id: string | null;
           monto: number;
           moneda: Database['public']['Enums']['currency'];
-          autorizo: string | null;
           autorizador_id: string | null;
           notas: string | null;
           estado: Database['public']['Enums']['reintegro_status'];
@@ -1317,7 +1337,6 @@ export type Database = {
           consumo_id?: string | null;
           monto: number;
           moneda: Database['public']['Enums']['currency'];
-          autorizo?: string | null;
           autorizador_id?: string | null;
           notas?: string | null;
           estado?: Database['public']['Enums']['reintegro_status'];
@@ -1331,7 +1350,6 @@ export type Database = {
           consumo_id?: string | null;
           monto?: number;
           moneda?: Database['public']['Enums']['currency'];
-          autorizo?: string | null;
           autorizador_id?: string | null;
           notas?: string | null;
           estado?: Database['public']['Enums']['reintegro_status'];
@@ -1361,7 +1379,6 @@ export type Database = {
           tipo_label: string | null;
           referencia: string | null;
           banco: string | null;
-          autorizo: string | null;
           autorizador_id: string | null;
           notas: string | null;
           estado: Database['public']['Enums']['pago_estado'];
@@ -1391,7 +1408,6 @@ export type Database = {
           tipo_label?: string | null;
           referencia?: string | null;
           banco?: string | null;
-          autorizo?: string | null;
           autorizador_id?: string | null;
           notas?: string | null;
           estado?: Database['public']['Enums']['pago_estado'];
@@ -1418,7 +1434,6 @@ export type Database = {
           tipo_label?: string | null;
           referencia?: string | null;
           banco?: string | null;
-          autorizo?: string | null;
           autorizador_id?: string | null;
           notas?: string | null;
           estado?: Database['public']['Enums']['pago_estado'];

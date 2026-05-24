@@ -76,7 +76,7 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
 
   function exportCsv() {
     if (filtered.length === 0) return;
-    const header = ['Fecha', 'Empresa', 'Tarjeta', 'Proveedor', 'Concepto', 'Moneda', 'Monto', 'Autorizó', 'Voucher', 'Vence', 'Reintegro'].map(csvCell).join(',');
+    const header = ['Fecha', 'Empresa', 'Tarjeta', 'Proveedor', 'Concepto', 'Moneda', 'Monto', 'Voucher', 'Vence', 'Reintegro'].map(csvCell).join(',');
     const lines = filtered.map((r) => {
       const due = r.reintegro_id ? '' : addBusinessDays(r.fecha, REINTEGRO_DEADLINE_BIZDAYS);
       const left = r.reintegro_id ? '' : `${bizDaysLeft(due)}d`;
@@ -88,7 +88,6 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
         r.concepto,
         r.moneda,
         Number(r.monto).toFixed(2),
-        r.autorizo,
         r.voucher_num,
         left,
         r.reintegro_id ? '✓' : '',

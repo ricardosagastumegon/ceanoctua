@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { createCrudHooks } from '@/lib/createCrudHooks';
 import {
-  autorizadoresApi,
   empleadosApi,
   entidadesApi,
+  personasApi,
   proveedoresApi,
   tarjetasApi,
   tiposPagoApi,
@@ -34,7 +34,7 @@ export function describeError(error: unknown, action?: 'delete'): string {
 // CRUD hooks via factory — same signatures as before, ~150 lines less.
 // --------------------------------------------------------------------
 const entidades = createCrudHooks('entidades', entidadesApi);
-const autorizadores = createCrudHooks('autorizadores', autorizadoresApi);
+const personas = createCrudHooks('personas', personasApi);
 const empleados = createCrudHooks('empleados', empleadosApi);
 const tiposPago = createCrudHooks('tipos_pago', tiposPagoApi);
 const proveedores = createCrudHooks('proveedores', proveedoresApi);
@@ -42,7 +42,7 @@ const tarjetas = createCrudHooks('tarjetas_credito', tarjetasApi);
 
 export const adminKeys = {
   entidades: entidades.queryKey,
-  autorizadores: autorizadores.queryKey,
+  personas: personas.queryKey,
   empleados: empleados.queryKey,
   tiposPago: tiposPago.queryKey,
   proveedores: proveedores.queryKey,
@@ -55,11 +55,19 @@ export const useCreateEntidad = entidades.useCreate;
 export const useUpdateEntidad = entidades.useUpdate;
 export const useDeleteEntidad = entidades.useDelete;
 
-// Autorizadores
-export const useAutorizadores = autorizadores.useList;
-export const useCreateAutorizador = autorizadores.useCreate;
-export const useUpdateAutorizador = autorizadores.useUpdate;
-export const useDeleteAutorizador = autorizadores.useDelete;
+// Personas (Personal JD)
+export const usePersonas = personas.useList;
+export const useCreatePersona = personas.useCreate;
+export const useUpdatePersona = personas.useUpdate;
+export const useDeletePersona = personas.useDelete;
+
+// Sub-list filtered to autorizadores activos — para los selects de Consumos/Reintegros/Pagos.
+export function useAutorizadores() {
+  return useQuery({
+    queryKey: ['personas', 'autorizadores'],
+    queryFn: () => personasApi.listAutorizadores(),
+  });
+}
 
 // Empleados
 export const useEmpleados = empleados.useList;

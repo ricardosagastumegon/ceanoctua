@@ -5,7 +5,7 @@ import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { Reintegro, ReintegroInsert } from './api';
 import type { Database } from '@/types/database';
-import { useAutorizadores } from '@/modules/admin/hooks';
+import { useAutorizadores, useEntidades, useTarjetas } from '@/modules/admin/hooks';
 import { useConsumos } from '../consumos/hooks';
 
 type Currency = Database['public']['Enums']['currency'];
@@ -27,7 +27,6 @@ type FormState = {
   consumo_id: string;
   monto: string;
   moneda: Currency;
-  autorizo: string;
   autorizador_id: string;
   estado: ReintegroStatus;
   notas: string;
@@ -42,7 +41,6 @@ const empty: FormState = {
   consumo_id: '',
   monto: '',
   moneda: 'GTQ',
-  autorizo: '',
   autorizador_id: '',
   estado: 'generada',
   notas: '',
@@ -58,7 +56,6 @@ function fromRow(r: Reintegro | null | undefined): FormState {
     consumo_id: r.consumo_id ?? '',
     monto: String(r.monto),
     moneda: r.moneda,
-    autorizo: r.autorizo ?? '',
     autorizador_id: r.autorizador_id ?? '',
     estado: r.estado,
     notas: r.notas ?? '',
@@ -75,7 +72,6 @@ function toInput(s: FormState): ReintegroInsert {
     consumo_id: s.consumo_id || null,
     monto: Number.isFinite(n) ? n : 0,
     moneda: s.moneda,
-    autorizo: s.autorizo.trim() || null,
     autorizador_id: s.autorizador_id || null,
     estado: s.estado,
     notas: s.notas.trim() || null,
@@ -87,6 +83,8 @@ export function ReintegroForm({ initial, submitting, onSubmit, onCancel }: Catal
   const [error, setError] = useState<string | null>(null);
   const consumos = useConsumos();
   const autorizadores = useAutorizadores();
+  const entidades = useEntidades();
+  const tarjetas = useTarjetas();
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -104,10 +102,6 @@ export function ReintegroForm({ initial, submitting, onSubmit, onCancel }: Catal
           next.monto = String(c.monto);
           next.moneda = c.moneda;
         }
-      }
-      if (k === 'autorizador_id' && val) {
-        const a = (autorizadores.data ?? []).find((x) => x.id === val);
-        if (a) next.autorizo = a.nombre;
       }
       return next;
     });
@@ -148,9 +142,24 @@ export function ReintegroForm({ initial, submitting, onSubmit, onCancel }: Catal
       </Select>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <TextInput name="empresa" label="Empresa *" value={v.empresa} onChange={(e) => upd('empresa', e.target.value)} required />
-        <TextInput name="tc_empresa" label="TC empresa" value={v.tc_empresa} onChange={(e) => upd('tc_empresa', e.target.value)} />
-        <TextInput name="card_id" label="Tarjeta *" value={v.card_id} onChange={(e) => upd('card_id', e.target.value)} required />
+        <div>
+          <TextInput name="empresa" label="Empresa que reintegra *" value={v.empresa} onChange={(e) => upd('empresa', e.target.value)} required list="reintegros-empresas" hint="Sugerencias del catálogo" />
+          <datalist id="reintegros-empresas">
+            {(entidades.data ?? []).map((e) => <option key={e.id} value={e.nombre} />)}
+          </datalist>
+        </div>
+        <div>
+          <TextInput name="tc_empresa" label="Empresa dueña de TC" value={v.tc_empresa} onChange={(e) => upd('tc_empresa', e.target.value)} list="reintegros-tc-empresas" />
+          <datalist id="reintegros-tc-empresas">
+            {(tarjetas.data ?? []).filter((t) => t.empresa).map((t) => <option key={t.id} value={t.empresa as string} />)}
+          </datalist>
+        </div>
+        <div>
+          <TextInput name="card_id" label="Tarjeta *" value={v.card_id} onChange={(e) => upd('card_id', e.target.value)} required list="reintegros-tarjetas" />
+          <datalist id="reintegros-tarjetas">
+            {(tarjetas.data ?? []).map((t) => <option key={t.id} value={t.tc_id}>{t.empresa ?? ''}</option>)}
+          </datalist>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -161,15 +170,14 @@ export function ReintegroForm({ initial, submitting, onSubmit, onCancel }: Catal
           <option value="EUR">EUR</option>
           <option value="GBP">GBP</option>
         </Select>
-        <Select name="autorizador_id" label="Autorizador" value={v.autorizador_id} onChange={(e) => upd('autorizador_id', e.target.value)}>
-          <option value="">—</option>
+        <Select name="autorizador_id" label="Autorizó (Personal JD)" value={v.autorizador_id} onChange={(e) => upd('autorizador_id', e.target.value)}>
+          <option value="">— elegir —</option>
           {(autorizadores.data ?? []).map((a) => (
-            <option key={a.id} value={a.id}>{a.nombre}</option>
+            <option key={a.id} value={a.id}>{a.iniciales ? `${a.iniciales} · ` : ''}{a.nombre}</option>
           ))}
         </Select>
       </div>
 
-      <TextInput name="autorizo" label="Autorizó" value={v.autorizo} onChange={(e) => upd('autorizo', e.target.value)} />
       <TextArea name="notas" label="Notas" value={v.notas} onChange={(e) => upd('notas', e.target.value)} />
 
       {error && <p className="rounded-md border border-rust/30 bg-rust-l px-3 py-2 text-sm text-rust">{error}</p>}

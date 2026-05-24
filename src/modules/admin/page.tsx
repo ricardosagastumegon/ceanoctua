@@ -3,42 +3,42 @@ import { useAuth } from '@/lib/auth';
 import { CatalogPage } from './components/CatalogPage';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { EntidadForm } from './components/EntidadForm';
-import { AutorizadorForm } from './components/AutorizadorForm';
+import { PersonaForm } from './components/PersonaForm';
 import { EmpleadoForm } from './components/EmpleadoForm';
 import { TipoPagoForm } from './components/TipoPagoForm';
 import { ProveedorForm } from './components/ProveedorForm';
 import { TarjetaForm } from './components/TarjetaForm';
 import {
-  useAutorizadores,
-  useCreateAutorizador,
   useCreateEmpleado,
   useCreateEntidad,
+  useCreatePersona,
   useCreateProveedor,
   useCreateTarjeta,
   useCreateTipoPago,
-  useDeleteAutorizador,
   useDeleteEmpleado,
   useDeleteEntidad,
+  useDeletePersona,
   useDeleteProveedor,
   useDeleteTarjeta,
   useDeleteTipoPago,
   useEmpleados,
   useEntidades,
   useEntidadesRealtime,
+  usePersonas,
   useProveedores,
   useTarjetas,
   useTiposPago,
-  useUpdateAutorizador,
   useUpdateEmpleado,
   useUpdateEntidad,
+  useUpdatePersona,
   useUpdateProveedor,
   useUpdateTarjeta,
   useUpdateTipoPago,
 } from './hooks';
 import type {
-  Autorizador,
   Empleado,
   Entidad,
+  Persona,
   Proveedor,
   Tarjeta,
   TipoPago,
@@ -46,7 +46,7 @@ import type {
 
 type CatalogKey =
   | 'entidades'
-  | 'autorizadores'
+  | 'personas'
   | 'empleados'
   | 'tipos_pago'
   | 'proveedores'
@@ -54,7 +54,7 @@ type CatalogKey =
 
 const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'entidades', label: 'Entidades' },
-  { key: 'autorizadores', label: 'Autorizadores' },
+  { key: 'personas', label: 'Personal JD' },
   { key: 'empleados', label: 'Empleados' },
   { key: 'tipos_pago', label: 'Tipos de pago' },
   { key: 'proveedores', label: 'Proveedores' },
@@ -97,7 +97,7 @@ export default function AdminPage() {
       </div>
 
       {tab === 'entidades' && <EntidadesCatalog canEdit={isAdmin} />}
-      {tab === 'autorizadores' && <AutorizadoresCatalog canEdit={isAdmin} />}
+      {tab === 'personas' && <PersonasCatalog canEdit={isAdmin} />}
       {tab === 'empleados' && <EmpleadosCatalog canEdit={isAdmin} />}
       {tab === 'tipos_pago' && <TiposPagoCatalog canEdit={isAdmin} />}
       {tab === 'proveedores' && <ProveedoresCatalog canEdit={isAdmin} />}
@@ -159,15 +159,35 @@ function EntidadesCatalog({ canEdit }: { canEdit: boolean }) {
 }
 
 // ============================================================
-// Autorizadores
+// Personal JD (personas) — reemplaza Autorizadores en fase 15.
+// Una persona puede ser miembro de Junta Directiva, autorizador y/o
+// firmante. Los selects de "Autorizó" en consumos/reintegros/pagos
+// filtran por es_autorizador = true.
 // ============================================================
-function AutorizadoresCatalog({ canEdit }: { canEdit: boolean }) {
-  const query = useAutorizadores();
-  const create = useCreateAutorizador();
-  const update = useUpdateAutorizador();
-  const remove = useDeleteAutorizador();
+function PersonasCatalog({ canEdit }: { canEdit: boolean }) {
+  const query = usePersonas();
+  const create = useCreatePersona();
+  const update = useUpdatePersona();
+  const remove = useDeletePersona();
 
-  const columns: DataTableColumn<Autorizador>[] = [
+  function rolesChips(p: Persona) {
+    const chips: { label: string; cls: string }[] = [];
+    if (p.es_jd) chips.push({ label: 'JD', cls: 'bg-teal-l text-teal-d' });
+    if (p.es_autorizador) chips.push({ label: 'Autorizador', cls: 'bg-gold-light text-gold' });
+    if (p.es_firmante) chips.push({ label: 'Firmante', cls: 'bg-purple/10 text-purple' });
+    return chips;
+  }
+
+  const columns: DataTableColumn<Persona>[] = [
+    {
+      key: 'iniciales',
+      header: 'Iniciales',
+      sortable: true,
+      accessor: (r) => r.iniciales,
+      render: (r) => r.iniciales
+        ? <span className="font-mono text-xs font-semibold text-teal-d">{r.iniciales}</span>
+        : <span className="text-dark-3">—</span>,
+    },
     {
       key: 'nombre',
       header: 'Nombre',
@@ -176,15 +196,28 @@ function AutorizadoresCatalog({ canEdit }: { canEdit: boolean }) {
       render: (r) => <span className="font-medium text-dark">{r.nombre}</span>,
     },
     { key: 'nit', header: 'NIT', sortable: true, accessor: (r) => r.nit, render: (r) => r.nit ?? '—' },
+    {
+      key: 'roles',
+      header: 'Roles',
+      render: (r) => (
+        <span className="flex flex-wrap gap-1">
+          {rolesChips(r).map((c) => (
+            <span key={c.label} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.cls}`}>
+              {c.label}
+            </span>
+          ))}
+        </span>
+      ),
+    },
     { key: 'dir', header: 'Dirección', accessor: (r) => r.dir, render: (r) => r.dir ?? '—' },
   ];
 
   return (
     <CatalogPage
-      title="Autorizadores"
-      description="Personas autorizadas para aprobar consumos, reintegros y pagos."
-      newLabel="+ Nuevo autorizador"
-      modalSize="md"
+      title="Personal JD"
+      description="Fuente única de personas (Junta Directiva + autorizadores + firmantes). Reemplaza la tabla Autorizadores."
+      newLabel="+ Nueva persona"
+      modalSize="lg"
       columns={columns}
       rows={query.data ?? []}
       loading={query.isLoading}
@@ -195,7 +228,7 @@ function AutorizadoresCatalog({ canEdit }: { canEdit: boolean }) {
       onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
       onDelete={(id) => remove.mutateAsync(id)}
       submitting={create.isPending || update.isPending}
-      Form={AutorizadorForm}
+      Form={PersonaForm}
       rowLabel={(r) => r.nombre}
       canEdit={canEdit}
     />

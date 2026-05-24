@@ -28,29 +28,38 @@ export const entidadesApi = {
   },
 };
 
-// Autorizadores ----------------------------------------------------------
-export type Autorizador = Database['public']['Tables']['autorizadores']['Row'];
-export type AutorizadorInsert = Database['public']['Tables']['autorizadores']['Insert'];
-export type AutorizadorUpdate = Database['public']['Tables']['autorizadores']['Update'];
+// Personas (Personal JD · reemplaza autorizadores en fase 15) ------------
+export type Persona = Database['public']['Tables']['personas']['Row'];
+export type PersonaInsert = Database['public']['Tables']['personas']['Insert'];
+export type PersonaUpdate = Database['public']['Tables']['personas']['Update'];
 
-export const autorizadoresApi = {
-  async list(): Promise<Autorizador[]> {
-    const { data, error } = await supabase.from('autorizadores').select('*').order('nombre');
+export const personasApi = {
+  async list(): Promise<Persona[]> {
+    const { data, error } = await supabase.from('personas').select('*').order('nombre');
     if (error) throw error;
     return data ?? [];
   },
-  async create(input: AutorizadorInsert): Promise<Autorizador> {
-    const { data, error } = await supabase.from('autorizadores').insert(input).select('*').single();
+  async listAutorizadores(): Promise<Persona[]> {
+    const { data, error } = await supabase
+      .from('personas')
+      .select('*')
+      .eq('es_autorizador', true)
+      .order('nombre');
+    if (error) throw error;
+    return data ?? [];
+  },
+  async create(input: PersonaInsert): Promise<Persona> {
+    const { data, error } = await supabase.from('personas').insert(input).select('*').single();
     if (error) throw error;
     return data;
   },
-  async update(id: string, patch: AutorizadorUpdate): Promise<Autorizador> {
-    const { data, error } = await supabase.from('autorizadores').update(patch).eq('id', id).select('*').single();
+  async update(id: string, patch: PersonaUpdate): Promise<Persona> {
+    const { data, error } = await supabase.from('personas').update(patch).eq('id', id).select('*').single();
     if (error) throw error;
     return data;
   },
   async remove(id: string): Promise<void> {
-    const { error } = await supabase.from('autorizadores').delete().eq('id', id);
+    const { error } = await supabase.from('personas').delete().eq('id', id);
     if (error) throw error;
   },
 };

@@ -6,6 +6,7 @@ import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { Vale, ValeInsert } from './api';
 import type { Database } from '@/types/database';
 import { useLiquidaciones } from '../liquidaciones/hooks';
+import { useEmpleados, useEntidades } from '@/modules/admin/hooks';
 
 type Currency = Database['public']['Enums']['currency'];
 type ValeStatus = Database['public']['Enums']['vale_status'];
@@ -27,7 +28,9 @@ type FormState = {
   moneda: Currency;
   monto: string;
   vale_a: string;
+  empleado_id: string;
   entidad: string;
+  entidad_id: string;
   concepto: string;
   lugar: string;
   estado: ValeStatus;
@@ -42,7 +45,9 @@ const empty: FormState = {
   moneda: 'GTQ',
   monto: '',
   vale_a: '',
+  empleado_id: '',
   entidad: '',
+  entidad_id: '',
   concepto: '',
   lugar: '',
   estado: 'Creado',
@@ -57,7 +62,9 @@ function fromRow(r: Vale | null | undefined): FormState {
     moneda: r.moneda,
     monto: String(r.monto),
     vale_a: r.vale_a ?? '',
+    empleado_id: r.empleado_id ?? '',
     entidad: r.entidad ?? '',
+    entidad_id: r.entidad_id ?? '',
     concepto: r.concepto ?? '',
     lugar: r.lugar ?? '',
     estado: r.estado,
@@ -73,7 +80,9 @@ function toInput(s: FormState): ValeInsert {
     moneda: s.moneda,
     monto: Number.isFinite(n) ? n : 0,
     vale_a: s.vale_a.trim(),
+    empleado_id: s.empleado_id || null,
     entidad: s.entidad.trim() || null,
+    entidad_id: s.entidad_id || null,
     concepto: s.concepto.trim() || null,
     lugar: s.lugar.trim() || null,
     estado: s.estado,
@@ -86,6 +95,8 @@ export function ValeForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
   const [v, setV] = useState<FormState>(fromRow(initial));
   const [error, setError] = useState<string | null>(null);
   const liqs = useLiquidaciones();
+  const empleados = useEmpleados();
+  const entidades = useEntidades();
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -93,7 +104,18 @@ export function ValeForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
   }, [initial]);
 
   function upd<K extends keyof FormState>(k: K, val: FormState[K]) {
-    setV((p) => ({ ...p, [k]: val }));
+    setV((p) => {
+      const next = { ...p, [k]: val };
+      if (k === 'empleado_id' && val) {
+        const emp = (empleados.data ?? []).find((x) => x.id === val);
+        if (emp) next.vale_a = emp.nombre;
+      }
+      if (k === 'entidad_id' && val) {
+        const e = (entidades.data ?? []).find((x) => x.id === val);
+        if (e) next.entidad = e.nombre;
+      }
+      return next;
+    });
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -128,11 +150,23 @@ export function ValeForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
         <TextInput name="monto" label="Monto *" type="number" min="0" step="0.01" value={v.monto} onChange={(e) => upd('monto', e.target.value)} required hint="visible en el PDF" />
         <TextInput name="fecha" label="Fecha" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} />
       </div>
-      <TextInput name="vale_a" label="Vale a (firma solicitante) *" value={v.vale_a} onChange={(e) => upd('vale_a', e.target.value)} required autoFocus />
+      <Select name="empleado_id" label="Vale a (empleado del catálogo)" value={v.empleado_id} onChange={(e) => upd('empleado_id', e.target.value)}>
+        <option value="">— elegir o escribir abajo —</option>
+        {(empleados.data ?? []).map((e) => (
+          <option key={e.id} value={e.id}>{e.nombre}{e.puesto ? ` · ${e.puesto}` : ''}</option>
+        ))}
+      </Select>
+      <TextInput name="vale_a" label="Vale a (firma solicitante) *" value={v.vale_a} onChange={(e) => upd('vale_a', e.target.value)} required autoFocus hint="Auto desde dropdown o manual" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextInput name="entidad" label="Entidad a liquidar vale" value={v.entidad} onChange={(e) => upd('entidad', e.target.value)} />
+        <Select name="entidad_id" label="Entidad (catálogo)" value={v.entidad_id} onChange={(e) => upd('entidad_id', e.target.value)}>
+          <option value="">— elegir o escribir abajo —</option>
+          {(entidades.data ?? []).map((e) => (
+            <option key={e.id} value={e.id}>{e.nombre}</option>
+          ))}
+        </Select>
         <TextInput name="lugar" label="Lugar" value={v.lugar} onChange={(e) => upd('lugar', e.target.value)} />
       </div>
+      <TextInput name="entidad" label="Entidad a liquidar (texto)" value={v.entidad} onChange={(e) => upd('entidad', e.target.value)} hint="Auto desde dropdown o manual" />
       <TextArea name="concepto" label="Concepto" value={v.concepto} onChange={(e) => upd('concepto', e.target.value)} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

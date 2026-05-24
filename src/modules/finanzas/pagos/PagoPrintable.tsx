@@ -81,7 +81,7 @@ export function PagoPrintable({ pago }: { pago: Pago }) {
 
       <section className="grid grid-cols-2 gap-8 border-t border-sand px-6 py-8">
         <Sig label="Solicitado" />
-        <Sig label="Autorizado" name={pago.autorizo ?? ''} />
+        <Sig label="Autorizado" />
       </section>
 
       <footer className="border-t border-sand bg-sand-l px-6 py-3 text-center text-[10px] text-dark-3">

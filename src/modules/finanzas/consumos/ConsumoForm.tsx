@@ -19,7 +19,6 @@ type FormState = {
   concepto: string;
   monto: string;
   moneda: Currency;
-  autorizo: string;
   autorizador_id: string;
 };
 
@@ -34,7 +33,6 @@ const empty: FormState = {
   concepto: '',
   monto: '',
   moneda: 'GTQ',
-  autorizo: '',
   autorizador_id: '',
 };
 
@@ -50,7 +48,6 @@ function fromRow(r: Consumo | null | undefined): FormState {
     concepto: r.concepto ?? '',
     monto: String(r.monto),
     moneda: r.moneda,
-    autorizo: r.autorizo ?? '',
     autorizador_id: r.autorizador_id ?? '',
   };
 }
@@ -67,7 +64,6 @@ function toInput(s: FormState): ConsumoInsert {
     concepto: s.concepto.trim(),
     monto: Number.isFinite(n) ? n : 0,
     moneda: s.moneda,
-    autorizo: s.autorizo.trim() || null,
     autorizador_id: s.autorizador_id || null,
   };
 }
@@ -98,10 +94,6 @@ export function ConsumoForm({ initial, submitting, onSubmit, onCancel }: Catalog
       if (k === 'proveedor_id' && val) {
         const pr = (proveedores.data ?? []).find((x) => x.id === val);
         if (pr) next.proveedor = pr.nombre;
-      }
-      if (k === 'autorizador_id' && val) {
-        const a = (autorizadores.data ?? []).find((x) => x.id === val);
-        if (a) next.autorizo = a.nombre;
       }
       return next;
     });
@@ -157,15 +149,14 @@ export function ConsumoForm({ initial, submitting, onSubmit, onCancel }: Catalog
       </Select>
       <TextInput name="proveedor" label="Proveedor *" value={v.proveedor} onChange={(e) => upd('proveedor', e.target.value)} required />
       <TextArea name="concepto" label="Concepto *" value={v.concepto} onChange={(e) => upd('concepto', e.target.value)} required />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Select name="autorizador_id" label="Autorizador" value={v.autorizador_id} onChange={(e) => upd('autorizador_id', e.target.value)}>
-          <option value="">— elegir —</option>
-          {(autorizadores.data ?? []).map((a) => (
-            <option key={a.id} value={a.id}>{a.nombre}</option>
-          ))}
-        </Select>
-        <TextInput name="autorizo" label="Autorizó" value={v.autorizo} onChange={(e) => upd('autorizo', e.target.value)} />
-      </div>
+      <Select name="autorizador_id" label="Autorizó (Personal JD)" value={v.autorizador_id} onChange={(e) => upd('autorizador_id', e.target.value)}>
+        <option value="">— elegir autorizador —</option>
+        {(autorizadores.data ?? []).map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.iniciales ? `${a.iniciales} · ` : ''}{a.nombre}
+          </option>
+        ))}
+      </Select>
 
       {error && <p className="rounded-md border border-rust/30 bg-rust-l px-3 py-2 text-sm text-rust">{error}</p>}
 

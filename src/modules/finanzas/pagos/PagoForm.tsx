@@ -31,7 +31,6 @@ type FormState = {
   tipo_label: string;
   referencia: string;
   banco: string;
-  autorizo: string;
   autorizador_id: string;
   estado: PagoEstado;
   consumo_id: string;
@@ -56,7 +55,6 @@ const empty: FormState = {
   tipo_label: 'Pago de Contado',
   referencia: '',
   banco: '',
-  autorizo: '',
   autorizador_id: '',
   estado: 'Programado',
   consumo_id: '',
@@ -82,7 +80,6 @@ function fromRow(r: Pago | null | undefined): FormState {
     tipo_label: r.tipo_label ?? 'Pago de Contado',
     referencia: r.referencia ?? '',
     banco: r.banco ?? '',
-    autorizo: r.autorizo ?? '',
     autorizador_id: r.autorizador_id ?? '',
     estado: r.estado,
     consumo_id: r.consumo_id ?? '',
@@ -113,7 +110,6 @@ function toInput(s: FormState): PagoInsert {
     tipo_label: s.tipo_label.trim() || null,
     referencia: s.referencia.trim() || null,
     banco: s.banco.trim() || null,
-    autorizo: s.autorizo.trim() || null,
     autorizador_id: s.autorizador_id || null,
     estado: s.estado,
     consumo_id: s.consumo_id || null,
@@ -147,10 +143,6 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
           next.proveedor = pr.nombre;
           if (pr.nit) next.nit = pr.nit;
         }
-      }
-      if (k === 'autorizador_id' && val) {
-        const a = (autorizadores.data ?? []).find((x) => x.id === val);
-        if (a) next.autorizo = a.nombre;
       }
       if (k === 'consumo_id' && val) {
         // Linking to a consumo → mark this as TC-Reintegro context (label only; tipo stays valid enum)
@@ -275,9 +267,11 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="referencia" label="Referencia" value={v.referencia} onChange={(e) => upd('referencia', e.target.value)} hint="N° cheque / transf" />
         <TextInput name="banco" label="Banco" value={v.banco} onChange={(e) => upd('banco', e.target.value)} />
-        <Select name="autorizador_id" label="Autorizador" value={v.autorizador_id} onChange={(e) => upd('autorizador_id', e.target.value)}>
-          <option value="">—</option>
-          {(autorizadores.data ?? []).map((a) => (<option key={a.id} value={a.id}>{a.nombre}</option>))}
+        <Select name="autorizador_id" label="Autorizó (Personal JD)" value={v.autorizador_id} onChange={(e) => upd('autorizador_id', e.target.value)}>
+          <option value="">— elegir —</option>
+          {(autorizadores.data ?? []).map((a) => (
+            <option key={a.id} value={a.id}>{a.iniciales ? `${a.iniciales} · ` : ''}{a.nombre}</option>
+          ))}
         </Select>
       </div>
 
@@ -292,7 +286,6 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
         {v.consumo_id && <p className="mt-2 text-xs text-teal-d">Este pago se considera TC-Reintegro (referencia auto al voucher).</p>}
       </fieldset>
 
-      <TextInput name="autorizo" label="Autorizó" value={v.autorizo} onChange={(e) => upd('autorizo', e.target.value)} />
       <TextArea name="notas" label="Notas" value={v.notas} onChange={(e) => upd('notas', e.target.value)} />
 
       {error && <p className="rounded-md border border-rust/30 bg-rust-l px-3 py-2 text-sm text-rust">{error}</p>}

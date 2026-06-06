@@ -8,17 +8,20 @@ import { EmpleadoForm } from './components/EmpleadoForm';
 import { TipoPagoForm } from './components/TipoPagoForm';
 import { ProveedorForm } from './components/ProveedorForm';
 import { TarjetaForm } from './components/TarjetaForm';
+import { StatusSpForm } from './components/StatusSpForm';
 import {
   useCreateEmpleado,
   useCreateEntidad,
   useCreatePersona,
   useCreateProveedor,
+  useCreateStatusSp,
   useCreateTarjeta,
   useCreateTipoPago,
   useDeleteEmpleado,
   useDeleteEntidad,
   useDeletePersona,
   useDeleteProveedor,
+  useDeleteStatusSp,
   useDeleteTarjeta,
   useDeleteTipoPago,
   useEmpleados,
@@ -26,12 +29,14 @@ import {
   useEntidadesRealtime,
   usePersonas,
   useProveedores,
+  useStatusSp,
   useTarjetas,
   useTiposPago,
   useUpdateEmpleado,
   useUpdateEntidad,
   useUpdatePersona,
   useUpdateProveedor,
+  useUpdateStatusSp,
   useUpdateTarjeta,
   useUpdateTipoPago,
 } from './hooks';
@@ -40,6 +45,7 @@ import type {
   Entidad,
   Persona,
   Proveedor,
+  StatusSp,
   Tarjeta,
   TipoPago,
 } from './api';
@@ -50,7 +56,8 @@ type CatalogKey =
   | 'empleados'
   | 'tipos_pago'
   | 'proveedores'
-  | 'tarjetas';
+  | 'tarjetas'
+  | 'status_sp';
 
 const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'entidades', label: 'Entidades' },
@@ -59,6 +66,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'tipos_pago', label: 'Tipos de pago' },
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
+  { key: 'status_sp', label: 'Status Solicitud de Pago' },
 ];
 
 export default function AdminPage() {
@@ -102,6 +110,7 @@ export default function AdminPage() {
       {tab === 'tipos_pago' && <TiposPagoCatalog canEdit={isAdmin} />}
       {tab === 'proveedores' && <ProveedoresCatalog canEdit={isAdmin} />}
       {tab === 'tarjetas' && <TarjetasCatalog canEdit={isAdmin} />}
+      {tab === 'status_sp' && <StatusSpCatalog canEdit={isAdmin} />}
     </section>
   );
 }
@@ -451,6 +460,76 @@ function TarjetasCatalog({ canEdit }: { canEdit: boolean }) {
       submitting={create.isPending || update.isPending}
       Form={TarjetaForm}
       rowLabel={(r) => `${tipoLabel[r.tipo]} ${r.tc_id}`}
+      canEdit={canEdit}
+    />
+  );
+}
+
+// ============================================================
+// Status Solicitud de Pago (catálogo nuevo · Fase 16 · F-0)
+// Alimenta el dropdown de estado en las Solicitudes de Pago (F-5).
+// ============================================================
+function StatusSpCatalog({ canEdit }: { canEdit: boolean }) {
+  const query = useStatusSp();
+  const create = useCreateStatusSp();
+  const update = useUpdateStatusSp();
+  const remove = useDeleteStatusSp();
+
+  const columns: DataTableColumn<StatusSp>[] = [
+    {
+      key: 'orden',
+      header: 'Orden',
+      sortable: true,
+      accessor: (r) => r.orden,
+      render: (r) => (
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-teal-l font-mono text-xs font-bold text-teal-d">
+          {r.orden}
+        </span>
+      ),
+    },
+    {
+      key: 'nombre',
+      header: 'Nombre',
+      sortable: true,
+      accessor: (r) => r.nombre,
+      render: (r) => <span className="font-medium text-dark">{r.nombre}</span>,
+    },
+    {
+      key: 'activo',
+      header: 'Estado',
+      sortable: true,
+      accessor: (r) => (r.activo ? 1 : 0),
+      render: (r) =>
+        r.activo ? (
+          <span className="inline-flex rounded-full bg-teal-l px-2 py-0.5 text-xs font-semibold text-teal-d">
+            Activo
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-sand-l px-2 py-0.5 text-xs font-semibold text-dark-3">
+            Inactivo
+          </span>
+        ),
+    },
+  ];
+
+  return (
+    <CatalogPage
+      title="Status · Solicitud de Pago"
+      description="6 estados del flujo de SP (Generado → Pagado). Se usan en el dropdown de Pagos."
+      newLabel="+ Nuevo status"
+      modalSize="md"
+      columns={columns}
+      rows={query.data ?? []}
+      loading={query.isLoading}
+      isError={query.isError}
+      error={query.error}
+      onRetry={() => void query.refetch()}
+      onCreate={(values) => create.mutateAsync(values)}
+      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+      onDelete={(id) => remove.mutateAsync(id)}
+      submitting={create.isPending || update.isPending}
+      Form={StatusSpForm}
+      rowLabel={(r) => r.nombre}
       canEdit={canEdit}
     />
   );

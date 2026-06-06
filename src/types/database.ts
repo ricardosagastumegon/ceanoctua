@@ -568,6 +568,23 @@ export type Database = {
       };
 
       // ====================================================
+      // Status Solicitud de Pago (Fase 16 · F-0)
+      // ====================================================
+      status_solicitud_pago: {
+        Row: {
+          id: string;
+          nombre: string;
+          orden: number;
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; orden: number; activo?: boolean };
+        Update: { nombre?: string; orden?: number; activo?: boolean };
+        Relationships: [];
+      };
+
+      // ====================================================
       // Miel SJ (Fase 8)
       // ====================================================
       miel_constancias: {

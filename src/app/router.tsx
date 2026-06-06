@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import Login from './Login';
 
@@ -13,7 +13,7 @@ const JmPage = lazy(() => import('@/modules/jm/page'));
 const AaPage = lazy(() => import('@/modules/aa/page'));
 const EgPage = lazy(() => import('@/modules/eg/page'));
 const PePage = lazy(() => import('@/modules/pe/page'));
-const CcBoardPage = lazy(() => import('@/modules/cc-board/page'));
+// CcBoardPage eliminada en Fase 16 · F-0 (mergeada con Finanzas).
 const ArriazaPage = lazy(() => import('@/modules/arriaza/page'));
 const CeaPage = lazy(() => import('@/modules/cea/page'));
 const AdminPage = lazy(() => import('@/modules/admin/page'));
@@ -48,7 +48,10 @@ export const router = createBrowserRouter([
       { path: 'aa', element: withSuspense(<AaPage />) },
       { path: 'eg', element: withSuspense(<EgPage />) },
       { path: 'pe', element: withSuspense(<PePage />) },
-      { path: 'cc-board', element: withSuspense(<CcBoardPage />) },
+      // /cc-board redirige a /finanzas con hash a la sub-sección de vales,
+      // ya que CC Board fue absorbida por Finanzas en Fase 16 · F-0.
+      { path: 'cc-board', element: <Navigate to="/finanzas#vales" replace /> },
+      { path: 'cc-board/*', element: <Navigate to="/finanzas#vales" replace /> },
       { path: 'arriaza', element: withSuspense(<ArriazaPage />) },
       { path: 'cea', element: withSuspense(<CeaPage />) },
       { path: 'admin', element: withSuspense(<AdminPage />) },

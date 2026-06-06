@@ -28,6 +28,45 @@ export const entidadesApi = {
   },
 };
 
+// Status Solicitud de Pago (catálogo nuevo · fase 16 · F-0) --------------
+export type StatusSp = Database['public']['Tables']['status_solicitud_pago']['Row'];
+export type StatusSpInsert = Database['public']['Tables']['status_solicitud_pago']['Insert'];
+export type StatusSpUpdate = Database['public']['Tables']['status_solicitud_pago']['Update'];
+
+export const statusSpApi = {
+  async list(): Promise<StatusSp[]> {
+    const { data, error } = await supabase
+      .from('status_solicitud_pago')
+      .select('*')
+      .order('orden');
+    if (error) throw error;
+    return data ?? [];
+  },
+  async create(input: StatusSpInsert): Promise<StatusSp> {
+    const { data, error } = await supabase
+      .from('status_solicitud_pago')
+      .insert(input)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, patch: StatusSpUpdate): Promise<StatusSp> {
+    const { data, error } = await supabase
+      .from('status_solicitud_pago')
+      .update(patch)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase.from('status_solicitud_pago').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
 // Personas (Personal JD · reemplaza autorizadores en fase 15) ------------
 export type Persona = Database['public']['Tables']['personas']['Row'];
 export type PersonaInsert = Database['public']['Tables']['personas']['Insert'];

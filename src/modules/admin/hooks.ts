@@ -7,6 +7,7 @@ import {
   entidadesApi,
   personasApi,
   proveedoresApi,
+  statusSpApi,
   tarjetasApi,
   tiposPagoApi,
 } from './api';
@@ -39,6 +40,7 @@ const empleados = createCrudHooks('empleados', empleadosApi);
 const tiposPago = createCrudHooks('tipos_pago', tiposPagoApi);
 const proveedores = createCrudHooks('proveedores', proveedoresApi);
 const tarjetas = createCrudHooks('tarjetas_credito', tarjetasApi);
+const statusSp = createCrudHooks('status_solicitud_pago', statusSpApi);
 
 export const adminKeys = {
   entidades: entidades.queryKey,
@@ -47,7 +49,14 @@ export const adminKeys = {
   tiposPago: tiposPago.queryKey,
   proveedores: proveedores.queryKey,
   tarjetas: tarjetas.queryKey,
+  statusSp: statusSp.queryKey,
 };
+
+// Status Solicitud de Pago
+export const useStatusSp = statusSp.useList;
+export const useCreateStatusSp = statusSp.useCreate;
+export const useUpdateStatusSp = statusSp.useUpdate;
+export const useDeleteStatusSp = statusSp.useDelete;
 
 // Entidades
 export const useEntidades = entidades.useList;

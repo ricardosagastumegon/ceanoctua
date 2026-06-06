@@ -41,4 +41,7 @@ dist-ssr
 Thumbs.db
 
 # Local reference materials (not part of the build)
-reference/
+reference/*
+# pero los mockups del refactor SÍ van al repo (referencia para Claude Code)
+!reference/finanzas-mockups/
+!reference/finanzas-mockups/**

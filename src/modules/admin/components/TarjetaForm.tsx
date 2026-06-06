@@ -19,6 +19,7 @@ type FormState = {
   nit: string;
   direccion: string;
   titular: string;
+  color: string;
 };
 
 const empty: FormState = {
@@ -32,6 +33,7 @@ const empty: FormState = {
   nit: '',
   direccion: '',
   titular: '',
+  color: '#0d2b2e',
 };
 
 function fromRow(r: Tarjeta | null | undefined): FormState {
@@ -47,12 +49,12 @@ function fromRow(r: Tarjeta | null | undefined): FormState {
     nit: r.nit ?? '',
     direccion: r.direccion ?? '',
     titular: r.titular ?? '',
+    color: r.color ?? '#0d2b2e',
   };
 }
 
 function toInput(s: FormState): TarjetaInsert {
   const trim = (v: string) => v.trim() || null;
-  // Conditional fields: only send the ones that apply for the selected tipo.
   const base: TarjetaInsert = {
     tipo: s.tipo,
     tc_id: s.tc_id.trim(),
@@ -60,6 +62,7 @@ function toInput(s: FormState): TarjetaInsert {
     banco: trim(s.banco),
     limite: trim(s.limite),
     notas: trim(s.notas),
+    color: s.color || null,
   };
   if (s.tipo === 'corporativa') {
     base.empresa = trim(s.empresa);
@@ -129,6 +132,36 @@ export function TarjetaForm({
         <TextInput name="banco" label="Banco" value={values.banco} onChange={(e) => upd('banco', e.target.value)} />
         <TextInput name="limite" label="Límite" value={values.limite} onChange={(e) => upd('limite', e.target.value)} />
       </div>
+
+      {/* F-4: color del Ícono en el dashboard de TC corporativas */}
+      {values.tipo === 'corporativa' && (
+        <div className="flex items-center gap-3 rounded-md border border-sand bg-sand-l/30 p-3">
+          <label htmlFor="color-picker" className="text-xs font-semibold uppercase tracking-wider text-dark-2">
+            Color de la card
+          </label>
+          <input
+            id="color-picker"
+            type="color"
+            value={values.color}
+            onChange={(e) => upd('color', e.target.value)}
+            className="h-9 w-12 cursor-pointer rounded border border-sand bg-white"
+          />
+          <TextInput
+            name="color"
+            label=""
+            value={values.color}
+            onChange={(e) => upd('color', e.target.value)}
+            className="flex-1"
+            placeholder="#0d2b2e"
+          />
+          <div
+            className="h-9 w-24 rounded-md text-center text-xs font-semibold leading-9 text-white"
+            style={{ background: values.color }}
+          >
+            preview
+          </div>
+        </div>
+      )}
 
       {/* Campos condicionales según tipo */}
       {values.tipo === 'corporativa' ? (

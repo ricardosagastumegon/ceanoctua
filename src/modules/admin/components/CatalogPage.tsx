@@ -33,6 +33,8 @@ export type CatalogPageProps<TRow extends { id: string }, TInput> = {
   modalSize?: 'sm' | 'md' | 'lg' | 'xl';
   /** Optional extra actions rendered before Editar/Borrar (e.g. "Ver PDF"). */
   extraActions?: (row: TRow) => ReactNode;
+  /** Optional extra button shown next to the "+ Nuevo" (e.g. CSV importer). */
+  headerExtra?: ReactNode;
 };
 
 export function CatalogPage<TRow extends { id: string }, TInput>({
@@ -55,6 +57,7 @@ export function CatalogPage<TRow extends { id: string }, TInput>({
   newLabel = '+ Nuevo',
   modalSize = 'lg',
   extraActions,
+  headerExtra,
 }: CatalogPageProps<TRow, TInput>) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -104,15 +107,18 @@ export function CatalogPage<TRow extends { id: string }, TInput>({
           <h2 className="font-heading text-xl font-semibold text-dark">{title}</h2>
           {description && <p className="mt-1 text-sm text-dark-2">{description}</p>}
         </div>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditing(null)}
-            className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
-          >
-            {newLabel}
-          </button>
-        )}
+        <div className="flex gap-2">
+          {headerExtra}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
+            >
+              {newLabel}
+            </button>
+          )}
+        </div>
       </header>
 
       <DataTable<TRow>

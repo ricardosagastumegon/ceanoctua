@@ -9,6 +9,7 @@ import { useConsumos, useCreateConsumo, useDeleteConsumo, useUpdateConsumo } fro
 import type { Consumo } from './api';
 import { ConsumoForm } from './ConsumoForm';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
+import { TcGallery } from './TcGallery';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -137,6 +138,8 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
           ⬇ Exportar CSV
         </button>
       </header>
+
+      <TcGallery filterCard={filterCard} onSelectCard={setFilterCard} />
 
       <div className="grid grid-cols-1 gap-2 rounded-md border border-sand bg-white p-3 sm:grid-cols-3">
         <select

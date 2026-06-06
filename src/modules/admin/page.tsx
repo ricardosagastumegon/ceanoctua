@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { CatalogPage } from './components/CatalogPage';
 import type { DataTableColumn } from '@/components/ui/DataTable';
+import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { EntidadForm } from './components/EntidadForm';
 import { PersonaForm } from './components/PersonaForm';
 import { EmpleadoForm } from './components/EmpleadoForm';
@@ -124,6 +125,16 @@ function EntidadesCatalog({ canEdit }: { canEdit: boolean }) {
   const update = useUpdateEntidad();
   const remove = useDeleteEntidad();
   useEntidadesRealtime();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const importMappings: ColumnMapping<Entidad>[] = [
+    { headerAlias: 'nombre|name|entidad|razon', field: 'nombre', required: true },
+    { headerAlias: 'nit', field: 'nit' },
+    { headerAlias: 'direccion|dirección|address|dir', field: 'direccion' },
+    { headerAlias: 'contacto|contact', field: 'contacto' },
+    { headerAlias: 'telefono|tel|phone', field: 'telefono' },
+    { headerAlias: 'email|correo', field: 'email' },
+  ];
 
   const columns: DataTableColumn<Entidad>[] = [
     {
@@ -146,24 +157,45 @@ function EntidadesCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Entidades"
-      description="Empresas y organizaciones registradas."
-      newLabel="+ Nueva entidad"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={EntidadForm}
-      rowLabel={(r) => r.nombre}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Entidades"
+        description="Empresas y organizaciones registradas."
+        newLabel="+ Nueva entidad"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={EntidadForm}
+        rowLabel={(r) => r.nombre}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<Entidad>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar entidades desde CSV/Excel"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').EntidadInsert); }}
+        exampleCsv={'nombre,nit,direccion,contacto,telefono,email\nAGROATLANTIC,7507658,14 Ave 2-60 Zona 15,Juan Pérez,2222-3333,info@agro.com'}
+      />
+    </>
   );
 }
 
@@ -252,6 +284,16 @@ function EmpleadosCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreateEmpleado();
   const update = useUpdateEmpleado();
   const remove = useDeleteEmpleado();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const importMappings: ColumnMapping<Empleado>[] = [
+    { headerAlias: 'nombre|name|empleado', field: 'nombre', required: true },
+    { headerAlias: 'puesto|cargo|position', field: 'puesto' },
+    { headerAlias: 'depto|departamento|department|area', field: 'depto' },
+    { headerAlias: 'empresa|company', field: 'empresa' },
+    { headerAlias: 'email|correo', field: 'email' },
+    { headerAlias: 'telefono|tel|phone', field: 'telefono' },
+  ];
 
   const columns: DataTableColumn<Empleado>[] = [
     {
@@ -266,25 +308,46 @@ function EmpleadosCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Empleados"
-      description="Personal interno (alimenta selectores en otros módulos)."
-      newLabel="+ Nuevo empleado"
-      modalSize="md"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={EmpleadoForm}
-      rowLabel={(r) => r.nombre}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Empleados"
+        description="Personal interno (alimenta selectores en otros módulos)."
+        newLabel="+ Nuevo empleado"
+        modalSize="md"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={EmpleadoForm}
+        rowLabel={(r) => r.nombre}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<Empleado>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar empleados desde CSV/Excel"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').EmpleadoInsert); }}
+        exampleCsv={'nombre,puesto,depto,empresa,email,telefono\nJuan Pérez,Auxiliar,Contabilidad,AGROATLANTIC,juan@ejemplo.com,5555-5555'}
+      />
+    </>
   );
 }
 
@@ -338,6 +401,18 @@ function ProveedoresCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreateProveedor();
   const update = useUpdateProveedor();
   const remove = useDeleteProveedor();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const importMappings: ColumnMapping<Proveedor>[] = [
+    { headerAlias: 'nombre|name|proveedor', field: 'nombre', required: true },
+    { headerAlias: 'razon|razón social|razon social|legal', field: 'razon' },
+    { headerAlias: 'nit', field: 'nit' },
+    { headerAlias: 'giro|rubro|categoria', field: 'giro' },
+    { headerAlias: 'contacto|contact', field: 'contacto' },
+    { headerAlias: 'tel|telefono|teléfono|phone', field: 'tel' },
+    { headerAlias: 'email|correo', field: 'email' },
+    { headerAlias: 'direccion|dirección|address', field: 'direccion' },
+  ];
 
   const columns: DataTableColumn<Proveedor>[] = [
     {
@@ -368,24 +443,45 @@ function ProveedoresCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Proveedores"
-      description="Proveedores reales (no es el directorio — eso va con CEA)."
-      newLabel="+ Nuevo proveedor"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={ProveedorForm}
-      rowLabel={(r) => r.nombre}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Proveedores"
+        description="Proveedores reales (no es el directorio — eso va con CEA)."
+        newLabel="+ Nuevo proveedor"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={ProveedorForm}
+        rowLabel={(r) => r.nombre}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<Proveedor>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar proveedores desde CSV/Excel"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').ProveedorInsert); }}
+        exampleCsv={'nombre,razon,nit,giro,tel,email\nFerretería La Esquina,Ferretería La Esquina S.A.,1234567-8,Materiales,2222-3333,info@ferr.com'}
+      />
+    </>
   );
 }
 

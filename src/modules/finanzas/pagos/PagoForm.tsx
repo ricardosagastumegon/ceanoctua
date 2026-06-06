@@ -32,7 +32,7 @@ type FormState = {
   referencia: string;
   banco: string;
   autorizador_id: string;
-  estado: PagoEstado;
+  status: PagoEstado;
   consumo_id: string;
   notas: string;
 };
@@ -56,7 +56,7 @@ const empty: FormState = {
   referencia: '',
   banco: '',
   autorizador_id: '',
-  estado: 'Programado',
+  status: 'Programado',
   consumo_id: '',
   notas: '',
 };
@@ -81,7 +81,7 @@ function fromRow(r: Pago | null | undefined): FormState {
     referencia: r.referencia ?? '',
     banco: r.banco ?? '',
     autorizador_id: r.autorizador_id ?? '',
-    estado: r.estado,
+    status: r.status,
     consumo_id: r.consumo_id ?? '',
     notas: r.notas ?? '',
   };
@@ -111,7 +111,7 @@ function toInput(s: FormState): PagoInsert {
     referencia: s.referencia.trim() || null,
     banco: s.banco.trim() || null,
     autorizador_id: s.autorizador_id || null,
-    estado: s.estado,
+    status: s.status,
     consumo_id: s.consumo_id || null,
     notas: s.notas.trim() || null,
   };
@@ -175,7 +175,7 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="fecha" label="Fecha *" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} required />
-        <Select name="estado" label="Estado" value={v.estado} onChange={(e) => upd('estado', e.target.value as PagoEstado)}>
+        <Select name="status" label="Status" value={v.status} onChange={(e) => upd('status', e.target.value as PagoEstado)}>
           {estadoOptions.map((o) => (
             <option key={o} value={o}>{o}</option>
           ))}

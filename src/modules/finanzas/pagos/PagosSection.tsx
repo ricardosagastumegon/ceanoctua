@@ -19,6 +19,7 @@ import {
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
+import { NotificacionesPanel } from './NotificacionesPanel';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -27,7 +28,7 @@ function fmt(n: number, currency: string): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(n));
 }
 
-const estadoBg: Record<Pago['estado'], string> = {
+const estadoBg: Record<Pago['status'], string> = {
   Programado: 'bg-sand text-dark',
   Aprobado: 'bg-blue-light text-blue',
   Pagado: 'bg-teal-l text-teal-d',
@@ -182,6 +183,21 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         )}
       </header>
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+        <NotificacionesPanel
+          onCreateFromNotif={(notif) => {
+            // Pre-rellena los campos del nuevo pago con los datos del origen.
+            setEditing({
+              id: '',
+              monto: notif.monto ?? 0,
+              moneda: (notif.moneda as 'GTQ' | 'USD' | 'EUR' | 'GBP') ?? 'GTQ',
+              concepto: notif.resumen ?? null,
+              origen_notificacion_id: notif.id,
+              fecha: new Date().toISOString().slice(0, 10),
+            } as unknown as Pago);
+          }}
+        />
+      <div className="space-y-3">
       {/* KPIs por paso */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         {PAGO_STEPS.map((label, i) => (
@@ -238,8 +254,8 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                           {p.tipo_label}
                         </span>
                       )}
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${estadoBg[p.estado]}`}>
-                        {p.estado}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${estadoBg[p.status]}`}>
+                        {p.status}
                       </span>
                       {(() => {
                         const fc = firmasByPago.data?.get(p.id);
@@ -366,6 +382,8 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
       >
         {viewing && <PagoPrintable pago={viewing} />}
       </PrintableModal>
+      </div>
+      </div>
     </section>
   );
 }

@@ -35,12 +35,7 @@ export const valesApi = {
       .eq('id', id);
     if (error) throw error;
   },
-  async assignToLiquidacion(valeId: string, liquidacionId: string | null): Promise<void> {
-    const patch: ValeUpdate = {
-      liquidacion_id: liquidacionId,
-      estado: liquidacionId ? 'EnLiquidacion' : 'Aprobado',
-    };
-    const { error } = await supabase.from('caja_chica_vales').update(patch).eq('id', valeId);
-    if (error) throw error;
-  },
+  // assignToLiquidacion fue deprecada en Fase 17 · F-2 — el vínculo
+  // ahora vive en `liquidacion_vales` (M:N). El estado del vale lo
+  // actualiza el trigger SQL `mark_vale_as_assigned`.
 };

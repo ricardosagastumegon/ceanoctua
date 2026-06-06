@@ -123,9 +123,9 @@ export type Database = {
         Relationships: [];
       };
       tarjetas_credito: {
-        Row: AuditCols & { id: string; legacy_id: number | null; tipo: Database['public']['Enums']['tc_tipo']; tc_id: string; empresa: string | null; titular: string | null; red: string | null; banco: string | null; nit: string | null; limite: string | null; direccion: string | null; notas: string | null; activo: boolean };
-        Insert: AuditInsert & { id?: string; legacy_id?: number | null; tipo: Database['public']['Enums']['tc_tipo']; tc_id: string; empresa?: string | null; titular?: string | null; red?: string | null; banco?: string | null; nit?: string | null; limite?: string | null; direccion?: string | null; notas?: string | null; activo?: boolean };
-        Update: AuditUpdate & { tipo?: Database['public']['Enums']['tc_tipo']; tc_id?: string; empresa?: string | null; titular?: string | null; red?: string | null; banco?: string | null; nit?: string | null; limite?: string | null; direccion?: string | null; notas?: string | null; activo?: boolean };
+        Row: AuditCols & { id: string; legacy_id: number | null; tipo: Database['public']['Enums']['tc_tipo']; tc_id: string; empresa: string | null; titular: string | null; red: string | null; banco: string | null; nit: string | null; limite: string | null; direccion: string | null; notas: string | null; activo: boolean; color: string | null };
+        Insert: AuditInsert & { id?: string; legacy_id?: number | null; tipo: Database['public']['Enums']['tc_tipo']; tc_id: string; empresa?: string | null; titular?: string | null; red?: string | null; banco?: string | null; nit?: string | null; limite?: string | null; direccion?: string | null; notas?: string | null; activo?: boolean; color?: string | null };
+        Update: AuditUpdate & { tipo?: Database['public']['Enums']['tc_tipo']; tc_id?: string; empresa?: string | null; titular?: string | null; red?: string | null; banco?: string | null; nit?: string | null; limite?: string | null; direccion?: string | null; notas?: string | null; activo?: boolean; color?: string | null };
         Relationships: [];
       };
 
@@ -1117,8 +1117,13 @@ export type Database = {
           concepto: string | null;
           lugar: string | null;
           estado: Database['public']['Enums']['vale_status'];
+          estado_previo: Database['public']['Enums']['vale_status'] | null;
           notas: string | null;
-          liquidacion_id: string | null;
+          tipo: Database['public']['Enums']['vale_tipo'];
+          vale_a_empleado_id: string | null;
+          vale_a_entidad_id: string | null;
+          liquidar_a_empleado_id: string | null;
+          liquidar_a_entidad_id: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1136,7 +1141,11 @@ export type Database = {
           lugar?: string | null;
           estado?: Database['public']['Enums']['vale_status'];
           notas?: string | null;
-          liquidacion_id?: string | null;
+          tipo?: Database['public']['Enums']['vale_tipo'];
+          vale_a_empleado_id?: string | null;
+          vale_a_entidad_id?: string | null;
+          liquidar_a_empleado_id?: string | null;
+          liquidar_a_entidad_id?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1151,10 +1160,88 @@ export type Database = {
           lugar?: string | null;
           estado?: Database['public']['Enums']['vale_status'];
           notas?: string | null;
-          liquidacion_id?: string | null;
+          tipo?: Database['public']['Enums']['vale_tipo'];
+          vale_a_empleado_id?: string | null;
+          vale_a_entidad_id?: string | null;
+          liquidar_a_empleado_id?: string | null;
+          liquidar_a_entidad_id?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
+      };
+
+      liquidacion_vales: {
+        Row: { liquidacion_id: string; vale_id: string; created_at: string };
+        Insert: { liquidacion_id: string; vale_id: string };
+        Update: never;
+        Relationships: [
+          { foreignKeyName: 'liquidacion_vales_liquidacion_id_fkey'; columns: ['liquidacion_id']; referencedRelation: 'caja_chica_liquidaciones'; referencedColumns: ['id'] },
+          { foreignKeyName: 'liquidacion_vales_vale_id_fkey'; columns: ['vale_id']; referencedRelation: 'caja_chica_vales'; referencedColumns: ['id'] },
+        ];
+      };
+
+      consumo_renglones: {
+        Row: {
+          id: string;
+          consumo_id: string;
+          orden: number;
+          descripcion: string;
+          cantidad: number;
+          precio_unit: number;
+          subtotal: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          consumo_id: string;
+          orden: number;
+          descripcion: string;
+          cantidad?: number;
+          precio_unit?: number;
+        };
+        Update: {
+          orden?: number;
+          descripcion?: string;
+          cantidad?: number;
+          precio_unit?: number;
+        };
+        Relationships: [
+          { foreignKeyName: 'consumo_renglones_consumo_id_fkey'; columns: ['consumo_id']; referencedRelation: 'tc_consumos'; referencedColumns: ['id'] },
+        ];
+      };
+
+      pagos_notificaciones: {
+        Row: {
+          id: string;
+          origen_tipo: 'liquidacion' | 'consumo_tc';
+          origen_id: string;
+          monto: number | null;
+          moneda: string | null;
+          resumen: string | null;
+          procesado: boolean;
+          pago_id: string | null;
+          created_at: string;
+          procesado_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          origen_tipo: 'liquidacion' | 'consumo_tc';
+          origen_id: string;
+          monto?: number | null;
+          moneda?: string | null;
+          resumen?: string | null;
+          procesado?: boolean;
+          pago_id?: string | null;
+          procesado_at?: string | null;
+        };
+        Update: {
+          procesado?: boolean;
+          pago_id?: string | null;
+          procesado_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'pagos_notificaciones_pago_id_fkey'; columns: ['pago_id']; referencedRelation: 'pagos'; referencedColumns: ['id'] },
+        ];
       };
 
       caja_chica_liquidaciones: {
@@ -1172,12 +1259,17 @@ export type Database = {
           estado: string;
           entidad: string | null;
           payment_method: string | null;
+          forma_pago: string | null;
           motivo: string | null;
           producto: string | null;
+          producto_servicio: string | null;
           solicitado: string | null;
           reintegrar_a: string | null;
+          reintegrar_a_persona_id: string | null;
           vale_serial: string | null;
           vale_monto: number;
+          total_compras: number | null;
+          total_vales: number | null;
           diff: number;
           comentarios: string | null;
           comprobante_storage_path: string | null;
@@ -1197,12 +1289,17 @@ export type Database = {
           estado?: string;
           entidad?: string | null;
           payment_method?: string | null;
+          forma_pago?: string | null;
           motivo?: string | null;
           producto?: string | null;
+          producto_servicio?: string | null;
           solicitado?: string | null;
           reintegrar_a?: string | null;
+          reintegrar_a_persona_id?: string | null;
           vale_serial?: string | null;
           vale_monto?: number;
+          total_compras?: number | null;
+          total_vales?: number | null;
           comentarios?: string | null;
           comprobante_storage_path?: string | null;
           deleted_at?: string | null;
@@ -1218,12 +1315,17 @@ export type Database = {
           estado?: string;
           entidad?: string | null;
           payment_method?: string | null;
+          forma_pago?: string | null;
           motivo?: string | null;
           producto?: string | null;
+          producto_servicio?: string | null;
           solicitado?: string | null;
           reintegrar_a?: string | null;
+          reintegrar_a_persona_id?: string | null;
           vale_serial?: string | null;
           vale_monto?: number;
+          total_compras?: number | null;
+          total_vales?: number | null;
           comentarios?: string | null;
           comprobante_storage_path?: string | null;
           deleted_at?: string | null;
@@ -1281,6 +1383,7 @@ export type Database = {
           voucher_num: string | null;
           fecha: string;
           empresa: string | null;
+          empresa_codigo: string | null;
           card_id: string;
           tarjeta_id: string | null;
           proveedor: string;
@@ -1289,6 +1392,10 @@ export type Database = {
           monto: number;
           moneda: Database['public']['Enums']['currency'];
           autorizador_id: string | null;
+          solicitado_por: string | null;
+          solicitado_por_id: string | null;
+          no_autorizacion: string | null;
+          pagado_por: string | null;
           reintegro_id: string | null;
           deleted_at: string | null;
         };
@@ -1299,6 +1406,7 @@ export type Database = {
           voucher_num?: string | null;
           fecha: string;
           empresa?: string | null;
+          empresa_codigo?: string | null;
           card_id: string;
           tarjeta_id?: string | null;
           proveedor: string;
@@ -1307,6 +1415,10 @@ export type Database = {
           monto: number;
           moneda: Database['public']['Enums']['currency'];
           autorizador_id?: string | null;
+          solicitado_por?: string | null;
+          solicitado_por_id?: string | null;
+          no_autorizacion?: string | null;
+          pagado_por?: string | null;
           reintegro_id?: string | null;
           deleted_at?: string | null;
         };
@@ -1314,6 +1426,7 @@ export type Database = {
           origen?: string | null;
           fecha?: string;
           empresa?: string | null;
+          empresa_codigo?: string | null;
           card_id?: string;
           tarjeta_id?: string | null;
           proveedor?: string;
@@ -1322,6 +1435,10 @@ export type Database = {
           monto?: number;
           moneda?: Database['public']['Enums']['currency'];
           autorizador_id?: string | null;
+          solicitado_por?: string | null;
+          solicitado_por_id?: string | null;
+          no_autorizacion?: string | null;
+          pagado_por?: string | null;
           reintegro_id?: string | null;
           deleted_at?: string | null;
         };
@@ -1398,8 +1515,11 @@ export type Database = {
           banco: string | null;
           autorizador_id: string | null;
           notas: string | null;
-          estado: Database['public']['Enums']['pago_estado'];
+          status: Database['public']['Enums']['pago_estado'];
+          status_id: string | null;
           consumo_id: string | null;
+          tipo_cambio: number | null;
+          origen_notificacion_id: string | null;
           step_idx: number;
           step_dates: string[];
           comprobante_storage_path: string | null;
@@ -1427,8 +1547,11 @@ export type Database = {
           banco?: string | null;
           autorizador_id?: string | null;
           notas?: string | null;
-          estado?: Database['public']['Enums']['pago_estado'];
+          status?: Database['public']['Enums']['pago_estado'];
+          status_id?: string | null;
           consumo_id?: string | null;
+          tipo_cambio?: number | null;
+          origen_notificacion_id?: string | null;
           step_idx?: number;
           step_dates?: string[];
           comprobante_storage_path?: string | null;
@@ -1453,8 +1576,11 @@ export type Database = {
           banco?: string | null;
           autorizador_id?: string | null;
           notas?: string | null;
-          estado?: Database['public']['Enums']['pago_estado'];
+          status?: Database['public']['Enums']['pago_estado'];
+          status_id?: string | null;
           consumo_id?: string | null;
+          tipo_cambio?: number | null;
+          origen_notificacion_id?: string | null;
           step_idx?: number;
           step_dates?: string[];
           comprobante_storage_path?: string | null;
@@ -1571,6 +1697,7 @@ export type Database = {
       task_status: 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
       firma_status: 'en_espera' | 'firmado' | 'stand_by' | 'denegada';
       firma_urgencia: 'urgente' | 'importante' | 'programado';
+      vale_tipo: 'desembolso' | 'entidad';
       vale_status:
         | 'Creado'
         | 'Aprobado'

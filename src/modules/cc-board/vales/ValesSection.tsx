@@ -7,10 +7,13 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
+import type { Database } from '@/types/database';
 import type { Vale, ValeInsert } from './api';
 import { ValeForm } from './ValeForm';
 import { ValePrintable } from './ValePrintable';
 import { useCreateVale, useDeleteVale, useUpdateVale, useVales } from './hooks';
+
+type ValeTipo = Database['public']['Enums']['vale_tipo'];
 
 function fmtMoney(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(n);
@@ -41,6 +44,8 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<Vale | null | undefined>(undefined);
+  // Cuando se crea un nuevo vale, recuerda el tipo (desembolso o entidad)
+  const [newTipo, setNewTipo] = useState<ValeTipo>('desembolso');
   const [viewing, setViewing] = useState<Vale | null>(null);
 
   async function handleSave(values: ValeInsert) {
@@ -73,6 +78,11 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+  function openNew(tipo: ValeTipo) {
+    setNewTipo(tipo);
+    setEditing(null);
+  }
+
   const columns: DataTableColumn<Vale>[] = [
     {
       key: 'serial',
@@ -82,6 +92,19 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
       render: (r) => <span className="font-mono text-xs font-semibold text-teal-d">{r.serial ?? '—'}</span>,
     },
     {
+      key: 'tipo',
+      header: 'Tipo',
+      sortable: true,
+      accessor: (r) => r.tipo,
+      render: (r) => (
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.tipo === 'entidad' ? 'bg-purple/10 text-purple' : 'bg-teal-l text-teal-d'}`}
+        >
+          {r.tipo === 'entidad' ? 'A entidad' : 'Desembolso'}
+        </span>
+      ),
+    },
+    {
       key: 'vale_a',
       header: 'Vale a',
       sortable: true,
@@ -89,7 +112,6 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
       render: (r) => (
         <div>
           <div className="font-medium text-dark">{r.vale_a}</div>
-          {r.entidad && <div className="text-xs text-dark-3">{r.entidad}</div>}
           {r.concepto && <div className="line-clamp-1 max-w-xs text-xs text-dark-3">{r.concepto}</div>}
         </div>
       ),
@@ -110,7 +132,7 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
     },
     {
       key: 'estado',
-      header: 'Estado',
+      header: 'Status',
       sortable: true,
       accessor: (r) => r.estado,
       render: (r) => (
@@ -119,33 +141,34 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
         </span>
       ),
     },
-    {
-      key: 'liquidacion_id',
-      header: 'Liq.',
-      accessor: (r) => r.liquidacion_id,
-      render: (r) => r.liquidacion_id
-        ? <span className="rounded bg-teal-l px-1.5 py-0.5 text-[10px] font-semibold text-teal-d">📎 vinculado</span>
-        : <span className="text-dark-3">—</span>,
-    },
   ];
 
   return (
     <section className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-heading text-xl font-semibold text-dark">Vales de caja chica</h2>
+          <h2 className="font-heading text-xl font-semibold text-dark">Vales</h2>
           <p className="mt-1 text-sm text-dark-2">
-            Serial VL-AAAA-NNNN. Asignar uno a una liquidación lo marca como 'Asignado a Liquidación'.
+            Serial <span className="font-mono">VL-AAAA-NNNN</span>. Vale por desembolso (empleado → entidad) o Vale a Entidad (entidad → empleado).
           </p>
         </div>
         {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditing(null)}
-            className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
-          >
-            + Nuevo vale
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => openNew('desembolso')}
+              className="rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
+            >
+              + Nuevo Vale
+            </button>
+            <button
+              type="button"
+              onClick={() => openNew('entidad')}
+              className="rounded-md border border-purple/40 bg-purple/10 px-3 py-2 text-sm font-semibold text-purple hover:bg-purple/20"
+            >
+              + Vale a Entidad
+            </button>
+          </div>
         )}
       </header>
 
@@ -192,11 +215,12 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
       <Modal
         open={editing !== undefined}
         onClose={() => setEditing(undefined)}
-        title={editing?.id ? `Editar — ${editing.serial ?? editing.vale_a}` : 'Nuevo vale'}
+        title={editing?.id ? `Editar — ${editing.serial ?? editing.vale_a}` : (newTipo === 'entidad' ? 'Vale a Entidad' : 'Nuevo Vale')}
         size="lg"
       >
         <ValeForm
           initial={editing ?? null}
+          defaultTipo={newTipo}
           submitting={create.isPending || update.isPending}
           onSubmit={handleSave}
           onCancel={() => setEditing(undefined)}

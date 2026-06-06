@@ -28,7 +28,7 @@ export function PagoPrintable({ pago }: { pago: Pago }) {
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">{pago.tipo_label}</span>
           )}
           <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
-            {pago.estado}
+            {pago.status}
           </span>
         </div>
         <p className="mt-3 font-mono text-3xl font-bold" style={{ color: '#a0ffe8' }}>

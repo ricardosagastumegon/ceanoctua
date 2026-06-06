@@ -5,7 +5,7 @@ import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { Consumo, ConsumoInsert } from './api';
 import type { Database } from '@/types/database';
-import { useAutorizadores, useProveedores, useTarjetas } from '@/modules/admin/hooks';
+import { useAutorizadores, useEmpleados, useProveedores, useTarjetas } from '@/modules/admin/hooks';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -20,6 +20,11 @@ type FormState = {
   monto: string;
   moneda: Currency;
   autorizador_id: string;
+  // Campos nuevos de Fase 17 · F-4
+  solicitado_por: string;
+  solicitado_por_id: string;
+  no_autorizacion: string;
+  pagado_por: string;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -34,6 +39,10 @@ const empty: FormState = {
   monto: '',
   moneda: 'GTQ',
   autorizador_id: '',
+  solicitado_por: '',
+  solicitado_por_id: '',
+  no_autorizacion: '',
+  pagado_por: '',
 };
 
 function fromRow(r: Consumo | null | undefined): FormState {
@@ -49,6 +58,10 @@ function fromRow(r: Consumo | null | undefined): FormState {
     monto: String(r.monto),
     moneda: r.moneda,
     autorizador_id: r.autorizador_id ?? '',
+    solicitado_por: r.solicitado_por ?? '',
+    solicitado_por_id: r.solicitado_por_id ?? '',
+    no_autorizacion: r.no_autorizacion ?? '',
+    pagado_por: r.pagado_por ?? '',
   };
 }
 
@@ -65,6 +78,10 @@ function toInput(s: FormState): ConsumoInsert {
     monto: Number.isFinite(n) ? n : 0,
     moneda: s.moneda,
     autorizador_id: s.autorizador_id || null,
+    solicitado_por: s.solicitado_por.trim() || null,
+    solicitado_por_id: s.solicitado_por_id || null,
+    no_autorizacion: s.no_autorizacion.trim() || null,
+    pagado_por: s.pagado_por.trim() || null,
   };
 }
 
@@ -74,6 +91,7 @@ export function ConsumoForm({ initial, submitting, onSubmit, onCancel }: Catalog
   const tarjetas = useTarjetas();
   const proveedores = useProveedores();
   const autorizadores = useAutorizadores();
+  const empleados = useEmpleados();
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -157,6 +175,34 @@ export function ConsumoForm({ initial, submitting, onSubmit, onCancel }: Catalog
           </option>
         ))}
       </Select>
+
+      {/* Campos nuevos · Fase 17 · F-4 */}
+      <fieldset className="rounded-md border border-sand p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-dark-2">
+          Datos adicionales del consumo
+        </legend>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Select name="solicitado_por_id" label="Solicitado por (empleado)" value={v.solicitado_por_id} onChange={(e) => {
+            const id = e.target.value;
+            setV((p) => {
+              const next = { ...p, solicitado_por_id: id };
+              if (id) {
+                const emp = (empleados.data ?? []).find((x) => x.id === id);
+                if (emp) next.solicitado_por = emp.nombre;
+              }
+              return next;
+            });
+          }}>
+            <option value="">— elegir o escribir abajo —</option>
+            {(empleados.data ?? []).map((e) => (
+              <option key={e.id} value={e.id}>{e.nombre}</option>
+            ))}
+          </Select>
+          <TextInput name="solicitado_por" label="Solicitado por (texto)" value={v.solicitado_por} onChange={(e) => upd('solicitado_por', e.target.value)} />
+          <TextInput name="no_autorizacion" label="No. autorización" value={v.no_autorizacion} onChange={(e) => upd('no_autorizacion', e.target.value)} hint="número del banco" />
+          <TextInput name="pagado_por" label="Pagado por" value={v.pagado_por} onChange={(e) => upd('pagado_por', e.target.value)} />
+        </div>
+      </fieldset>
 
       {error && <p className="rounded-md border border-rust/30 bg-rust-l px-3 py-2 text-sm text-rust">{error}</p>}
 

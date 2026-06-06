@@ -27,14 +27,6 @@ export function useDeleteVale() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
   });
 }
-export function useAssignVale() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ valeId, liquidacionId }: { valeId: string; liquidacionId: string | null }) =>
-      valesApi.assignToLiquidacion(valeId, liquidacionId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: keys.all });
-      void qc.invalidateQueries({ queryKey: ['caja_chica_liquidaciones'] });
-    },
-  });
-}
+// useAssignVale fue removida en Fase 17 · F-2 — el vínculo vale↔liquidación
+// ahora vive en `liquidacion_vales` (M:N). Ver useReplaceLiqVales en
+// modules/cc-board/liquidaciones/hooks.ts.

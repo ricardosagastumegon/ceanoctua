@@ -72,7 +72,7 @@ export const pagosApi = {
     const dates = [...(current.step_dates ?? [])];
     dates[next] = new Date().toISOString().slice(0, 10);
     const patch: PagoUpdate = { step_idx: next, step_dates: dates };
-    if (next === PAGO_STEPS.length - 1) patch.estado = 'Pagado';
+    if (next === PAGO_STEPS.length - 1) patch.status = 'Pagado';
     return this.update(id, patch);
   },
   async uploadComprobante(id: string, file: File): Promise<string> {

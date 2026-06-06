@@ -94,6 +94,36 @@ export const liquidacionesApi = {
     return data ?? [];
   },
 
+  // Fase 17 · F-2: multi-vale via junction `liquidacion_vales`
+  async listLinkedVales(liqId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('liquidacion_vales')
+      .select('vale_id')
+      .eq('liquidacion_id', liqId);
+    if (error) throw error;
+    return (data ?? []).map((r) => r.vale_id as string);
+  },
+  async replaceLinkedVales(liqId: string, valeIds: string[]): Promise<void> {
+    const current = await this.listLinkedVales(liqId);
+    const desired = new Set(valeIds);
+    const currentSet = new Set(current);
+    const toAdd = valeIds.filter((id) => !currentSet.has(id));
+    const toRemove = current.filter((id) => !desired.has(id));
+    if (toRemove.length > 0) {
+      const { error } = await supabase
+        .from('liquidacion_vales')
+        .delete()
+        .eq('liquidacion_id', liqId)
+        .in('vale_id', toRemove);
+      if (error) throw error;
+    }
+    if (toAdd.length > 0) {
+      const payload = toAdd.map((vale_id) => ({ liquidacion_id: liqId, vale_id }));
+      const { error } = await supabase.from('liquidacion_vales').insert(payload);
+      if (error) throw error;
+    }
+  },
+
   async uploadComprobante(liqId: string, file: File): Promise<string> {
     const ext = file.name.split('.').pop() ?? 'bin';
     const path = `cc-board/liquidaciones/${liqId}.${Date.now()}.${ext}`;

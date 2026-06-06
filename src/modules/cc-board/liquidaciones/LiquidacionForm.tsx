@@ -4,7 +4,7 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { formatMoney } from '@/lib/money';
 import { useVales } from '../vales/hooks';
-import { useLiqRows } from './hooks';
+import { useLinkedVales, useLiqRows } from './hooks';
 import {
   LIQ_ESTADOS,
   PAYMENT_METHODS,
@@ -19,6 +19,8 @@ type Currency = Database['public']['Enums']['currency'];
 export type LiquidacionFormValues = {
   patch: LiquidacionInsert;
   rows: Omit<LiqRowInsert, 'liquidacion_id'>[];
+  /** Fase 17 · F-2: lista de vales vinculados (M:N) */
+  valeIds: string[];
 };
 
 type FormState = {
@@ -116,9 +118,17 @@ export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Pro
   const [editingRowIdx, setEditingRowIdx] = useState<number | null>(null);
   const [newRow, setNewRow] = useState<RowState>(emptyRow);
   const [error, setError] = useState<string | null>(null);
+  // Fase 17 · F-2: vales vinculados M:N. Inicializa con la lista del
+  // junction al editar; vacío al crear.
+  const [selectedValeIds, setSelectedValeIds] = useState<string[]>([]);
 
   const valesQ = useVales();
   const existingRowsQ = useLiqRows(initial?.id);
+  const linkedValesQ = useLinkedVales(initial?.id);
+
+  useEffect(() => {
+    if (linkedValesQ.data) setSelectedValeIds(linkedValesQ.data);
+  }, [linkedValesQ.data]);
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -171,18 +181,16 @@ export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Pro
   }
 
   const total = rows.reduce((s, r) => s + numCantidad(r.cantidad) * numCantidad(r.unitario), 0);
-  const valeMonto = numCantidad(v.vale_monto);
+  // Suma de los vales seleccionados (M:N). Reemplaza al vale_monto single.
+  const valeMonto = (valesQ.data ?? [])
+    .filter((x) => selectedValeIds.includes(x.id))
+    .reduce((s, x) => s + Number(x.monto ?? 0), 0);
   const diff = total - valeMonto;
 
-  function onSelectVale(serial: string) {
-    const vale = valesQ.data?.find((x) => x.serial === serial);
-    if (vale) {
-      upd('vale_serial', serial);
-      upd('vale_monto', String(vale.monto));
-    } else {
-      upd('vale_serial', '');
-      upd('vale_monto', '0');
-    }
+  function toggleVale(id: string) {
+    setSelectedValeIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -224,7 +232,7 @@ export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Pro
       orden: idx + 1,
     }));
 
-    await onSubmit({ patch, rows: rowsInsert });
+    await onSubmit({ patch, rows: rowsInsert, valeIds: selectedValeIds });
   }
 
   return (
@@ -333,13 +341,32 @@ export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Pro
             <p className="mt-1 font-mono text-lg font-bold text-dark">{fmt(total, v.moneda)}</p>
           </div>
           <div className="rounded-md border border-sand bg-sand-l/30 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-dark-3">Vale</p>
-            <Select name="vale_serial" label="" value={v.vale_serial} onChange={(e) => onSelectVale(e.target.value)}>
-              <option value="">— sin vale —</option>
-              {(valesQ.data ?? []).map((x) => (
-                <option key={x.id} value={x.serial ?? ''}>{x.serial} · {fmt(Number(x.monto), x.moneda)} · {x.vale_a}</option>
-              ))}
-            </Select>
+            <p className="text-xs font-semibold uppercase tracking-wider text-dark-3">Vales vinculados ({selectedValeIds.length})</p>
+            <div className="mt-2 max-h-32 overflow-y-auto rounded-md border border-sand bg-white p-2">
+              {(valesQ.data ?? []).length === 0 ? (
+                <p className="text-xs text-dark-3">No hay vales registrados.</p>
+              ) : (
+                <ul className="space-y-1 text-xs">
+                  {(valesQ.data ?? []).map((x) => (
+                    <li key={x.id}>
+                      <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 hover:bg-sand-l">
+                        <input
+                          type="checkbox"
+                          checked={selectedValeIds.includes(x.id)}
+                          onChange={() => toggleVale(x.id)}
+                          className="h-3 w-3 rounded border-sand text-teal focus:ring-teal"
+                        />
+                        <span className="font-mono text-teal-d">{x.serial ?? '—'}</span>
+                        <span className="text-dark-2">·</span>
+                        <span className="font-mono">{fmt(Number(x.monto), x.moneda)}</span>
+                        <span className="text-dark-2">·</span>
+                        <span className="truncate">{x.vale_a}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <p className="mt-1 font-mono text-lg font-bold text-dark">{fmt(valeMonto, v.moneda)}</p>
           </div>
           <div className={`rounded-md border p-3 ${diff < 0 ? 'border-rust/40 bg-rust-l' : 'border-teal/40 bg-teal-l/30'}`}>

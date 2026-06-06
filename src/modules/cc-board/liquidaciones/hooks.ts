@@ -77,6 +77,27 @@ export function useDeleteLiquidacion() {
   });
 }
 
+export function useLinkedVales(liqId: string | undefined) {
+  return useQuery({
+    queryKey: liqId ? ['liq-vales', liqId] : ['noop-lv'],
+    queryFn: () => liquidacionesApi.listLinkedVales(liqId as string),
+    enabled: !!liqId,
+  });
+}
+
+export function useReplaceLinkedVales() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ liqId, valeIds }: { liqId: string; valeIds: string[] }) =>
+      liquidacionesApi.replaceLinkedVales(liqId, valeIds),
+    onSuccess: (_d, vars) => {
+      void qc.invalidateQueries({ queryKey: ['liq-vales', vars.liqId] });
+      void qc.invalidateQueries({ queryKey: keys.all });
+      void qc.invalidateQueries({ queryKey: ['caja_chica_vales'] });
+    },
+  });
+}
+
 export function useUploadLiqComprobante() {
   const qc = useQueryClient();
   return useMutation({

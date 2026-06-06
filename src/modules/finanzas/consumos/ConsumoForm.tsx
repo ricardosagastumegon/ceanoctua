@@ -6,6 +6,7 @@ import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { Consumo, ConsumoInsert } from './api';
 import type { Database } from '@/types/database';
 import { useAutorizadores, useEmpleados, useProveedores, useTarjetas } from '@/modules/admin/hooks';
+import { ConsumoRenglonesPanel } from './ConsumoRenglonesPanel';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -203,6 +204,10 @@ export function ConsumoForm({ initial, submitting, onSubmit, onCancel }: Catalog
           <TextInput name="pagado_por" label="Pagado por" value={v.pagado_por} onChange={(e) => upd('pagado_por', e.target.value)} />
         </div>
       </fieldset>
+
+      {initial?.id && (
+        <ConsumoRenglonesPanel consumoId={initial.id} moneda={v.moneda} canEdit />
+      )}
 
       {error && <p className="rounded-md border border-rust/30 bg-rust-l px-3 py-2 text-sm text-rust">{error}</p>}
 

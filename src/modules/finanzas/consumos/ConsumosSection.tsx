@@ -3,9 +3,12 @@ import { CatalogPage } from '@/modules/admin/components/CatalogPage';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { addBusinessDays, bizDaysLeft, dueStateFor, formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
+import { useToast } from '@/components/ui/Toast';
+import { describeError } from '@/modules/admin/hooks';
 import { useConsumos, useCreateConsumo, useDeleteConsumo, useUpdateConsumo } from './hooks';
 import type { Consumo } from './api';
 import { ConsumoForm } from './ConsumoForm';
+import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -40,6 +43,7 @@ function csvCell(s: string | number | null | undefined): string {
 }
 
 export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const query = useConsumos();
   const create = useCreateConsumo();
   const update = useUpdateConsumo();
@@ -170,6 +174,29 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
         Form={ConsumoForm}
         rowLabel={(r) => r.voucher_num ?? r.proveedor}
         canEdit={canEdit}
+        extraActions={(row) => (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await pushPagoNotificacion({
+                  origen_tipo: 'consumo_tc',
+                  origen_id: row.id,
+                  monto: Number(row.monto),
+                  moneda: row.moneda,
+                  resumen: `Consumo ${row.voucher_num ?? ''} · ${row.proveedor} · ${row.concepto.slice(0, 40)}`,
+                });
+                toast.success('Enviado a Pagos · ver Notificaciones');
+              } catch (e) {
+                toast.error(describeError(e));
+              }
+            }}
+            className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20"
+            title="Enviar a Pagos como notificación"
+          >
+            💸
+          </button>
+        )}
       />
 
       {totalsByMoneda.length > 0 && (

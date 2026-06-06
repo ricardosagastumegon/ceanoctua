@@ -5,14 +5,16 @@ import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import { PAGO_TIPO_LABELS, type Pago, type PagoInsert } from './api';
 import type { Database } from '@/types/database';
-import { useAutorizadores, useEntidades, useProveedores } from '@/modules/admin/hooks';
+import { useAutorizadores, useEntidades, useProveedores, useStatusSp } from '@/modules/admin/hooks';
 import { useConsumos } from '../consumos/hooks';
 
 type Currency = Database['public']['Enums']['currency'];
 type PagoEstado = Database['public']['Enums']['pago_estado'];
 type PagoTipo = Database['public']['Enums']['pago_tipo'];
 
-const estadoOptions: PagoEstado[] = ['Programado', 'Aprobado', 'Pagado', 'Conciliado', 'Anulado', 'Devuelto'];
+// estadoOptions removido en F-5 — el status ahora se elige del catálogo
+// status_solicitud_pago. El enum PagoEstado se mantiene en DB como
+// proyección legacy con mapeo automático en el form.
 
 type FormState = {
   fecha: string;
@@ -33,6 +35,7 @@ type FormState = {
   banco: string;
   autorizador_id: string;
   status: PagoEstado;
+  status_id: string;
   consumo_id: string;
   notas: string;
 };
@@ -57,6 +60,7 @@ const empty: FormState = {
   banco: '',
   autorizador_id: '',
   status: 'Programado',
+  status_id: '',
   consumo_id: '',
   notas: '',
 };
@@ -82,6 +86,7 @@ function fromRow(r: Pago | null | undefined): FormState {
     banco: r.banco ?? '',
     autorizador_id: r.autorizador_id ?? '',
     status: r.status,
+    status_id: r.status_id ?? '',
     consumo_id: r.consumo_id ?? '',
     notas: r.notas ?? '',
   };
@@ -112,6 +117,7 @@ function toInput(s: FormState): PagoInsert {
     banco: s.banco.trim() || null,
     autorizador_id: s.autorizador_id || null,
     status: s.status,
+    status_id: s.status_id || null,
     consumo_id: s.consumo_id || null,
     notas: s.notas.trim() || null,
   };
@@ -124,6 +130,7 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
   const proveedores = useProveedores();
   const autorizadores = useAutorizadores();
   const consumos = useConsumos();
+  const statusSpList = useStatusSp();
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -175,9 +182,32 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="fecha" label="Fecha *" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} required />
-        <Select name="status" label="Status" value={v.status} onChange={(e) => upd('status', e.target.value as PagoEstado)}>
-          {estadoOptions.map((o) => (
-            <option key={o} value={o}>{o}</option>
+        <Select
+          name="status_id"
+          label="Status (catálogo SP)"
+          value={v.status_id}
+          onChange={(e) => {
+            const id = e.target.value;
+            const opt = (statusSpList.data ?? []).find((x) => x.id === id);
+            setV((p) => {
+              const next = { ...p, status_id: id };
+              // Sync enum legacy con un mapeo razonable.
+              if (opt) {
+                const name = opt.nombre.toLowerCase();
+                if (name.includes('pagado')) next.status = 'Pagado';
+                else if (name.includes('firmado')) next.status = 'Aprobado';
+                else if (name.includes('procesad')) next.status = 'Aprobado';
+                else if (name.includes('present')) next.status = 'Aprobado';
+                else if (name.includes('generado')) next.status = 'Programado';
+                else if (name.includes('firma')) next.status = 'Programado';
+              }
+              return next;
+            });
+          }}
+        >
+          <option value="">— elegir —</option>
+          {(statusSpList.data ?? []).filter((s) => s.activo).map((s) => (
+            <option key={s.id} value={s.id}>{s.orden}. {s.nombre}</option>
           ))}
         </Select>
         <Select name="tipo" label="Medio" value={v.tipo} onChange={(e) => upd('tipo', e.target.value as PagoTipo)}>

@@ -15,9 +15,11 @@ import {
   useDeleteLiquidacion,
   useLiqRows,
   useLiquidaciones,
+  useReplaceLinkedVales,
   useUpdateLiquidacion,
 } from './hooks';
 import { LIQ_ESTADOS, type Liquidacion } from './api';
+import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(n);
@@ -49,6 +51,7 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const query = useLiquidaciones();
   const create = useCreateLiquidacion();
   const update = useUpdateLiquidacion();
+  const replaceVales = useReplaceLinkedVales();
   const remove = useDeleteLiquidacion();
   const toast = useToast();
   const confirm = useConfirm();
@@ -108,13 +111,18 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
 
   async function handleSave(values: LiquidacionFormValues) {
     try {
+      let liqId: string;
       if (editing && editing.id) {
         await update.mutateAsync({ id: editing.id, patch: values.patch, rows: values.rows });
+        liqId = editing.id;
         toast.success('Liquidación actualizada.');
       } else {
-        await create.mutateAsync({ input: values.patch, rows: values.rows });
+        const created = await create.mutateAsync({ input: values.patch, rows: values.rows });
+        liqId = created.id;
         toast.success('Liquidación creada.');
       }
+      // Fase 17 · F-2: sync junction de vales vinculados.
+      await replaceVales.mutateAsync({ liqId, valeIds: values.valeIds });
       setEditing(undefined);
     } catch (e) {
       toast.error(describeError(e));
@@ -295,36 +303,64 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
         onRetry={() => void query.refetch()}
         emptyMessage="Sin liquidaciones con estos filtros."
         rowKey={(r) => r.id}
-        actions={(row) => (
-          <div className="flex justify-end gap-1">
-            <button
-              type="button"
-              onClick={() => setViewing(row)}
-              className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
-              title="Ver PDF"
-            >
-              👁
-            </button>
-            {canEdit && (
-              <>
+        actions={(row) => {
+          const isSP =
+            row.forma_pago === 'Solicitud de Pago' ||
+            row.payment_method === 'Solicitud de Pago';
+          return (
+            <div className="flex justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => setViewing(row)}
+                className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                title="Ver PDF"
+              >
+                👁
+              </button>
+              {canEdit && isSP && (
                 <button
                   type="button"
-                  onClick={() => setEditing(row)}
-                  className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
+                  onClick={async () => {
+                    try {
+                      await pushPagoNotificacion({
+                        origen_tipo: 'liquidacion',
+                        origen_id: row.id,
+                        monto: Number(row.monto_total),
+                        moneda: row.moneda,
+                        resumen: `Liquidación ${row.serial ?? ''} · ${row.motivo ?? '(sin motivo)'} · ${row.solicitado ?? ''}`,
+                      });
+                      toast.success('Enviado a Pagos · ver Notificaciones');
+                    } catch (e) {
+                      toast.error(describeError(e));
+                    }
+                  }}
+                  className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20"
+                  title="Enviar a Pagos como notificación"
                 >
-                  ✏️
+                  💸 PAGOS
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(row)}
-                  className="rounded-md border border-rust/40 px-2 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
-                >
-                  ×
-                </button>
-              </>
-            )}
-          </div>
-        )}
+              )}
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(row)}
+                    className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(row)}
+                    className="rounded-md border border-rust/40 px-2 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        }}
       />
 
       {/* Footer totals */}

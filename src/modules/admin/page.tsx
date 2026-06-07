@@ -210,6 +210,22 @@ function PersonasCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreatePersona();
   const update = useUpdatePersona();
   const remove = useDeletePersona();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const toBool = (raw: string) => {
+    const s = raw.toLowerCase().trim();
+    return s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'yes' || s === 'x';
+  };
+  const importMappings: ColumnMapping<Persona>[] = [
+    { headerAlias: 'nombre|name', field: 'nombre', required: true },
+    { headerAlias: 'iniciales|codigo|código', field: 'iniciales', transform: (s) => s.toUpperCase() },
+    { headerAlias: 'nit', field: 'nit' },
+    { headerAlias: 'dir|direccion|dirección', field: 'dir' },
+    { headerAlias: 'es_jd|jd|junta', field: 'es_jd', transform: toBool },
+    { headerAlias: 'es_autorizador|autorizador', field: 'es_autorizador', transform: toBool },
+    { headerAlias: 'es_firmante|firmante', field: 'es_firmante', transform: toBool },
+    { headerAlias: 'notas|observaciones', field: 'notas' },
+  ];
 
   function rolesChips(p: Persona) {
     const chips: { label: string; cls: string }[] = [];
@@ -254,25 +270,46 @@ function PersonasCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Personal JD"
-      description="Fuente única de personas (Junta Directiva + autorizadores + firmantes). Reemplaza la tabla Autorizadores."
-      newLabel="+ Nueva persona"
-      modalSize="lg"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={PersonaForm}
-      rowLabel={(r) => r.nombre}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Personal JD"
+        description="Fuente única de personas (Junta Directiva + autorizadores + firmantes). Reemplaza la tabla Autorizadores."
+        newLabel="+ Nueva persona"
+        modalSize="lg"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={PersonaForm}
+        rowLabel={(r) => r.nombre}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<Persona>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar Personal JD desde CSV/Excel"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').PersonaInsert); }}
+        exampleCsv={'nombre,iniciales,nit,dir,es_jd,es_autorizador,es_firmante\nMiguel Arriaza,MAA,,,si,si,si\nRodrigo Santos,,1824658-3,,no,si,no'}
+      />
+    </>
   );
 }
 
@@ -359,6 +396,12 @@ function TiposPagoCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreateTipoPago();
   const update = useUpdateTipoPago();
   const remove = useDeleteTipoPago();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const importMappings: ColumnMapping<TipoPago>[] = [
+    { headerAlias: 'tipo|nombre|name', field: 'tipo', required: true },
+    { headerAlias: 'descripcion|descripción|desc', field: 'descripcion' },
+  ];
 
   const columns: DataTableColumn<TipoPago>[] = [
     {
@@ -371,25 +414,46 @@ function TiposPagoCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Tipos de pago"
-      description="Categorías que se usan al registrar pagos a proveedores."
-      newLabel="+ Nuevo tipo"
-      modalSize="sm"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={TipoPagoForm}
-      rowLabel={(r) => r.tipo}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Tipos de pago"
+        description="Categorías que se usan al registrar pagos a proveedores."
+        newLabel="+ Nuevo tipo"
+        modalSize="sm"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={TipoPagoForm}
+        rowLabel={(r) => r.tipo}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<TipoPago>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar tipos de pago"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').TipoPagoInsert); }}
+        exampleCsv={'tipo,descripcion\nAnticipo con factura,\nPago de Contado,\nCrédito 30 días,'}
+      />
+    </>
   );
 }
 
@@ -493,8 +557,25 @@ function TarjetasCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreateTarjeta();
   const update = useUpdateTarjeta();
   const remove = useDeleteTarjeta();
+  const [importerOpen, setImporterOpen] = useState(false);
 
   const tipoLabel = { corporativa: 'Corporativa', presidencia: 'Presidencia' } as const;
+
+  const importMappings: ColumnMapping<Tarjeta>[] = [
+    { headerAlias: 'tipo', field: 'tipo', required: true, transform: (s) => {
+      const v = s.toLowerCase().trim();
+      return v === 'presidencia' ? 'presidencia' : 'corporativa';
+    } },
+    { headerAlias: 'tc_id|identificador|terminacion|terminación', field: 'tc_id', required: true },
+    { headerAlias: 'empresa|company', field: 'empresa' },
+    { headerAlias: 'titular|holder', field: 'titular' },
+    { headerAlias: 'red|network', field: 'red' },
+    { headerAlias: 'banco|bank', field: 'banco' },
+    { headerAlias: 'nit', field: 'nit' },
+    { headerAlias: 'limite|límite', field: 'limite' },
+    { headerAlias: 'direccion|dirección|address', field: 'direccion' },
+    { headerAlias: 'color', field: 'color' },
+  ];
 
   const columns: DataTableColumn<Tarjeta>[] = [
     {
@@ -539,25 +620,46 @@ function TarjetasCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Tarjetas de crédito"
-      description="Tarjetas corporativas y de presidencia. El formulario cambia según el tipo."
-      newLabel="+ Nueva tarjeta"
-      modalSize="lg"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={TarjetaForm}
-      rowLabel={(r) => `${tipoLabel[r.tipo]} ${r.tc_id}`}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Tarjetas de crédito"
+        description="Tarjetas corporativas y de presidencia. El formulario cambia según el tipo."
+        newLabel="+ Nueva tarjeta"
+        modalSize="lg"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={TarjetaForm}
+        rowLabel={(r) => `${tipoLabel[r.tipo]} ${r.tc_id}`}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<Tarjeta>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar tarjetas de crédito"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').TarjetaInsert); }}
+        exampleCsv={'tipo,tc_id,empresa,banco,red,color\ncorporativa,TC Corp Agro Term. 7274,AGROATLANTIC,BAC,Visa,#0d2b2e\npresidencia,Amex GT Term. 2345,,BAC,Amex,'}
+      />
+    </>
   );
 }
 
@@ -570,6 +672,16 @@ function StatusSpCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreateStatusSp();
   const update = useUpdateStatusSp();
   const remove = useDeleteStatusSp();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const importMappings: ColumnMapping<StatusSp>[] = [
+    { headerAlias: 'nombre|name', field: 'nombre', required: true },
+    { headerAlias: 'orden|order', field: 'orden', required: true, transform: (s) => Number(s) || 0 },
+    { headerAlias: 'activo|active', field: 'activo', transform: (s) => {
+      const v = s.toLowerCase().trim();
+      return !(v === 'false' || v === '0' || v === 'no');
+    } },
+  ];
 
   const columns: DataTableColumn<StatusSp>[] = [
     {
@@ -609,24 +721,45 @@ function StatusSpCatalog({ canEdit }: { canEdit: boolean }) {
   ];
 
   return (
-    <CatalogPage
-      title="Status · Solicitud de Pago"
-      description="6 estados del flujo de SP (Generado → Pagado). Se usan en el dropdown de Pagos."
-      newLabel="+ Nuevo status"
-      modalSize="md"
-      columns={columns}
-      rows={query.data ?? []}
-      loading={query.isLoading}
-      isError={query.isError}
-      error={query.error}
-      onRetry={() => void query.refetch()}
-      onCreate={(values) => create.mutateAsync(values)}
-      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
-      onDelete={(id) => remove.mutateAsync(id)}
-      submitting={create.isPending || update.isPending}
-      Form={StatusSpForm}
-      rowLabel={(r) => r.nombre}
-      canEdit={canEdit}
-    />
+    <>
+      <CatalogPage
+        title="Status · Solicitud de Pago"
+        description="6 estados del flujo de SP (Generado → Pagado). Se usan en el dropdown de Pagos."
+        newLabel="+ Nuevo status"
+        modalSize="md"
+        columns={columns}
+        rows={query.data ?? []}
+        loading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        onCreate={(values) => create.mutateAsync(values)}
+        onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+        onDelete={(id) => remove.mutateAsync(id)}
+        submitting={create.isPending || update.isPending}
+        Form={StatusSpForm}
+        rowLabel={(r) => r.nombre}
+        canEdit={canEdit}
+        headerExtra={
+          canEdit ? (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar CSV
+            </button>
+          ) : null
+        }
+      />
+      <CsvImporter<StatusSp>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar status de SP"
+        mappings={importMappings}
+        onImportRow={async (row) => { await create.mutateAsync(row as import('./api').StatusSpInsert); }}
+        exampleCsv={'nombre,orden,activo\nGenerado,1,true\nFirmado,3,true'}
+      />
+    </>
   );
 }

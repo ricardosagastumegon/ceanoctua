@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PrintableModal } from '@/components/ui/PrintableModal';
+import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { describeError } from '@/modules/admin/hooks';
+import { describeError, useEmpleados, useEntidades } from '@/modules/admin/hooks';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import type { Database } from '@/types/database';
@@ -41,12 +42,50 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
   const create = useCreateVale();
   const update = useUpdateVale();
   const remove = useDeleteVale();
+  const empleados = useEmpleados();
+  const entidades = useEntidades();
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<Vale | null | undefined>(undefined);
   // Cuando se crea un nuevo vale, recuerda el tipo (desembolso o entidad)
   const [newTipo, setNewTipo] = useState<ValeTipo>('desembolso');
   const [viewing, setViewing] = useState<Vale | null>(null);
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  // Importer: lookup por nombre case-insensitive → uuid.
+  const empleadoByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of empleados.data ?? []) m.set(e.nombre.toLowerCase().trim(), e.id);
+    return m;
+  }, [empleados.data]);
+  const entidadByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of entidades.data ?? []) m.set(e.nombre.toLowerCase().trim(), e.id);
+    return m;
+  }, [entidades.data]);
+
+  const importMappings: ColumnMapping<ValeInsert>[] = [
+    { headerAlias: 'tipo|kind', field: 'tipo', transform: (s) => {
+      const v = s.toLowerCase().trim();
+      return v === 'entidad' || v === 'a entidad' ? 'entidad' : 'desembolso';
+    } },
+    { headerAlias: 'fecha|date', field: 'fecha' },
+    { headerAlias: 'monto|amount|total', field: 'monto', required: true, transform: (s) => Number(s.replace(/[^0-9.-]/g, '')) },
+    { headerAlias: 'moneda|currency', field: 'moneda', transform: (s) => {
+      const v = s.toUpperCase().trim();
+      return ['GTQ', 'USD', 'EUR', 'GBP'].includes(v) ? v : 'GTQ';
+    } },
+    { headerAlias: 'vale_a|nombre|beneficiario', field: 'vale_a', required: true },
+    { headerAlias: 'concepto|description|descripcion', field: 'concepto' },
+    { headerAlias: 'lugar|place', field: 'lugar' },
+    { headerAlias: 'empleado|vale_a_empleado|empleado_nombre', field: 'vale_a_empleado_id', transform: (s) =>
+      empleadoByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'entidad|liquidar_a_entidad|entidad_nombre', field: 'liquidar_a_entidad_id', transform: (s) =>
+      entidadByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'notas', field: 'notas' },
+  ];
 
   async function handleSave(values: ValeInsert) {
     try {
@@ -156,6 +195,14 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
           <div className="flex gap-2">
             <button
               type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+              title="Importar vales desde CSV/Excel"
+            >
+              ⬆ Importar
+            </button>
+            <button
+              type="button"
               onClick={() => openNew('desembolso')}
               className="rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
             >
@@ -234,6 +281,20 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
       >
         {viewing && <ValePrintable vale={viewing} />}
       </PrintableModal>
+
+      <CsvImporter<ValeInsert>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar vales desde CSV/Excel"
+        mappings={importMappings}
+        onImportRow={async (row) => {
+          // El parser deja moneda undefined si la columna no existe — el insert necesita un default.
+          const r = row as ValeInsert;
+          if (!r.moneda) r.moneda = 'GTQ';
+          await create.mutateAsync(r);
+        }}
+        exampleCsv={'tipo,fecha,monto,moneda,vale_a,concepto,empleado,entidad\ndesembolso,2026-05-15,1000,GTQ,Angeles Quezada,Compra de plantas,Angeles Quezada,AGROATLANTIC\nentidad,2026-05-20,500,GTQ,SUREÑA S.A.,Reembolso,Juan Perez,SUREÑA S.A.'}
+      />
     </section>
   );
 }

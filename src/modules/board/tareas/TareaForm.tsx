@@ -93,13 +93,28 @@ export function TareaForm({
         autoFocus
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextInput
-          name="lista"
-          label="Lista"
-          value={v.lista}
-          onChange={(e) => upd('lista', e.target.value)}
-          hint="ej: gifts, home, kids, holding, empresa, docs…"
-        />
+        <div>
+          <TextInput
+            name="lista"
+            label="Sub-lista"
+            value={v.lista}
+            onChange={(e) => upd('lista', e.target.value)}
+            list="tareas-listas"
+            hint="categoría (autocomplete + texto libre)"
+          />
+          <datalist id="tareas-listas">
+            {/* Categorías derivadas del HTML original */}
+            <option value="gifts">JA · Regalos & Detalles</option>
+            <option value="home">LA · Casa</option>
+            <option value="kids">LA · Hijas / Colegio</option>
+            <option value="holding">LA · Empresa Holding</option>
+            <option value="empresa">JM · Empresa</option>
+            <option value="docs">AA · Documentos familia</option>
+            <option value="seguridad">JA · Chofer / Seguridad</option>
+            <option value="religioso">LA · Actividad Religiosa</option>
+            <option value="fincas">EG · Viajes a fincas</option>
+          </datalist>
+        </div>
         <TextInput
           name="fecha"
           label="Fecha"

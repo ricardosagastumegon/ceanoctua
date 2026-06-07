@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PrintableModal } from '@/components/ui/PrintableModal';
@@ -56,6 +56,20 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const replaceVales = useReplaceLinkedVales();
   const entidadesList = useEntidades();
   const [importerOpen, setImporterOpen] = useState(false);
+  // Estado para pre-vincular un vale al abrir la sección desde el botón
+  // "+ Liquidar" de ValesSection (vía sessionStorage).
+  const [preLinkValeId, setPreLinkValeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = sessionStorage.getItem('preLinkValeId');
+    if (id) {
+      sessionStorage.removeItem('preLinkValeId');
+      setPreLinkValeId(id);
+      // Abre el form de nueva liquidación; el LiquidacionForm leerá
+      // preLinkValeId al inicializar selectedValeIds.
+      setEditing(null);
+    }
+  }, []);
 
   const entidadByNombre = useMemo(() => {
     const m = new Map<string, string>();
@@ -419,9 +433,16 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
       >
         <LiquidacionForm
           initial={editing ?? null}
+          preLinkValeId={editing?.id ? null : preLinkValeId}
           submitting={create.isPending || update.isPending}
-          onSubmit={handleSave}
-          onCancel={() => setEditing(undefined)}
+          onSubmit={(values) => {
+            setPreLinkValeId(null);
+            return handleSave(values);
+          }}
+          onCancel={() => {
+            setPreLinkValeId(null);
+            setEditing(undefined);
+          }}
         />
       </Modal>
 

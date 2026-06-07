@@ -107,12 +107,14 @@ function fmt(n: number, currency: string): string {
 
 type Props = {
   initial: Liquidacion | null;
+  /** Cuando se abre desde "+ Liquidar" en ValesSection, pre-selecciona ese vale. */
+  preLinkValeId?: string | null;
   submitting?: boolean;
   onSubmit: (v: LiquidacionFormValues) => void | Promise<void>;
   onCancel: () => void;
 };
 
-export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Props) {
+export function LiquidacionForm({ initial, preLinkValeId, submitting, onSubmit, onCancel }: Props) {
   const [v, setV] = useState<FormState>(fromRow(initial));
   const [rows, setRows] = useState<RowState[]>([]);
   const [editingRowIdx, setEditingRowIdx] = useState<number | null>(null);
@@ -129,6 +131,13 @@ export function LiquidacionForm({ initial, submitting, onSubmit, onCancel }: Pro
   useEffect(() => {
     if (linkedValesQ.data) setSelectedValeIds(linkedValesQ.data);
   }, [linkedValesQ.data]);
+
+  // Pre-vincula el vale que viene del botón "+ Liquidar" (solo al crear).
+  useEffect(() => {
+    if (preLinkValeId && !initial?.id) {
+      setSelectedValeIds((prev) => (prev.includes(preLinkValeId) ? prev : [...prev, preLinkValeId]));
+    }
+  }, [preLinkValeId, initial?.id]);
 
   useEffect(() => {
     setV(fromRow(initial));

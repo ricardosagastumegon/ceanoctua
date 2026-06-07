@@ -1,6 +1,11 @@
-import { useMemo } from 'react';
-import { useTarjetas } from '@/modules/admin/hooks';
+import { useMemo, useState } from 'react';
+import { useCreateTarjeta, useTarjetas } from '@/modules/admin/hooks';
 import { useConsumos } from './hooks';
+import { useAuth } from '@/lib/auth';
+import { Modal } from '@/components/ui/Modal';
+import { TarjetaForm } from '@/modules/admin/components/TarjetaForm';
+import { useToast } from '@/components/ui/Toast';
+import { describeError } from '@/modules/admin/hooks';
 import { formatMoney } from '@/lib/money';
 
 // F-4 · Gallery de TC corporativas. Una card por cada `tarjetas_credito`
@@ -26,6 +31,11 @@ function tintFromColor(hex: string | null | undefined): string {
 export function TcGallery({ filterCard, onSelectCard }: Props) {
   const tarjetasQ = useTarjetas();
   const consumosQ = useConsumos();
+  const createTarjeta = useCreateTarjeta();
+  const { profile } = useAuth();
+  const toast = useToast();
+  const isAdmin = profile?.rol === 'admin';
+  const [tcCorpOpen, setTcCorpOpen] = useState(false);
 
   const corp = (tarjetasQ.data ?? []).filter(
     (t) => t.tipo === 'corporativa' && t.activo,
@@ -91,9 +101,21 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-dark-2">
-        Tarjetas corporativas
-      </h3>
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-dark-2">
+          Tarjetas corporativas
+        </h3>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setTcCorpOpen(true)}
+            className="rounded-md border border-purple/40 bg-purple/10 px-3 py-1 text-xs font-semibold text-purple hover:bg-purple/20"
+            title="Crear nueva tarjeta corporativa"
+          >
+            + TC CORP
+          </button>
+        )}
+      </div>
       <div className="flex flex-wrap gap-3">
         {corp.map((t) => {
           const stats = statsByCardId.get(t.tc_id);
@@ -145,6 +167,29 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
           );
         })}
       </div>
+
+      <Modal
+        open={tcCorpOpen}
+        onClose={() => setTcCorpOpen(false)}
+        title="Nueva tarjeta corporativa"
+        size="lg"
+      >
+        <TarjetaForm
+          initial={null}
+          submitting={createTarjeta.isPending}
+          onSubmit={async (values) => {
+            try {
+              // Forzar tipo='corporativa' aunque el form permita cambiar.
+              await createTarjeta.mutateAsync({ ...values, tipo: 'corporativa' });
+              toast.success('Tarjeta corporativa creada.');
+              setTcCorpOpen(false);
+            } catch (e) {
+              toast.error(describeError(e));
+            }
+          }}
+          onCancel={() => setTcCorpOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

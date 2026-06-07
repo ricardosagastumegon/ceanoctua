@@ -241,6 +241,21 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
               <>
                 <button
                   type="button"
+                  onClick={() => {
+                    // Pre-vincula este vale a una nueva liquidación.
+                    // LiquidacionesSection lee la key en el mount.
+                    sessionStorage.setItem('preLinkValeId', row.id);
+                    // Navega a la sub-sección Liquidaciones por hash.
+                    window.location.hash = 'liquidaciones';
+                    toast.success('Abriendo nueva liquidación con este vale vinculado…');
+                  }}
+                  className="rounded-md border border-teal/40 bg-teal-l px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal/20"
+                  title="Crear liquidación con este vale pre-vinculado"
+                >
+                  + Liquidar
+                </button>
+                <button
+                  type="button"
                   onClick={() => setEditing(row)}
                   className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
                 >

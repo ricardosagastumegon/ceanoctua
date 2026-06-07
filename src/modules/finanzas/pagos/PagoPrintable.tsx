@@ -52,31 +52,56 @@ export function PagoPrintable({ pago }: { pago: Pago }) {
       </section>
 
       <section className="px-6 py-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-dark-2">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-dark-2">
           Flujo del pago
         </h2>
-        <ol className="grid grid-cols-6 gap-1 text-center">
-          {PAGO_STEPS.map((label, i) => {
-            const done = i < pago.step_idx;
-            const active = i === pago.step_idx;
-            const date = pago.step_dates?.[i];
-            const dotColor = done || active ? '#077e84' : '#e5e5e5';
-            return (
-              <li key={label} className="space-y-1">
-                <div
-                  className="mx-auto h-4 w-4 rounded-full"
-                  style={{ background: dotColor }}
-                />
-                <p
-                  className={`text-[10px] font-semibold uppercase tracking-wider ${active ? 'text-teal-d' : done ? 'text-dark-2' : 'text-dark-3'}`}
-                >
-                  {label}
-                </p>
-                {date && <p className="text-[9px] text-dark-3">{date}</p>}
-              </li>
-            );
-          })}
-        </ol>
+        {/* Timeline horizontal con línea conectora + círculos numerados + fechas */}
+        <div className="relative">
+          {/* Línea horizontal background */}
+          <div className="absolute left-4 right-4 top-4 h-0.5 bg-sand" aria-hidden />
+          {/* Línea progreso teal */}
+          <div
+            className="absolute left-4 top-4 h-0.5 bg-gradient-to-r from-teal to-teal-d"
+            style={{
+              width: pago.step_idx === 0 ? '0%' : `calc(${(pago.step_idx / (PAGO_STEPS.length - 1)) * 100}% - 1rem)`,
+            }}
+            aria-hidden
+          />
+          <ol className="relative grid grid-cols-6 gap-1 text-center">
+            {PAGO_STEPS.map((label, i) => {
+              const done = i < pago.step_idx;
+              const active = i === pago.step_idx;
+              const date = pago.step_dates?.[i];
+              return (
+                <li key={label} className="space-y-1.5">
+                  <div
+                    className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
+                      done
+                        ? 'border-teal-d bg-teal text-white'
+                        : active
+                          ? 'border-teal-d bg-white text-teal-d ring-2 ring-teal-l'
+                          : 'border-sand bg-sand-l text-dark-3'
+                    }`}
+                  >
+                    {done ? '✓' : i + 1}
+                  </div>
+                  <p
+                    className={`text-[10px] font-semibold uppercase tracking-wider leading-tight ${
+                      active ? 'text-teal-d' : done ? 'text-dark-2' : 'text-dark-3'
+                    }`}
+                  >
+                    {label}
+                  </p>
+                  {date ? (
+                    <p className="font-mono text-[9px] text-dark-3">{date}</p>
+                  ) : (
+                    <p className="text-[9px] text-dark-3/40">—</p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </section>
 
       <section className="grid grid-cols-2 gap-8 border-t border-sand px-6 py-8">

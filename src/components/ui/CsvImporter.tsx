@@ -1,4 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
+import * as XLSX from 'xlsx';
 import { Modal } from './Modal';
 import { TextArea } from './TextArea';
 import { useToast } from './Toast';
@@ -137,12 +138,35 @@ export function CsvImporter<T extends object>({
   function onFileChange(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
+    const ext = f.name.toLowerCase().split('.').pop();
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result;
-      if (typeof result === 'string') setText(result);
-    };
-    reader.readAsText(f, 'utf-8');
+
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') {
+      // Binario: parsea con SheetJS y emite TSV (lo que el parser interno
+      // ya soporta vía detectSeparator).
+      reader.onload = (ev) => {
+        try {
+          const buf = ev.target?.result;
+          if (!buf) return;
+          const wb = XLSX.read(buf, { type: 'array' });
+          const firstSheet = wb.SheetNames[0];
+          if (!firstSheet) return;
+          const sheet = wb.Sheets[firstSheet];
+          const tsv = XLSX.utils.sheet_to_csv(sheet, { FS: '\t' });
+          setText(tsv);
+        } catch (err) {
+          toast.error(`Error al leer xlsx: ${(err as Error).message}`);
+        }
+      };
+      reader.readAsArrayBuffer(f);
+    } else {
+      // CSV/TSV: lectura como texto UTF-8.
+      reader.onload = (ev) => {
+        const result = ev.target?.result;
+        if (typeof result === 'string') setText(result);
+      };
+      reader.readAsText(f, 'utf-8');
+    }
   }
 
   async function doImport() {
@@ -212,10 +236,13 @@ export function CsvImporter<T extends object>({
 
         <input
           type="file"
-          accept=".csv,.tsv,text/csv,text/tab-separated-values"
+          accept=".csv,.tsv,.xlsx,.xls,.ods,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
           onChange={onFileChange}
           className="block w-full rounded border border-sand bg-white px-2 py-1.5 text-xs"
         />
+        <p className="text-[10px] text-dark-3">
+          Acepta <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.ods</strong>, <strong>.csv</strong> y <strong>.tsv</strong>. Los binarios se leen con SheetJS (toma la primera hoja).
+        </p>
 
         <TextArea
           name="csv"

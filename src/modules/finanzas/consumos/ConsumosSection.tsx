@@ -10,6 +10,11 @@ import type { Consumo } from './api';
 import { ConsumoForm } from './ConsumoForm';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
 import { TcGallery } from './TcGallery';
+import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
+import { PrintableModal } from '@/components/ui/PrintableModal';
+import { useAutorizadores, useProveedores, useTarjetas } from '@/modules/admin/hooks';
+import type { ConsumoInsert } from './api';
+import { ConsumoPrintable } from './ConsumoPrintable';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -47,6 +52,58 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
   const toast = useToast();
   const query = useConsumos();
   const create = useCreateConsumo();
+  const tarjetasList = useTarjetas();
+  const proveedoresList = useProveedores();
+  const autorizadoresList = useAutorizadores();
+  const [importerOpen, setImporterOpen] = useState(false);
+  const [viewing, setViewing] = useState<import('./api').Consumo | null>(null);
+
+  // Lookups por nombre/tc_id case-insensitive.
+  const tarjetaByTcId = useMemo(() => {
+    const m = new Map<string, { id: string; tc_id: string; empresa: string | null }>();
+    for (const t of tarjetasList.data ?? []) {
+      m.set(t.tc_id.toLowerCase().trim(), { id: t.id, tc_id: t.tc_id, empresa: t.empresa });
+    }
+    return m;
+  }, [tarjetasList.data]);
+  const proveedorByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of proveedoresList.data ?? []) m.set(p.nombre.toLowerCase().trim(), p.id);
+    return m;
+  }, [proveedoresList.data]);
+  const autorizadorByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of autorizadoresList.data ?? []) m.set(a.nombre.toLowerCase().trim(), a.id);
+    return m;
+  }, [autorizadoresList.data]);
+
+  const importMappings: ColumnMapping<ConsumoInsert>[] = [
+    { headerAlias: 'fecha|date', field: 'fecha', required: true },
+    { headerAlias: 'card_id|tarjeta|tc_id|terminacion|terminación', field: 'card_id', required: true },
+    { headerAlias: 'tarjeta_id|tarjeta_uuid', field: 'tarjeta_id', transform: (s) => {
+      // Si llega un tc_id (como "TC Corp Agro Term. 7274"), lookup al uuid.
+      const direct = tarjetaByTcId.get(s.toLowerCase().trim());
+      return direct?.id ?? null;
+    } },
+    { headerAlias: 'empresa|company', field: 'empresa' },
+    { headerAlias: 'empresa_codigo|prefijo|code', field: 'empresa_codigo', transform: (s) => s.toUpperCase() },
+    { headerAlias: 'proveedor|supplier', field: 'proveedor', required: true },
+    { headerAlias: 'proveedor_id|proveedor_uuid', field: 'proveedor_id', transform: (s) =>
+      proveedorByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'concepto|concept|description', field: 'concepto', required: true },
+    { headerAlias: 'monto|amount|total', field: 'monto', required: true, transform: (s) => Number(s.replace(/[^0-9.-]/g, '')) },
+    { headerAlias: 'moneda|currency', field: 'moneda', transform: (s) => {
+      const v = s.toUpperCase().trim();
+      return ['GTQ', 'USD', 'EUR', 'GBP'].includes(v) ? v : 'GTQ';
+    } },
+    { headerAlias: 'autorizo|autorizador|autorizado_por', field: 'autorizador_id', transform: (s) =>
+      autorizadorByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'solicitado_por|solicitado', field: 'solicitado_por' },
+    { headerAlias: 'no_autorizacion|no_aut|num_aut', field: 'no_autorizacion' },
+    { headerAlias: 'pagado_por', field: 'pagado_por' },
+  ];
   const update = useUpdateConsumo();
   const remove = useDeleteConsumo();
 
@@ -129,14 +186,25 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
             Cada consumo genera un voucher serial. El badge VENCE muestra los días hábiles hasta el límite de 7 días para reintegro.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={exportCsv}
-          disabled={filtered.length === 0}
-          className="rounded-md border border-teal/40 px-3 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l disabled:opacity-50"
-        >
-          ⬇ Exportar CSV
-        </button>
+        <div className="flex gap-2">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={filtered.length === 0}
+            className="rounded-md border border-teal/40 px-3 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l disabled:opacity-50"
+          >
+            ⬇ Exportar CSV
+          </button>
+        </div>
       </header>
 
       <TcGallery filterCard={filterCard} onSelectCard={setFilterCard} />
@@ -178,6 +246,15 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
         rowLabel={(r) => r.voucher_num ?? r.proveedor}
         canEdit={canEdit}
         extraActions={(row) => (
+          <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setViewing(row)}
+            className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
+            title="Ver PDF"
+          >
+            👁
+          </button>
           <button
             type="button"
             onClick={async () => {
@@ -199,8 +276,17 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
           >
             💸
           </button>
+          </div>
         )}
       />
+
+      <PrintableModal
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing?.voucher_num ?? 'Consumo TC'}
+      >
+        {viewing && <ConsumoPrintable consumo={viewing} />}
+      </PrintableModal>
 
       {totalsByMoneda.length > 0 && (
         <div className="flex flex-wrap items-center justify-end gap-3 rounded-md border border-sand bg-sand-l/30 px-4 py-2 text-sm">
@@ -210,6 +296,24 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
           ))}
         </div>
       )}
+
+      <CsvImporter<ConsumoInsert>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar consumos TC desde CSV/Excel"
+        mappings={importMappings}
+        onImportRow={async (row) => {
+          const r = row as ConsumoInsert;
+          if (!r.moneda) r.moneda = 'GTQ';
+          // Si vino tc_id como card_id pero no tarjeta_id, lookup ahora
+          if (r.card_id && !r.tarjeta_id) {
+            const t = tarjetaByTcId.get(r.card_id.toLowerCase().trim());
+            if (t) r.tarjeta_id = t.id;
+          }
+          await create.mutateAsync(r);
+        }}
+        exampleCsv={'fecha,card_id,empresa,proveedor,concepto,monto,moneda,autorizo,solicitado_por\n2026-05-15,TC Corp Agro Term. 7274,AGROATLANTIC,Office Depot,Materiales,1250.50,GTQ,Javier Arriaza,Lucía Monrroy\n2026-05-16,TC Corp Bananera Term. 5523,BANANERA IZABAL,UBER Eats,Comida ejecutiva,275,GTQ,Lissa Arriaza,Angeles Quezada'}
+      />
     </section>
   );
 }

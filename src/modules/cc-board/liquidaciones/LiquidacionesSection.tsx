@@ -18,8 +18,10 @@ import {
   useReplaceLinkedVales,
   useUpdateLiquidacion,
 } from './hooks';
-import { LIQ_ESTADOS, type Liquidacion } from './api';
+import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
+import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
+import { useEntidades } from '@/modules/admin/hooks';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(n);
@@ -52,6 +54,33 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const create = useCreateLiquidacion();
   const update = useUpdateLiquidacion();
   const replaceVales = useReplaceLinkedVales();
+  const entidadesList = useEntidades();
+  const [importerOpen, setImporterOpen] = useState(false);
+
+  const entidadByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of entidadesList.data ?? []) m.set(e.nombre.toLowerCase().trim(), e.id);
+    return m;
+  }, [entidadesList.data]);
+
+  const importMappings: ColumnMapping<LiquidacionInsert>[] = [
+    { headerAlias: 'fecha|date', field: 'fecha', required: true },
+    { headerAlias: 'motivo|motivo|reason', field: 'motivo', required: true },
+    { headerAlias: 'solicitado|solicitado_por|solicitante', field: 'solicitado', required: true },
+    { headerAlias: 'entidad|empresa', field: 'entidad' },
+    { headerAlias: 'producto|producto_servicio|servicio', field: 'producto_servicio' },
+    { headerAlias: 'forma_pago|payment_method|pago', field: 'forma_pago' },
+    { headerAlias: 'reintegrar_a|reintegrar', field: 'reintegrar_a' },
+    { headerAlias: 'moneda|currency', field: 'moneda', transform: (s) => {
+      const v = s.toUpperCase().trim();
+      return ['GTQ', 'USD', 'EUR', 'GBP'].includes(v) ? v : 'GTQ';
+    } },
+    { headerAlias: 'monto_total|total|monto', field: 'monto_total', transform: (s) => Number(s.replace(/[^0-9.-]/g, '')) },
+    { headerAlias: 'estado|status', field: 'estado' },
+    { headerAlias: 'comentarios|notas', field: 'comentarios' },
+  ];
+  void entidadByNombre; // por ahora solo se valida texto; el lookup queda
+  // disponible para una futura iteración con entidad_id.
   const remove = useDeleteLiquidacion();
   const toast = useToast();
   const confirm = useConfirm();
@@ -240,6 +269,15 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
           </p>
         </div>
         <div className="flex gap-2">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar
+            </button>
+          )}
           <button
             type="button"
             onClick={exportCsv}
@@ -396,6 +434,20 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
           <LiquidacionPrintable liq={viewing} rows={viewingRows.data ?? []} />
         )}
       </PrintableModal>
+
+      <CsvImporter<LiquidacionInsert>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar liquidaciones (solo headers — renglones/vales se agregan editando cada una)"
+        mappings={importMappings}
+        onImportRow={async (row) => {
+          const r = row as LiquidacionInsert;
+          if (!r.moneda) r.moneda = 'GTQ';
+          if (!r.estado) r.estado = 'Generada';
+          await create.mutateAsync({ input: r, rows: [] });
+        }}
+        exampleCsv={'fecha,motivo,solicitado,entidad,forma_pago,moneda,monto_total\n2026-05-15,Compra plantas oficina,Lissa Arriaza,AGROATLANTIC,Caja Chica,GTQ,1500\n2026-05-16,Reparación AC,Angeles Quezada,SUREÑA S.A.,Solicitud de Pago,GTQ,3200'}
+      />
     </section>
   );
 }

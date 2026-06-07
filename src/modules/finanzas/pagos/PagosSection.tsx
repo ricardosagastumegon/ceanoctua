@@ -22,6 +22,8 @@ import { PagoPrintable } from './PagoPrintable';
 import { NotificacionesPanel } from './NotificacionesPanel';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
+import { useAutorizadores, useEntidades, useProveedores, useStatusSp } from '@/modules/admin/hooks';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -52,6 +54,62 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStep, setFilterStep] = useState<string>('');
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [importerOpen, setImporterOpen] = useState(false);
+  const entidadesList = useEntidades();
+  const proveedoresList = useProveedores();
+  const autorizadoresList = useAutorizadores();
+  const statusSpList = useStatusSp();
+
+  const entidadByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of entidadesList.data ?? []) m.set(e.nombre.toLowerCase().trim(), e.id);
+    return m;
+  }, [entidadesList.data]);
+  const proveedorByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of proveedoresList.data ?? []) m.set(p.nombre.toLowerCase().trim(), p.id);
+    return m;
+  }, [proveedoresList.data]);
+  const autorizadorByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of autorizadoresList.data ?? []) m.set(a.nombre.toLowerCase().trim(), a.id);
+    return m;
+  }, [autorizadoresList.data]);
+  const statusSpByNombre = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of statusSpList.data ?? []) m.set(s.nombre.toLowerCase().trim(), s.id);
+    return m;
+  }, [statusSpList.data]);
+
+  const importMappings: ColumnMapping<PagoInsert>[] = [
+    { headerAlias: 'fecha|date', field: 'fecha', required: true },
+    { headerAlias: 'proveedor|supplier', field: 'proveedor' },
+    { headerAlias: 'proveedor_id|proveedor_nombre', field: 'proveedor_id', transform: (s) =>
+      proveedorByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'entidad|company', field: 'entidad' },
+    { headerAlias: 'entidad_id|entidad_nombre', field: 'entidad_id', transform: (s) =>
+      entidadByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'nit', field: 'nit' },
+    { headerAlias: 'concepto|description', field: 'concepto' },
+    { headerAlias: 'monto|amount|total', field: 'monto', required: true, transform: (s) => Number(s.replace(/[^0-9.-]/g, '')) },
+    { headerAlias: 'moneda|currency', field: 'moneda', transform: (s) => {
+      const v = s.toUpperCase().trim();
+      return ['GTQ', 'USD', 'EUR', 'GBP'].includes(v) ? v : 'GTQ';
+    } },
+    { headerAlias: 'tipo_label|tipo_pago|tipo|payment_type', field: 'tipo_label' },
+    { headerAlias: 'tipo_cambio|tc|exchange_rate', field: 'tipo_cambio', transform: (s) => Number(s) || null },
+    { headerAlias: 'pct_anticipo|anticipo|%anticipo', field: 'pct_anticipo', transform: (s) => Number(s) || null },
+    { headerAlias: 'referencia|ref', field: 'referencia' },
+    { headerAlias: 'banco|bank', field: 'banco' },
+    { headerAlias: 'autorizo|autorizador|autorizado_por', field: 'autorizador_id', transform: (s) =>
+      autorizadorByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+    { headerAlias: 'status_sp|status_nombre', field: 'status_id', transform: (s) =>
+      statusSpByNombre.get(s.toLowerCase().trim()) ?? null,
+    },
+  ];
 
   // ---- Firmas vinculadas a estos pagos ----
   const qc = useQueryClient();
@@ -173,13 +231,22 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
           </p>
         </div>
         {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditing(null)}
-            className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
-          >
-            + Nueva solicitud
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setImporterOpen(true)}
+              className="rounded-md border border-teal/40 px-3 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ⬆ Importar
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
+            >
+              + Nueva solicitud
+            </button>
+          </div>
         )}
       </header>
 
@@ -384,6 +451,20 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
       </PrintableModal>
       </div>
       </div>
+
+      <CsvImporter<PagoInsert>
+        open={importerOpen}
+        onClose={() => setImporterOpen(false)}
+        title="Importar solicitudes de pago"
+        mappings={importMappings}
+        onImportRow={async (row) => {
+          const r = row as PagoInsert;
+          if (!r.moneda) r.moneda = 'GTQ';
+          if (!r.tipo) r.tipo = 'transferencia';
+          await create.mutateAsync(r);
+        }}
+        exampleCsv={'fecha,proveedor,entidad,concepto,monto,moneda,tipo_label,autorizo,status_sp\n2026-05-15,Office Depot,AGROATLANTIC,Materiales,1500,GTQ,Pago de Contado,Javier Arriaza,Generado\n2026-05-16,Telefónica,SUREÑA S.A.,Factura mensual,890,GTQ,Crédito 30 días,Lissa Arriaza,Firmado'}
+      />
     </section>
   );
 }

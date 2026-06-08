@@ -3,15 +3,19 @@ import { useCreateTarjeta, useTarjetas } from '@/modules/admin/hooks';
 import { useConsumos } from './hooks';
 import { useAuth } from '@/lib/auth';
 import { Modal } from '@/components/ui/Modal';
+import { PrintableModal } from '@/components/ui/PrintableModal';
 import { TarjetaForm } from '@/modules/admin/components/TarjetaForm';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { formatMoney } from '@/lib/money';
+import { EstadoCuentaPrintable } from './EstadoCuentaPrintable';
+import type { Database } from '@/types/database';
+
+type Tarjeta = Database['public']['Tables']['tarjetas_credito']['Row'];
 
 // F-4 · Gallery de TC corporativas. Una card por cada `tarjetas_credito`
 // con `tipo='corporativa'`. El click filtra la lista de consumos por
-// ese tc_id (selecciona el filtro existente). Botón "Estado de cuenta"
-// descarga CSV de los consumos de esa TC.
+// ese tc_id. Botón "Estado de cuenta" abre el PDF imprimible.
 
 type Props = {
   filterCard: string;
@@ -36,6 +40,7 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
   const toast = useToast();
   const isAdmin = profile?.rol === 'admin';
   const [tcCorpOpen, setTcCorpOpen] = useState(false);
+  const [estadoCuentaTarjeta, setEstadoCuentaTarjeta] = useState<Tarjeta | null>(null);
 
   const corp = (tarjetasQ.data ?? []).filter(
     (t) => t.tipo === 'corporativa' && t.activo,
@@ -57,38 +62,11 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
     return m;
   }, [consumosQ.data]);
 
-  function exportEstadoCuenta(tcId: string, label: string) {
-    const items = (consumosQ.data ?? []).filter((c) => c.card_id === tcId);
-    if (items.length === 0) return;
-    const csvCell = (s: unknown) => {
-      if (s == null) return '';
-      return `"${String(s).replace(/"/g, '""')}"`;
-    };
-    const header = ['Fecha', 'Proveedor', 'Concepto', 'Moneda', 'Monto', 'Voucher', 'Autorizó']
-      .map(csvCell)
-      .join(',');
-    const lines = items.map((c) =>
-      [
-        c.fecha,
-        c.proveedor,
-        c.concepto,
-        c.moneda,
-        Number(c.monto).toFixed(2),
-        c.voucher_num,
-        c.autorizador_id ?? '',
-      ]
-        .map(csvCell)
-        .join(','),
-    );
-    const csv = [header, ...lines].join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    const safe = label.replace(/[^a-z0-9]/gi, '_').slice(0, 40);
-    a.download = `estado_${safe}_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
+  // Lista de consumos para la TC seleccionada (para el PrintableModal).
+  const consumosForCard = useMemo(() => {
+    if (!estadoCuentaTarjeta) return [];
+    return (consumosQ.data ?? []).filter((c) => c.card_id === estadoCuentaTarjeta.tc_id);
+  }, [estadoCuentaTarjeta, consumosQ.data]);
 
   if (corp.length === 0) {
     return (
@@ -156,7 +134,7 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
                 )}
                 <button
                   type="button"
-                  onClick={() => exportEstadoCuenta(t.tc_id, t.empresa ?? t.tc_id)}
+                  onClick={() => setEstadoCuentaTarjeta(t)}
                   disabled={!stats || stats.count === 0}
                   className="mt-2 w-full rounded-md border border-teal/40 px-2 py-1 text-[10px] font-semibold text-teal-d hover:bg-teal-l disabled:opacity-40"
                 >
@@ -190,6 +168,16 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
           onCancel={() => setTcCorpOpen(false)}
         />
       </Modal>
+
+      <PrintableModal
+        open={estadoCuentaTarjeta !== null}
+        onClose={() => setEstadoCuentaTarjeta(null)}
+        title={`Estado de Cuenta · ${estadoCuentaTarjeta?.empresa ?? estadoCuentaTarjeta?.tc_id ?? ''}`}
+      >
+        {estadoCuentaTarjeta && (
+          <EstadoCuentaPrintable tarjeta={estadoCuentaTarjeta} consumos={consumosForCard} />
+        )}
+      </PrintableModal>
     </div>
   );
 }

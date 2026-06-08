@@ -356,9 +356,6 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
         emptyMessage="Sin liquidaciones con estos filtros."
         rowKey={(r) => r.id}
         actions={(row) => {
-          const isSP =
-            row.forma_pago === 'Solicitud de Pago' ||
-            row.payment_method === 'Solicitud de Pago';
           return (
             <div className="flex justify-end gap-1">
               <button
@@ -369,7 +366,9 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
               >
                 👁
               </button>
-              {canEdit && isSP && (
+              {/* Botón PAGOS siempre visible — el usuario decide si enviar a Pagos
+                  sin importar la forma de pago. */}
+              {canEdit && (
                 <button
                   type="button"
                   onClick={async () => {

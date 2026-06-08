@@ -305,3 +305,8 @@ create policy pagos_notif_write on public.pagos_notificaciones
   with check (public.auth_rol() in ('admin','asistente'));
 
 COMMIT;
+
+-- Forzar reload del schema cache de PostgREST. Sin esto el frontend
+-- falla con "Could not find column X in schema cache" aunque el DDL
+-- haya sido exitoso. Se ejecuta FUERA de la transacción.
+NOTIFY pgrst, 'reload schema';

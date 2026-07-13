@@ -60,37 +60,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Fallback timeout defensivo: si getSession() o loadProfile() se cuelgan
-    // (pending forever sin resolver ni rechazar), este timeout garantiza que
-    // la app no se quede atrapada en el splash "Cargando…". Se ha visto que
-    // supabase-js a veces no resuelve getSession() cuando hay estado local
-    // corrupto o timing raro con onAuthStateChange en paralelo.
+    // ============================================================
+    // Bootstrap: usar getUser() en vez de getSession().
+    // ============================================================
+    // ADR D-018 (docs/PROCESO-Y-DECISIONES.md): getSession() lee localStorage
+    // y espera el evento INITIAL_SESSION de onAuthStateChange, que en presencia
+    // de extensiones que monkey-patchean postMessage (MetaMask, etc.) NUNCA
+    // se dispara → Promise pending forever → splash "Cargando…" eterno.
+    //
+    // getUser() hace fetch HTTP a /auth/v1/user — resuelve o rechaza siempre.
+    // Reconstruimos la Session parcial leyendo el token de localStorage.
+    // Si el token no está o está mal, cae al login.
+    //
+    // El setTimeout de 5s es una red de seguridad adicional: si incluso
+    // getUser() se cuelga (network offline, DNS roto, etc.), no bloqueamos
+    // la app forever.
     const bootTimeout = setTimeout(() => {
       if (mounted) {
         // eslint-disable-next-line no-console
-        console.warn('[auth] bootstrap timeout after 8s — forcing loading=false. Session may be null.');
+        console.warn('[auth] bootstrap timeout after 5s — forcing loading=false');
         setLoading(false);
       }
-    }, 8000);
+    }, 5000);
 
-    supabase.auth.getSession()
-      .then(async ({ data }) => {
+    function readStoredSession(): Session | null {
+      try {
+        const key = `sb-${new URL(import.meta.env.VITE_SUPABASE_URL as string).hostname.split('.')[0]}-auth-token`;
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw) as Session;
+      } catch {
+        return null;
+      }
+    }
+
+    supabase.auth.getUser()
+      .then(async ({ data, error }) => {
         if (!mounted) return;
-        setSession(data.session);
-        if (data.session) {
-          lastUserIdRef.current = data.session.user.id;
-          try {
-            const p = await loadProfile(data.session.user.id);
-            if (mounted) setProfile(p);
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error('[auth] loadProfile failed at bootstrap:', e);
-          }
+        if (error || !data.user) {
+          setSession(null);
+          setProfile(null);
+          return;
+        }
+        // getUser() valida el token vía HTTP. Si llegamos aquí, el user es real.
+        // Reconstruimos la Session desde localStorage para exponerla al resto de la app.
+        const storedSession = readStoredSession();
+        if (storedSession) setSession(storedSession);
+        lastUserIdRef.current = data.user.id;
+        try {
+          const p = await loadProfile(data.user.id);
+          if (mounted) setProfile(p);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[auth] loadProfile failed at bootstrap:', e);
         }
       })
       .catch((e) => {
         // eslint-disable-next-line no-console
-        console.error('[auth] getSession() failed at bootstrap:', e);
+        console.error('[auth] getUser() failed at bootstrap:', e);
       })
       .finally(() => {
         clearTimeout(bootTimeout);

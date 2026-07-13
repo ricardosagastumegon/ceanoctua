@@ -6,6 +6,25 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Bootstrap fix · 2026-07-12 · C-1 CRITICAL del AUDIT
+
+**Objetivo:** arreglar el bug intermitente "Cargando…" eterno / "No hay perfil cargado" que bloqueaba la app en producción para la mayoría de sesiones.
+
+**Ver:** [`docs/AUDIT-2026-07-12.md`](AUDIT-2026-07-12.md) finding C-1 + ADR [D-018](PROCESO-Y-DECISIONES.md#d-018).
+
+**Cambios:**
+- `src/lib/auth.tsx` — bootstrap ahora usa `supabase.auth.getUser()` (fetch HTTP real) en vez de `getSession()` (que espera evento local que nunca llega con extensiones crypto tipo MetaMask instaladas).
+- Reconstrucción de `Session` desde `localStorage` para exponerla al `AuthContext`.
+- Timeout defensivo reducido de 8s a 5s (getUser() ya no cuelga; el timeout es solo red de seguridad para network offline).
+- Se mantienen `.catch`/`.finally` y try/catch alrededor de `loadProfile` (garantiza `setLoading(false)` siempre).
+
+**Housekeeping incluido:**
+- `supabase/scripts/fix-usuarios-nombres.sql` — script para arreglar `usuarios.nombre = NULL` de Angeles (finding M-3).
+
+**Regresa al día siguiente:** F19-1 · servicios simples del PLAN-TT-TOUR-Y-TRAVEL.md (tiendas, reuniones, rutas, pois, restaurantes).
+
+---
+
 ## Fase 19 · 2026-07-12 → (en progreso) · T&T Tour & Travel
 
 **Objetivo:** portar el módulo standalone HTML de T&T (14 servicios + itinerario + calendar + map Leaflet) al stack de NOCTUA — React + TypeScript strict + Supabase con RLS Pattern A + triggers de audit.

@@ -249,6 +249,26 @@ Cuando una decisión se revierte o supersede, no se borra — se marca **Superse
 
 ---
 
+## D-018 · Bootstrap del AuthProvider: `getUser()` en vez de `getSession()`
+
+- **Fecha:** 2026-07-12 (fase 19-0 · debug post-deploy)
+- **Contexto:** Bug crítico intermitente en producción — la app se quedaba en splash "Cargando…" forever en la mayoría de sesiones (en varias computadoras). El `AuthProvider` llamaba `supabase.auth.getSession()` que jamás resolvía la Promise, así que `setLoading(false)` nunca corría. El primer fix defensivo agregó timeout de 8s + `.finally()`, lo que evitó el bloqueo eterno pero dejó al usuario con `session=null` → `profile=null` → pantalla "No hay perfil cargado" (ver `AUDIT-2026-07-12.md` finding C-1).
+- **Root cause identificado:** `supabase.auth.getSession()` lee el token de `localStorage` (no hace fetch) y espera un evento `INITIAL_SESSION` de `onAuthStateChange`. Ese evento en presencia de extensiones que monkey-patchean `window.postMessage` (MetaMask, Rabby, Phantom, Coinbase Wallet, etc.) NUNCA se dispara. Los warnings de `contentscript.js:14083` (`MaxListenersExceededWarning`, `orphaned data for stream`) que apareció en la consola confirman que había extensiones saturando el `EventEmitter` global. El usuario confirmó que pasa en varias computadoras — probablemente muchos tienen alguna wallet crypto instalada.
+- **Alternativas:**
+  - **A · `getUser()` en vez de `getSession()`:** hace fetch HTTP a `/auth/v1/user` con el bearer token. Resuelve o rechaza siempre (no depende de eventos locales). Contras: requiere leer el token de `localStorage` manualmente para reconstruir la `Session`. La `Session` reconstruida tiene solo `user` — el resto de campos (`access_token`, `refresh_token`, `expires_at`) vienen del `localStorage`. Suficiente para el `AuthContext`.
+  - **B · Invalidar el token al fallar y forzar re-login:** más agresivo — el usuario tendría que volver a loguear cada vez que el bootstrap se cuelga. Malo UX.
+  - **C · Downgrade `@supabase/supabase-js` a una versión anterior:** riesgoso — otras versiones podrían tener otros bugs. Y no fixea el root cause.
+  - **D · Migrar a un cliente HTTP directo (sin supabase-js):** rewrite masivo. Fuera de alcance.
+- **Decisión:** **A · `getUser()` + reconstrucción de Session desde `localStorage`**. Además, mantener el timeout defensivo (reducido a 5s porque `getUser()` ya no debería colgarse — el timeout es red de seguridad para casos raros como network offline).
+- **Consecuencias:**
+  - Bootstrap ahora siempre resuelve. La app carga bien aunque haya extensiones crypto instaladas.
+  - Un fetch HTTP extra por bootstrap (~50-200ms latencia). Aceptable — ya sucede al llamar `loadProfile()` inmediatamente después de todos modos.
+  - Si el token está expirado, `getUser()` devuelve `error` y caemos limpiamente al login (comportamiento correcto).
+  - **NO se cambia el flujo de `signIn` / `signOut`** — esos no tienen el bug porque son operaciones activas del usuario, no bootstrap pasivo.
+- **How to apply:** ver [`src/lib/auth.tsx`](src/lib/auth.tsx) commit posterior a `b7ff827`. Patrón replicable si en el futuro `supabase-js` reintroduce el bug: cualquier operación "leer estado local" debe ser reemplazada por una llamada HTTP real.
+
+---
+
 ## Plantilla de nueva decisión
 
 ```

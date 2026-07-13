@@ -216,6 +216,39 @@ Cuando una decisión se revierte o supersede, no se borra — se marca **Superse
 
 ---
 
+## D-016 · Extender `audit_trigger` a catálogos que se crean después de fase 3
+
+- **Fecha:** 2026-07-12 (fase 18)
+- **Contexto:** La función `public.audit_trigger()` de fase 3 (2026-05-24) se attachó **solo a las 6 tablas financieras** (`tc_consumos`, `reintegros`, `caja_chica_vales`, `caja_chica_liquidaciones`, `pagos`, `vouchers`). Los catálogos posteriores (empleados, entidades, personas, status_sp, tarjetas, tipos_pago) NO tienen audit_trigger — cambios en el catálogo se ejecutan sin dejar rastro histórico. Al crear el catálogo Vehículos (fase 18), enfrenté la decisión de seguir ese patrón o divergir.
+- **Alternativas:**
+  - Seguir el patrón actual: catálogos sin audit_trigger. Ventaja: consistencia con los 6 catálogos ya existentes. Desventaja: viola la Regla 0 (CLAUDE.md §4 invariante 10 · "audit_log NUNCA se edita ni borra desde la app. Solo escribe el trigger").
+  - Divergir: agregar audit_trigger al nuevo catálogo. Ventaja: cumple Regla 0. Desventaja: inconsistencia con los otros 6 catálogos.
+- **Decisión:** Divergir a favor de la Regla 0. Vehículos lleva `audit_trigger`. Los otros catálogos existentes NO se retrofittean (el costo de hacerlo es rehacer 6 migraciones + testing, sin beneficio inmediato).
+- **Consecuencias:**
+  - A partir de fase 18, **todo catálogo nuevo lleva `audit_trigger`**.
+  - Los 6 catálogos originales quedan como deuda técnica documentada. Si en algún momento la asistente o el admin toca un catálogo de forma sospechosa, no hay rastro. Riesgo bajo (los catálogos cambian pocas veces al año) pero explícito.
+  - La divergencia queda anotada como comentario en el header de cada migración de catálogo nueva a partir de fase 18.
+- **How to apply:** En cada nueva migración de catálogo, agregar el bloque `do $$ begin if exists (select 1 from pg_proc where proname = 'audit_trigger') then ... end if; end $$;` con `create trigger audit_<tabla>` — ver `20260711000001_fase18_vehiculos.sql` líneas 61-74 como referencia.
+
+---
+
+## D-017 · Módulo T&T: portar completo a React vs. hosting HTML estático
+
+- **Fecha:** 2026-07-12 (fase 19 · planning)
+- **Contexto:** El proveedor entregó T&T como archivo HTML único standalone (~5000 líneas de vanilla JS + Leaflet + localStorage). El README de integración asume trasplantar el HTML dentro del monolito HTML original de Board Assistant — pero NOCTUA ya migró de ese monolito a React + Supabase en fase 1. Dos caminos posibles.
+- **Alternativas:**
+  - **A · Hosting estático del HTML:** subir `TT_modulo.html` a `/public/tt.html` y linkearlo desde el menú. Ventaja: 1 h de trabajo, cero refactor. Desventaja: rompe 4 invariantes de CLAUDE.md §4 (invariante 3 sin RLS · invariante 10 sin audit_log · el "stack" §2 sin vanilla JS · datos en localStorage por navegador = un-user, no multi-user).
+  - **B · Portar completo al stack:** 20 tablas nuevas, 14 sub-módulos React, ~19 h. Ventaja: cumple Regla 0 y todas las invariantes; multi-user real; backup automático; auditoría; consistencia visual. Desventaja: 19x más caro.
+  - **C · Híbrido:** portar solo el schema y las páginas de listado a React, dejar los forms de servicios como iframes al HTML original. Ventaja: costo medio. Desventaja: los forms de HTML no pueden persistir en Supabase sin código intermedio — igual necesitarías endpoint REST o similar.
+- **Decisión:** **B · Portar completo**. Confirmado explícitamente por el usuario el 2026-07-12: *"al lenguaje y arquitectura que hoy tengamos"*.
+- **Consecuencias:**
+  - Fase 19 se descompone en 6 sub-fases (F19-0 a F19-5) — plan detallado en `PLAN-TT-TOUR-Y-TRAVEL.md`.
+  - Recursos reutilizables de NOCTUA (PrintableModal, DataTable, Modal, createCrudHooks, CsvImporter, Storage bucket, RLS Pattern A) reducen mucho el trabajo. Solo lo específico de T&T (los 14 forms + itinerario dinámico + map Leaflet + calendar) es realmente nuevo.
+  - Bundle target: mantener < 500 KB inicial vía lazy routing agresivo. Leaflet lazy-lazy dentro de la página TT.
+  - **Regla nueva:** todo proveedor externo que entregue un módulo standalone en HTML+vanilla se traduce, nunca se copia-pega. Registrado en memory `feedback_provider_html_modules.md`.
+
+---
+
 ## Plantilla de nueva decisión
 
 ```

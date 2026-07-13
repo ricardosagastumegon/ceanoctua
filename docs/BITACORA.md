@@ -6,6 +6,54 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 19 · 2026-07-12 → (en progreso) · T&T Tour & Travel
+
+**Objetivo:** portar el módulo standalone HTML de T&T (14 servicios + itinerario + calendar + map Leaflet) al stack de NOCTUA — React + TypeScript strict + Supabase con RLS Pattern A + triggers de audit.
+
+**Estado:** planificación completa. Ver [PLAN-TT-TOUR-Y-TRAVEL.md](../PLAN-TT-TOUR-Y-TRAVEL.md) para el detalle. Descompuesto en 6 sub-fases (F19-0 a F19-5), estimado ~19 h de trabajo.
+
+**Alcance confirmado por el usuario:**
+- Los 14 servicios se implementan todos (nada se difiere)
+- Portar completo al stack de NOCTUA (no hosting estático del HTML)
+- Igual prioridad que otros items pendientes
+
+**Entregables recibidos como input:**
+- `TT_modulo.html` (~5000 líneas standalone) del proveedor
+- `README_INTEGRACION_TT_CEA.md` con instrucciones de integración
+
+**Comentarios:**
+- El HTML asume integración en el monolito HTML original de Board Assistant. NOCTUA ya migró de ese monolito en fase 1. Copiar-pegar rompería 4 invariantes de CLAUDE.md §4 (stack, RLS, audit_log, storage). Se traduce al modelo NOCTUA en su totalidad.
+- 20 tablas nuevas (15 raíz + 5 sub) + 6 enums + 2 catálogos globales (aeropuertos_iata, paises_catalogo con seed).
+- Reusa: PrintableModal, DataTable, Modal, createCrudHooks, CsvImporter, Storage bucket comprobantes, RLS Pattern A.
+
+---
+
+## Fase 18 · 2026-07-12 · Catálogo Vehículos (flota empresa)
+
+**Objetivo:** agregar catálogo para la flota vehicular de la empresa. Distinto de `arriaza_autos` (autos personales de LA · fase 13).
+
+**Cambios de schema:**
+- Tabla `vehiculos` con 6 campos + auditoría + soft delete
+- Índice único parcial `vehiculos_placa_activa_uidx` en `(placa) where deleted_at is null`
+- Triggers `set_updated_at` + `audit_trigger`
+- RLS Pattern C · Catálogo
+
+**Cambios de UI:**
+- Módulo nuevo `src/modules/admin/vehiculos/` con api, hooks, VehiculoForm, VehiculosSection
+- Sub-tab "Vehículos" en AdminPage entre Tarjetas y Status SP
+- Reusa CatalogPage genérico
+
+**Divergencia intencional documentada:**
+Los otros catálogos (empleados, entidades, personas, status_sp, tarjetas, tipos_pago) NO tienen `audit_trigger` — solo lo tienen las 6 tablas financieras según fase 3. Vehículos SÍ lo lleva porque la Regla 0 (CLAUDE.md §4 invariante 10) dice "audit_log NUNCA se edita ni borra… solo escribe el trigger". Ver ADR D-016 en `docs/PROCESO-Y-DECISIONES.md`.
+
+**Comentarios:**
+- Sin validación de formato de placa (queda pendiente de confirmar con el usuario).
+- Fase pequeña — 45 min de trabajo total, siguió el patrón canonical de `status_solicitud_pago` (fase 16 · F-0).
+
+**Commits clave:** commit fase 18 = `2520eb1` .. HEAD (pendiente push explícito).
+
+---
+
 ## Fase 17 · 2026-06-07 → 2026-06-08 · Refactor Finanzas F-1 a F-5
 
 **Objetivo:** Reorganizar el módulo Finanzas para reflejar el modelo real de la operación: Vales (desembolso vs a entidad), Liquidaciones con multi-vale, Reintegros como dashboard read-only, Consumos TC con line items y notificaciones, Pagos con bandeja de origen.

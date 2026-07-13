@@ -585,6 +585,46 @@ export type Database = {
       };
 
       // ====================================================
+      // Vehículos · flota de la empresa (Fase 18)
+      // Distinta de arriaza_autos (autos personales de LA).
+      // Soft delete → incluye deleted_at nullable.
+      // ====================================================
+      vehiculos: {
+        Row: {
+          id: string;
+          marca: string;
+          color: string | null;
+          placa: string;
+          tipo: string | null;
+          uso: string | null;
+          alias: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          marca: string;
+          color?: string | null;
+          placa: string;
+          tipo?: string | null;
+          uso?: string | null;
+          alias?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          marca?: string;
+          color?: string | null;
+          placa?: string;
+          tipo?: string | null;
+          uso?: string | null;
+          alias?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      // ====================================================
       // Miel SJ (Fase 8)
       // ====================================================
       miel_constancias: {

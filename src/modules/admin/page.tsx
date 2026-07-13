@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/auth';
 import { CatalogPage } from './components/CatalogPage';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
+import { VehiculosSection } from './vehiculos/VehiculosSection';
 import { EntidadForm } from './components/EntidadForm';
 import { PersonaForm } from './components/PersonaForm';
 import { EmpleadoForm } from './components/EmpleadoForm';
@@ -58,6 +59,7 @@ type CatalogKey =
   | 'tipos_pago'
   | 'proveedores'
   | 'tarjetas'
+  | 'vehiculos'
   | 'status_sp';
 
 const tabs: { key: CatalogKey; label: string }[] = [
@@ -67,6 +69,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'tipos_pago', label: 'Tipos de pago' },
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
+  { key: 'vehiculos', label: 'Vehículos' },
   { key: 'status_sp', label: 'Status Solicitud de Pago' },
 ];
 
@@ -111,6 +114,7 @@ export default function AdminPage() {
       {tab === 'tipos_pago' && <TiposPagoCatalog canEdit={isAdmin} />}
       {tab === 'proveedores' && <ProveedoresCatalog canEdit={isAdmin} />}
       {tab === 'tarjetas' && <TarjetasCatalog canEdit={isAdmin} />}
+      {tab === 'vehiculos' && <VehiculosSection canEdit={isAdmin} />}
       {tab === 'status_sp' && <StatusSpCatalog canEdit={isAdmin} />}
     </section>
   );

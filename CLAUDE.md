@@ -175,7 +175,13 @@ Aplicar en Supabase → Verificar cache  →  Bitácora actualizada
 4. Agregar entrada a `docs/BITACORA.md` con fecha + commits + notas.
 5. Si hubo una decisión de arquitectura, agregarla a `docs/PROCESO-Y-DECISIONES.md`.
 
-### 5.5 · Skills útiles
+### 5.5 · Pendientes / deuda técnica
+
+Lista viva en [`docs/PENDIENTES.md`](docs/PENDIENTES.md) — se actualiza al cierre de cada fase y al aplicar cualquier fix parcial. Categorías: Bloqueadores, Deuda técnica, Housekeeping.
+
+Antes de arrancar cualquier fase nueva, revisa esa lista para no perderse prerequisites o items agendados.
+
+### 5.6 · Skills útiles
 
 Skills específicos de NOCTUA en `.claude/skills/`:
 - **`apply-migration`** — aplica un `.sql` con auto-NOTIFY + verifica el resultado.

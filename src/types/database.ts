@@ -713,6 +713,7 @@ export type Database = {
           notas: string | null;
           lat: number | null;
           lng: number | null;
+          deleted_at: string | null;
         };
         Insert: AuditInsert & {
           id?: string;
@@ -732,6 +733,7 @@ export type Database = {
           notas?: string | null;
           lat?: number | null;
           lng?: number | null;
+          deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           miembro_id?: string | null;
@@ -749,11 +751,12 @@ export type Database = {
           notas?: string | null;
           lat?: number | null;
           lng?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
       att_tickets: {
-        Row: {
+        Row: AuditCols & {
           id: string;
           legacy_id: number | null;
           viaje_id: string;
@@ -772,10 +775,9 @@ export type Database = {
           moneda: Database['public']['Enums']['currency'] | null;
           notas: string | null;
           comentarios: string | null;
-          created_at: string;
-          updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string;
           legacy_id?: number | null;
           viaje_id: string;
@@ -794,8 +796,9 @@ export type Database = {
           moneda?: Database['public']['Enums']['currency'] | null;
           notas?: string | null;
           comentarios?: string | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           aerolinea?: string | null;
           codigo_reserva?: string | null;
           numero_ticket?: string | null;
@@ -811,13 +814,14 @@ export type Database = {
           moneda?: Database['public']['Enums']['currency'] | null;
           notas?: string | null;
           comentarios?: string | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_tickets_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
         ];
       };
       att_hoteles: {
-        Row: {
+        Row: AuditCols & {
           id: string;
           legacy_id: number | null;
           viaje_id: string;
@@ -840,10 +844,9 @@ export type Database = {
           services_total: number | null;
           cancel_policy: string | null;
           notas: string | null;
-          created_at: string;
-          updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string;
           legacy_id?: number | null;
           viaje_id: string;
@@ -865,8 +868,9 @@ export type Database = {
           services?: string | null;
           cancel_policy?: string | null;
           notas?: string | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           nombre?: string;
           location?: string | null;
           direccion?: string | null;
@@ -885,13 +889,14 @@ export type Database = {
           services?: string | null;
           cancel_policy?: string | null;
           notas?: string | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_hoteles_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
         ];
       };
       att_restaurantes: {
-        Row: {
+        Row: AuditCols & {
           id: string;
           legacy_id: number | null;
           viaje_id: string;
@@ -913,10 +918,9 @@ export type Database = {
           cancel_policy: string | null;
           stars: number | null;
           notas: string | null;
-          created_at: string;
-          updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string;
           legacy_id?: number | null;
           viaje_id: string;
@@ -938,8 +942,9 @@ export type Database = {
           cancel_policy?: string | null;
           stars?: number | null;
           notas?: string | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           nombre?: string;
           specialty?: string | null;
           phone?: string | null;
@@ -958,6 +963,7 @@ export type Database = {
           cancel_policy?: string | null;
           stars?: number | null;
           notas?: string | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_restaurantes_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
@@ -968,29 +974,32 @@ export type Database = {
       // Arriaza T&T child tables (Fase 13)
       // ====================================================
       att_ticket_pax: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; ticket_id: string;
           tipo: string | null; nombre: string | null; nacionalidad: string | null;
           pasaporte_num: string | null; pasaporte_exp: string | null;
           libreta_num: string | null; visa_pais: string | null;
           visa_num: string | null; visa_exp: string | null;
           ffn: string | null; programa: string | null;
-          orden: number | null; created_at: string; updated_at: string;
+          orden: number | null;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; ticket_id: string;
           tipo?: string | null; nombre?: string | null; nacionalidad?: string | null;
           pasaporte_num?: string | null; pasaporte_exp?: string | null;
           libreta_num?: string | null; visa_pais?: string | null;
           visa_num?: string | null; visa_exp?: string | null;
           ffn?: string | null; programa?: string | null; orden?: number | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           tipo?: string | null; nombre?: string | null; nacionalidad?: string | null;
           pasaporte_num?: string | null; pasaporte_exp?: string | null;
           libreta_num?: string | null; visa_pais?: string | null;
           visa_num?: string | null; visa_exp?: string | null;
           ffn?: string | null; programa?: string | null; orden?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_ticket_pax_ticket_id_fkey'; columns: ['ticket_id']; referencedRelation: 'att_tickets'; referencedColumns: ['id'] },
@@ -998,29 +1007,31 @@ export type Database = {
       };
 
       att_ticket_segments: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; ticket_id: string;
           direccion: string | null;
           origen_iata: string | null; origen_ciudad: string | null;
           destino_iata: string | null; destino_ciudad: string | null;
           fecha: string | null; checkin: string | null; etd: string | null; eta: string | null;
           numero_vuelo: string | null; orden: number | null;
-          created_at: string; updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; ticket_id: string;
           direccion?: string | null;
           origen_iata?: string | null; origen_ciudad?: string | null;
           destino_iata?: string | null; destino_ciudad?: string | null;
           fecha?: string | null; checkin?: string | null; etd?: string | null; eta?: string | null;
           numero_vuelo?: string | null; orden?: number | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           direccion?: string | null;
           origen_iata?: string | null; origen_ciudad?: string | null;
           destino_iata?: string | null; destino_ciudad?: string | null;
           fecha?: string | null; checkin?: string | null; etd?: string | null; eta?: string | null;
           numero_vuelo?: string | null; orden?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_ticket_segments_ticket_id_fkey'; columns: ['ticket_id']; referencedRelation: 'att_tickets'; referencedColumns: ['id'] },
@@ -1028,20 +1039,22 @@ export type Database = {
       };
 
       att_ticket_pay_records: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; ticket_id: string;
           metodo: string | null; tc_id: string | null; titular: string | null;
           autorizado_por: string | null; monto: number | null;
-          created_at: string; updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; ticket_id: string;
           metodo?: string | null; tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           metodo?: string | null; tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_ticket_pay_records_ticket_id_fkey'; columns: ['ticket_id']; referencedRelation: 'att_tickets'; referencedColumns: ['id'] },
@@ -1049,17 +1062,20 @@ export type Database = {
       };
 
       att_hotel_services: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; hotel_id: string;
           nombre: string; monto: number; notas: string | null;
-          orden: number | null; created_at: string; updated_at: string;
+          orden: number | null;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; hotel_id: string;
           nombre: string; monto?: number; notas?: string | null; orden?: number | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           nombre?: string; monto?: number; notas?: string | null; orden?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_hotel_services_hotel_id_fkey'; columns: ['hotel_id']; referencedRelation: 'att_hoteles'; referencedColumns: ['id'] },
@@ -1067,72 +1083,91 @@ export type Database = {
       };
 
       att_hotel_pay_records: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; hotel_id: string;
           tc_id: string | null; titular: string | null;
           autorizado_por: string | null; monto: number | null;
-          created_at: string; updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; hotel_id: string;
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_hotel_pay_records_hotel_id_fkey'; columns: ['hotel_id']; referencedRelation: 'att_hoteles'; referencedColumns: ['id'] },
         ];
       };
 
+      // NOTA: att_restaurant_diners no usa AuditCols porque su DDL de fase 13
+      // solo declara created_at (sin updated_at). La migración fase 19-0 SÍ le
+      // agrega created_by/updated_by/deleted_at, pero no updated_at para no
+      // ser invasiva. Bloque explícito refleja el estado real de la tabla.
       att_restaurant_diners: {
         Row: {
           id: string; legacy_id: number | null; restaurante_id: string;
-          nombre: string; notas: string | null; orden: number | null; created_at: string;
+          nombre: string; notas: string | null; orden: number | null;
+          created_at: string; created_by: string | null; updated_by: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string; legacy_id?: number | null; restaurante_id: string;
           nombre: string; notas?: string | null; orden?: number | null;
+          created_by?: string | null; updated_by?: string | null;
+          deleted_at?: string | null;
         };
-        Update: { nombre?: string; notas?: string | null; orden?: number | null };
+        Update: {
+          nombre?: string; notas?: string | null; orden?: number | null;
+          updated_by?: string | null; deleted_at?: string | null;
+        };
         Relationships: [
           { foreignKeyName: 'att_restaurant_diners_restaurante_id_fkey'; columns: ['restaurante_id']; referencedRelation: 'att_restaurantes'; referencedColumns: ['id'] },
         ];
       };
 
       att_restaurant_services: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; restaurante_id: string;
           nombre: string; monto: number; orden: number | null;
-          created_at: string; updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; restaurante_id: string;
           nombre: string; monto?: number; orden?: number | null;
+          deleted_at?: string | null;
         };
-        Update: { nombre?: string; monto?: number; orden?: number | null };
+        Update: AuditUpdate & {
+          nombre?: string; monto?: number; orden?: number | null;
+          deleted_at?: string | null;
+        };
         Relationships: [
           { foreignKeyName: 'att_restaurant_services_restaurante_id_fkey'; columns: ['restaurante_id']; referencedRelation: 'att_restaurantes'; referencedColumns: ['id'] },
         ];
       };
 
       att_restaurant_pay_records: {
-        Row: {
+        Row: AuditCols & {
           id: string; legacy_id: number | null; restaurante_id: string;
           tc_id: string | null; titular: string | null;
           autorizado_por: string | null; monto: number | null;
-          created_at: string; updated_at: string;
+          deleted_at: string | null;
         };
-        Insert: {
+        Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; restaurante_id: string;
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
+          deleted_at?: string | null;
         };
-        Update: {
+        Update: AuditUpdate & {
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           { foreignKeyName: 'att_restaurant_pay_records_restaurante_id_fkey'; columns: ['restaurante_id']; referencedRelation: 'att_restaurantes'; referencedColumns: ['id'] },

@@ -23,6 +23,7 @@ export function TicketSegmentsPanel({ ticketId, canEdit }: Props) {
         .from('att_ticket_segments')
         .select('*')
         .eq('ticket_id', ticketId)
+        .is('deleted_at', null)
         .order('direccion')
         .order('orden', { ascending: true, nullsFirst: false })
         .order('fecha');
@@ -41,7 +42,11 @@ export function TicketSegmentsPanel({ ticketId, canEdit }: Props) {
   });
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('att_ticket_segments').delete().eq('id', id);
+      // Soft delete · invariante 6 · CLAUDE.md §4.
+      const { error } = await supabase
+        .from('att_ticket_segments')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey }),

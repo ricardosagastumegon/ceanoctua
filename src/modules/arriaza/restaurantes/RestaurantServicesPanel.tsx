@@ -34,6 +34,7 @@ export function RestaurantServicesPanel({
         .from('att_restaurant_services')
         .select('*')
         .eq('restaurante_id', restauranteId)
+        .is('deleted_at', null)
         .order('orden', { ascending: true, nullsFirst: false })
         .order('created_at');
       if (error) throw error;
@@ -54,7 +55,11 @@ export function RestaurantServicesPanel({
   });
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('att_restaurant_services').delete().eq('id', id);
+      // Soft delete · invariante 6 · CLAUDE.md §4.
+      const { error } = await supabase
+        .from('att_restaurant_services')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey }),

@@ -48,11 +48,13 @@ export function PayRecordsPanel({ tableName, parentColumn, parentId, moneda = 'G
   // Supabase types are per-table; with a dynamic tableName union we step out
   // of the type-checked builder via `from(string as never)`. Acceptable: the
   // 3 target tables share the exact same column shape captured in PayRow.
+  // Nota: se añadió `.is('deleted_at', null)` en select y el remove pasó a
+  // soft-delete (UPDATE deleted_at) por Regla 0 · invariante 6 · CLAUDE.md §4.
   const client = supabase as unknown as {
     from: (n: string) => {
-      select: (s: string) => { eq: (c: string, v: unknown) => { order: (c: string) => Promise<{ data: PayRow[] | null; error: Error | null }> } };
+      select: (s: string) => { eq: (c: string, v: unknown) => { is: (c: string, v: unknown) => { order: (c: string) => Promise<{ data: PayRow[] | null; error: Error | null }> } } };
       insert: (v: unknown) => Promise<{ error: Error | null }>;
-      delete: () => { eq: (c: string, v: unknown) => Promise<{ error: Error | null }> };
+      update: (v: unknown) => { eq: (c: string, v: unknown) => Promise<{ error: Error | null }> };
     };
   };
 
@@ -63,6 +65,7 @@ export function PayRecordsPanel({ tableName, parentColumn, parentId, moneda = 'G
         .from(tableName)
         .select('id, tc_id, titular, autorizado_por, monto')
         .eq(parentColumn, parentId)
+        .is('deleted_at', null)
         .order('created_at');
       if (error) throw error;
       return data ?? [];
@@ -81,7 +84,11 @@ export function PayRecordsPanel({ tableName, parentColumn, parentId, moneda = 'G
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await client.from(tableName).delete().eq('id', id);
+      // Soft delete · invariante 6 · CLAUDE.md §4.
+      const { error } = await client
+        .from(tableName)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey }),

@@ -18,6 +18,7 @@ export const ticketPaxApi = {
       .from('att_ticket_pax')
       .select('*')
       .eq('ticket_id', ticketId)
+      .is('deleted_at', null)
       .order('orden', { ascending: true, nullsFirst: false })
       .order('created_at');
     if (error) throw error;
@@ -29,7 +30,11 @@ export const ticketPaxApi = {
     return data;
   },
   async remove(id: string): Promise<void> {
-    const { error } = await supabase.from('att_ticket_pax').delete().eq('id', id);
+    // Soft delete · invariante 6 · CLAUDE.md §4.
+    const { error } = await supabase
+      .from('att_ticket_pax')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
     if (error) throw error;
   },
 };

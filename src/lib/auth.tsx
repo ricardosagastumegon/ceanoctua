@@ -60,16 +60,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      if (data.session) {
-        lastUserIdRef.current = data.session.user.id;
-        const p = await loadProfile(data.session.user.id);
-        if (mounted) setProfile(p);
+    // Fallback timeout defensivo: si getSession() o loadProfile() se cuelgan
+    // (pending forever sin resolver ni rechazar), este timeout garantiza que
+    // la app no se quede atrapada en el splash "Cargando…". Se ha visto que
+    // supabase-js a veces no resuelve getSession() cuando hay estado local
+    // corrupto o timing raro con onAuthStateChange en paralelo.
+    const bootTimeout = setTimeout(() => {
+      if (mounted) {
+        // eslint-disable-next-line no-console
+        console.warn('[auth] bootstrap timeout after 8s — forcing loading=false. Session may be null.');
+        setLoading(false);
       }
-      if (mounted) setLoading(false);
-    });
+    }, 8000);
+
+    supabase.auth.getSession()
+      .then(async ({ data }) => {
+        if (!mounted) return;
+        setSession(data.session);
+        if (data.session) {
+          lastUserIdRef.current = data.session.user.id;
+          try {
+            const p = await loadProfile(data.session.user.id);
+            if (mounted) setProfile(p);
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('[auth] loadProfile failed at bootstrap:', e);
+          }
+        }
+      })
+      .catch((e) => {
+        // eslint-disable-next-line no-console
+        console.error('[auth] getSession() failed at bootstrap:', e);
+      })
+      .finally(() => {
+        clearTimeout(bootTimeout);
+        if (mounted) setLoading(false);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!mounted) return;
@@ -81,8 +107,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       lastUserIdRef.current = newUserId;
       if (newSession) {
-        const p = await loadProfile(newSession.user.id);
-        if (mounted) setProfile(p);
+        try {
+          const p = await loadProfile(newSession.user.id);
+          if (mounted) setProfile(p);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[auth] loadProfile failed on auth change:', e);
+        }
       } else {
         setProfile(null);
       }
@@ -90,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(bootTimeout);
       sub.subscription.unsubscribe();
     };
   }, []);

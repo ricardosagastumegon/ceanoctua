@@ -68,12 +68,14 @@ Los 4 skills existentes (`apply-migration`, `sync-schema`, `check-rls`, `audit-c
   3. Prueba real del soft-delete: crear viaje test-soft-delete + hijos → borrar → validar `deleted_at` + `audit_log`
 - **Estado:** Pendiente que el usuario lo valide. Sin esto no cerramos F19-0 y no arrancamos F19-1.
 
-### HK-3 · Reconectar el webhook GitHub→Vercel de forma permanente
+### ~~HK-3 · Fix permanente del webhook GitHub→Vercel · usar Deploy Hook~~ ✅
 
-- **Origen:** debug del 2026-07-12
-- **Impacto:** El webhook se rompe periódicamente (segunda vez este mes). Cuando pasa, los pushes no auto-deployan hasta que se reconecta manualmente.
-- **Estimado:** 5 min · en Vercel Settings → Git → Disconnect + Connect de nuevo (última vez que se hizo así funcionó por ~2 semanas).
-- **Estado:** Reconectado hoy 2026-07-12. Si se rompe otra vez, considerar mover la config a Vercel CLI + `vercel.json` (más complicado, pero más estable).
+Cerrado el 2026-08-07 en commit `b3b5802`. Setup ejecutado:
+- Vercel Deploy Hook creado: `https://api.vercel.com/v1/integrations/deploy/prj_kdnc2WS0hHmZdnMI5RKJdVjdez0u/n04ti0SrEf`
+- GitHub webhook id `662696047` apuntando a esa URL, event `push`, active
+- Delivery test confirmada: `status: OK`, latencia 4.59s
+
+Ya no depende de GitHub App de Vercel ni de OAuth tokens múltiple-cuenta. Redundante con el webhook viejo (ambos coexisten).
 
 ---
 
@@ -101,7 +103,8 @@ Los 4 skills existentes (`apply-migration`, `sync-schema`, `check-rls`, `audit-c
 
 | Fecha | ID | Cerrado en commit |
 |---|---|---|
-| 2026-07-12 | **C-1 · getSession() cuelga forever** | `895ad26` fix(auth) — reemplazo por getUser() |
+| 2026-08-07 | **HK-3** · Deploy Hook manual GitHub→Vercel | `b3b5802` chore(test) · webhook id 662696047, delivery OK 4.59s |
+| 2026-08-07 | **C-1 · getSession() cuelga forever** · validado por usuario | `895ad26` fix(auth) — reemplazo por getUser() · app cargando OK |
 | 2026-07-12 | **F19-0** · Regla 0 compliance att_* | `1a767d0` feat(arriaza) + `b7ff827` fix defensivo previo |
 | 2026-07-11 | **Fase 18** · Catálogo Vehículos | `6a5f343` feat(admin) |
 

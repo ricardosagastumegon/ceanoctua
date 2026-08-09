@@ -59,7 +59,13 @@ test.describe('compare @compare · CEA vs standalone HTML', () => {
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(/\/(dashboard|)?$/, { timeout: 15_000 });
     await page.goto('/arriaza');
-    await page.waitForTimeout(2500);
+    // Esperar hasta que el splash "Cargando…" desaparezca (bootstrap auth
+    // puede tardar hasta 6s por el timeout de C-1 v4). Máx 15s.
+    await page.waitForFunction(
+      () => !document.body.innerText.trim().startsWith('Cargando'),
+      { timeout: 15_000 },
+    ).catch(() => {});
+    await page.waitForTimeout(500);
     await page.screenshot({
       path: 'test-results/compare_cea_arriaza.png',
       fullPage: true,
@@ -74,7 +80,13 @@ test.describe('compare @compare · CEA vs standalone HTML', () => {
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(/\/(dashboard|)?$/, { timeout: 15_000 });
     await page.goto('/arriaza');
-    await page.waitForTimeout(2500);
+    // Esperar hasta que el splash "Cargando…" desaparezca (bootstrap auth
+    // puede tardar hasta 6s por el timeout de C-1 v4). Máx 15s.
+    await page.waitForFunction(
+      () => !document.body.innerText.trim().startsWith('Cargando'),
+      { timeout: 15_000 },
+    ).catch(() => {});
+    await page.waitForTimeout(500);
     // Click en el primer "+ Agregar Servicios".
     const btn = page.locator('button:has-text("Agregar Servicios")').first();
     if (await btn.count()) {
@@ -104,7 +116,13 @@ test.describe('compare @compare · CEA vs standalone HTML', () => {
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(/\/(dashboard|)?$/, { timeout: 15_000 });
     await page.goto('/arriaza');
-    await page.waitForTimeout(2500);
+    // Esperar hasta que el splash "Cargando…" desaparezca (bootstrap auth
+    // puede tardar hasta 6s por el timeout de C-1 v4). Máx 15s.
+    await page.waitForFunction(
+      () => !document.body.innerText.trim().startsWith('Cargando'),
+      { timeout: 15_000 },
+    ).catch(() => {});
+    await page.waitForTimeout(500);
     // Los trip cards deben mostrar el badge trip_no tipo TT-2026-####.
     const tripNoBadges = page.locator('text=/TT-\\d{4}-\\d{4}/');
     const count = await tripNoBadges.count();

@@ -94,81 +94,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Bootstrap con timeout AGRESIVO por operación + auto-nuke si todo falla.
+    // Bootstrap TRUST-FIRST · no llamar getUser al inicio, confiar en la sesión
+    // guardada en localStorage y usar el user.id para cargar profile directamente.
     //
     // Bugs previos:
     //   C-1 v1 (getSession) → hang forever en INITIAL_SESSION
     //   C-1 v2 (getUser)    → 401 al expirar sin retry
     //   C-1 v3 (+refresh)   → getUser/refresh se cuelgan por el lock interno
     //                        de supabase-js si hubo una operación previa fallida
-    //   C-1 v4 (este)       → timeout de 3s POR operación (Promise.race) +
-    //                        limpieza total de storage si nada resuelve, luego
-    //                        redirect a /login. NO más fallback UI dead-end.
-    function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-      return new Promise<T>((resolve, reject) => {
-        const t = setTimeout(() => reject(new Error(`timeout:${label}`)), ms);
-        p.then(
-          (v) => {
-            clearTimeout(t);
-            resolve(v);
-          },
-          (e) => {
-            clearTimeout(t);
-            reject(e);
-          },
-        );
-      });
-    }
-
-    function nukeSessionStorage() {
-      try {
-        for (const k of Object.keys(localStorage)) {
-          if (k.startsWith('sb-') || k.includes('supabase')) {
-            localStorage.removeItem(k);
-          }
-        }
-        for (const k of Object.keys(sessionStorage)) {
-          if (k.startsWith('sb-') || k.includes('supabase')) {
-            sessionStorage.removeItem(k);
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
+    //   C-1 v4 (timeout+nuke) → getUser tardaba >3s en Supabase auth server
+    //                          (server slow, no cliente), disparaba nuke +
+    //                          redirect loop
+    //   C-1 v5 (este)       → NO llamar getUser al montar. Usar directamente
+    //                          la session de localStorage. loadProfile con RLS
+    //                          valida el token indirectamente. Si loadProfile
+    //                          devuelve null, mostrar el fallback UI (no
+    //                          auto-nukear porque puede ser un blip transitorio).
     async function bootstrapAuth() {
-      // 1) getUser con timeout de 3s.
-      try {
-        const first = await withTimeout(supabase.auth.getUser(), 3000, 'getUser');
-        if (first.data.user && !first.error) {
-          return { user: first.data.user, session: readStoredSession() };
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn('[auth] getUser failed/timeout:', (e as Error).message);
+      const stored = readStoredSession();
+      if (!stored?.user?.id) {
+        // No hay sesión válida en storage → login required.
+        return { user: null, session: null };
       }
-
-      // 2) refreshSession con timeout de 3s.
-      try {
-        const refresh = await withTimeout(supabase.auth.refreshSession(), 3000, 'refreshSession');
-        if (refresh.data.session && !refresh.error) {
-          return { user: refresh.data.session.user, session: refresh.data.session };
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn('[auth] refreshSession failed/timeout:', (e as Error).message);
-      }
-
-      // 3) Nada funcionó. Nuke storage y forzar re-login.
-      // eslint-disable-next-line no-console
-      console.warn('[auth] bootstrap failed completely — clearing storage + redirect to /login');
-      nukeSessionStorage();
-      // Solo redirigir si no estamos ya en /login (evitar loops).
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
-      }
-      return { user: null, session: null };
+      // Confiamos en la sesión guardada. loadProfile hará el fetch real y
+      // si el token está expirado devolverá 401 → profile null → fallback UI.
+      return { user: stored.user, session: stored };
     }
 
     bootstrapAuth()

@@ -8,6 +8,7 @@ import { TripFormModal } from './TripFormModal';
 import { TripCard } from './TripCard';
 import { BackupModal } from './BackupModal';
 import { FinishedFolder } from './FinishedFolder';
+import { CalendarPanel } from './CalendarPanel';
 import {
   useAttViajes,
   useCreateAttViaje,
@@ -228,9 +229,9 @@ export function AttPage() {
         </div>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-4">
+          <div className="sticky top-4 space-y-3">
+            <CalendarPanel viajes={viajes} />
             <ArriazaMap viajes={viajes} onMarkerClick={() => {}} />
-            {/* F19-3e: Calendar aquí, itinerario final, etc. */}
           </div>
         </aside>
       </div>

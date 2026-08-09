@@ -19,6 +19,7 @@ import { FerriesSection } from './ferries/FerriesSection';
 import { TerrestresSection } from './terrestres/TerrestresSection';
 import { ActividadesSection } from './actividades/ActividadesSection';
 import { ItineraryModal } from './ItineraryModal';
+import { ShareModal } from './ShareModal';
 
 // Servicios con Section implementada — TODAS las 14 disponibles.
 const READY_SERVICES: ReadonlySet<ServiceKey> = new Set<ServiceKey>([
@@ -54,6 +55,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
   const [servicesOpen, setServicesOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [itinOpen, setItinOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // autoOpenKey: al hacer click en "+ Agregar Servicios > X", la Section de X
   // abre su modal "Nueva" automáticamente. Todas las secciones se renderean
   // apiladas (sin sub-nav), así que solo hay que triggear la del servicio elegido.
@@ -118,6 +120,14 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
               className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-teal hover:bg-teal-l"
             >
               📋
+            </button>
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              title="Compartir por WhatsApp"
+              className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-teal hover:bg-teal-l"
+            >
+              📲
             </button>
             {canEdit && (
               <>
@@ -290,6 +300,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
         )}
       </div>
       <ItineraryModal open={itinOpen} onClose={() => setItinOpen(false)} viaje={viaje} />
+      <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} viaje={viaje} />
     </article>
   );
 }

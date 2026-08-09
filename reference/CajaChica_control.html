@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Caja Chica · Board Assistant</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- SheetJS · para exportar Excel real (.xlsx). Lazy: solo se usa al descargar. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
    Control de Caja Chica · standalone HTML
@@ -195,7 +197,7 @@ td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
     <button class="btn rust sm" onclick="ccDeletePeriod()">🗑 Borrar período</button>
     <span style="flex:1"></span>
     <button class="btn ghost sm" onclick="window.print()">🖨 Imprimir</button>
-    <button class="btn ghost sm" onclick="ccExportCsv()">📊 Exportar CSV</button>
+    <button class="btn ghost sm" onclick="ccExportXlsx()">📊 Exportar Excel</button>
     <button class="btn ghost sm" onclick="ccExportJson()">💾 Backup JSON</button>
     <button class="btn ghost sm" onclick="document.getElementById('cc-import').click()">📥 Importar JSON</button>
     <input type="file" id="cc-import" accept=".json" style="display:none" onchange="ccImportJson(this)">
@@ -208,14 +210,16 @@ td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
         <tr>
           <th style="width:36px">#</th>
           <th style="width:110px">Fecha</th>
-          <th style="width:110px">Factura Nº</th>
-          <th style="width:140px">Nombre</th>
-          <th>Objeto / Concepto</th>
+          <th style="width:110px">No. Factura</th>
+          <th>Nombre / Producto</th>
+          <th class="right" style="width:80px">Cantidad</th>
+          <th class="right" style="width:100px">P. Unitario</th>
+          <th class="right" style="width:110px">Total</th>
           <th style="width:130px">Solicitante</th>
-          <th style="width:140px">Entidad / Lugar</th>
+          <th style="width:140px">Lugar</th>
           <th style="width:110px">Forma pago</th>
-          <th class="right" style="width:100px">Cantidad</th>
-          <th class="right" style="width:100px">Saldo</th>
+          <th style="width:150px">Observaciones</th>
+          <th class="right" style="width:110px">Saldo</th>
           <th class="center" style="width:110px">Foto</th>
           <th class="center no-print" style="width:80px">Acciones</th>
         </tr>
@@ -292,8 +296,26 @@ function ccLoad(){
     state.activeId = Object.keys(state.periods)[0];
   }
   // Asignar numero retroactivo a períodos viejos sin numero.
+  // Migrar filas legacy: entidad → lugar, agregar p_unitario/observaciones.
   Object.values(state.periods).forEach(p => {
     if(!p.numero){ p.numero = ccNextNumero(p.fecha); }
+    if(Array.isArray(p.rows)){
+      p.rows.forEach(r => {
+        if(r.entidad != null && r.lugar == null){ r.lugar = r.entidad; }
+        if(r.lugar == null) r.lugar = '';
+        if(r.p_unitario == null) r.p_unitario = '';
+        if(r.observaciones == null) r.observaciones = '';
+        // Si el backup viejo usaba 'cantidad' como monto total y no hay p_unitario,
+        // lo interpretamos como 1 unidad × cantidad (mantiene el total exacto).
+        // No convertimos hasta que el usuario edite: el ccRowTotal cae en 0 y
+        // hay que forzar recalculo. Preservamos el monto legacy en un campo aux:
+        if(r.p_unitario === '' && r.cantidad && !r._legacy_total){
+          r._legacy_total = parseFloat(r.cantidad);
+          r.p_unitario = r.cantidad; // 1 unidad × cantidad-vieja = mismo total
+          r.cantidad = '1';
+        }
+      });
+    }
   });
 }
 
@@ -382,12 +404,22 @@ function ccAddRow(n){
   for(let i=0;i<count;i++){
     p.rows.push({
       id: 'r_' + Date.now() + '_' + i,
-      fecha: today, factura: '', nombre: '', objeto: '',
-      solicitante: '', entidad: '', forma_pago: 'Caja chica',
-      cantidad: '', foto: null, // foto es base64 data URL
+      fecha: today, factura: '', nombre: '',
+      cantidad: '', p_unitario: '', // total_calc se derive de cantidad × p_unitario
+      solicitante: '', lugar: '',
+      forma_pago: 'Caja chica', observaciones: '',
+      foto: null, // base64 data URL
+      // Legacy: campo 'objeto' y 'entidad' preservados para backup previo si existieran.
     });
   }
   ccSave(); ccRenderRows(); ccRefreshTotals();
+}
+
+// Calcula el total de una fila (cantidad × p_unitario). Server-side de la fila.
+function ccRowTotal(r){
+  const c = parseFloat(r.cantidad || 0);
+  const pu = parseFloat(r.p_unitario || 0);
+  return c * pu;
 }
 
 function ccRemoveRow(id){
@@ -412,7 +444,11 @@ function ccUpdateField(id, field, value){
   if(!r) return;
   r[field] = value;
   ccSave();
-  if(field === 'cantidad') ccRefreshTotals();
+  // Los campos que afectan cálculos disparan re-render + refresh de totales.
+  if(field === 'cantidad' || field === 'p_unitario' || field === 'forma_pago'){
+    ccRenderRows();
+    ccRefreshTotals();
+  }
 }
 
 /* ============================================================
@@ -494,22 +530,26 @@ function ccRenderRows(){
   let saldo = monto;
   const tbody = document.getElementById('cc-rows');
   if(p.rows.length === 0){
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--dark-3);font-style:italic;">Sin líneas todavía. Haz clic en "Agregar línea" para empezar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--dark-3);font-style:italic;">Sin líneas todavía. Haz clic en "Agregar línea" para empezar.</td></tr>';
     return;
   }
   tbody.innerHTML = p.rows.map((r, i) => {
-    saldo -= parseFloat(r.cantidad || 0);
+    const total = ccRowTotal(r);
+    saldo -= total;
     const saldoNeg = saldo < 0;
+    const esOtro = r.forma_pago === 'Otro';
     return '<tr>' +
       '<td class="idx">' + (i+1) + '</td>' +
       '<td><input type="date" value="' + esc(r.fecha) + '" onchange="ccUpdateField(\'' + r.id + '\',\'fecha\',this.value)"></td>' +
       '<td><input type="text" value="' + esc(r.factura) + '" placeholder="Nº" onchange="ccUpdateField(\'' + r.id + '\',\'factura\',this.value)"></td>' +
-      '<td><input type="text" value="' + esc(r.nombre) + '" placeholder="Nombre" onchange="ccUpdateField(\'' + r.id + '\',\'nombre\',this.value)"></td>' +
-      '<td><input type="text" value="' + esc(r.objeto) + '" placeholder="Concepto / detalle" onchange="ccUpdateField(\'' + r.id + '\',\'objeto\',this.value)"></td>' +
+      '<td><input type="text" value="' + esc(r.nombre) + '" placeholder="Nombre / producto" onchange="ccUpdateField(\'' + r.id + '\',\'nombre\',this.value)"></td>' +
+      '<td><input type="number" step="0.01" value="' + esc(r.cantidad) + '" placeholder="1" onchange="ccUpdateField(\'' + r.id + '\',\'cantidad\',this.value)"></td>' +
+      '<td><input type="number" step="0.01" value="' + esc(r.p_unitario) + '" placeholder="0.00" onchange="ccUpdateField(\'' + r.id + '\',\'p_unitario\',this.value)"></td>' +
+      '<td class="num" style="background:var(--teal-l);font-weight:800;color:var(--teal-d);">' + fmtMoney(total) + '</td>' +
       '<td>' + ccRenderSolicitanteSelect(r) + '</td>' +
-      '<td><input type="text" value="' + esc(r.entidad) + '" placeholder="Entidad o lugar" onchange="ccUpdateField(\'' + r.id + '\',\'entidad\',this.value)"></td>' +
+      '<td><input type="text" value="' + esc(r.lugar) + '" placeholder="Lugar / dirección" onchange="ccUpdateField(\'' + r.id + '\',\'lugar\',this.value)"></td>' +
       '<td>' + ccRenderFormaPagoSelect(r) + '</td>' +
-      '<td><input type="number" step="0.01" value="' + esc(r.cantidad) + '" placeholder="0.00" onchange="ccUpdateField(\'' + r.id + '\',\'cantidad\',this.value)"></td>' +
+      '<td><input type="text" value="' + esc(r.observaciones) + '" placeholder="' + (esOtro ? '(requerido si "Otro")' : 'Notas opcionales') + '" onchange="ccUpdateField(\'' + r.id + '\',\'observaciones\',this.value)" style="' + (esOtro ? 'background:var(--gold-l);border-color:var(--gold);' : '') + '"></td>' +
       '<td class="saldo' + (saldoNeg ? ' neg' : '') + '">' + fmtMoney(saldo) + '</td>' +
       '<td class="photo-cell">' + ccRenderPhotoCell(r) + '</td>' +
       '<td class="actions-cell no-print">' +
@@ -545,7 +585,7 @@ function ccRenderPhotoCell(r){
 function ccRefreshTotals(){
   const p = ccActive(); if(!p) return;
   p.monto_inicial = parseFloat(document.getElementById('cc-monto-inicial').value || 0);
-  const gastado = p.rows.reduce((s, r) => s + parseFloat(r.cantidad || 0), 0);
+  const gastado = p.rows.reduce((s, r) => s + ccRowTotal(r), 0);
   const inicial = p.monto_inicial;
   const balance = inicial - gastado;
 
@@ -606,40 +646,77 @@ function ccImportJson(input){
   input.value = '';
 }
 
-function ccExportCsv(){
+// Exporta el periodo activo a Excel real (.xlsx) usando SheetJS.
+// Estructura: metadata arriba (Caja Chica, título, fecha, monto), fila en blanco,
+// header de columnas, filas de detalle con total automático y saldo running,
+// y footer con Total gastado + Saldo final.
+function ccExportXlsx(){
   const p = ccActive(); if(!p) return;
-  const lines = [];
-  // Cabecera con el numero de caja chica.
-  lines.push('Caja Chica,' + (p.numero || ''));
-  lines.push('Título,' + (p.titulo || ''));
-  lines.push('Fecha,' + (p.fecha || ''));
-  lines.push('Monto inicial,' + (p.monto_inicial || 0));
-  lines.push('');
-  const header = ['#','Fecha','Factura','Nombre','Objeto','Solicitante','Entidad','Forma pago','Cantidad','Saldo'];
-  lines.push(header.join(','));
+  if(typeof XLSX === 'undefined'){
+    ccToast('⚠️ SheetJS no cargó — revisa conexión y reintenta');
+    return;
+  }
+  // AOA (array of arrays) para mantener control total del formato.
+  const aoa = [];
+  aoa.push(['Caja Chica', p.numero || '']);
+  aoa.push(['Título', p.titulo || '']);
+  aoa.push(['Fecha', p.fecha || '']);
+  aoa.push(['Monto inicial', parseFloat(p.monto_inicial || 0)]);
+  aoa.push([]);
+  aoa.push(['#','Fecha','No. Factura','Nombre / Producto','Cantidad','P. Unitario','Total','Solicitante','Lugar','Forma pago','Observaciones','Saldo']);
   let saldo = parseFloat(p.monto_inicial || 0);
+  const headerRow = aoa.length; // 1-indexed row donde inicia el detalle
   p.rows.forEach((r, i) => {
-    saldo -= parseFloat(r.cantidad || 0);
-    const row = [
-      i+1, r.fecha, r.factura, r.nombre, r.objeto,
-      r.solicitante, r.entidad, r.forma_pago, r.cantidad || 0, saldo.toFixed(2)
-    ].map(v => {
-      const s = String(v == null ? '' : v);
-      return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
-    });
-    lines.push(row.join(','));
+    const total = ccRowTotal(r);
+    saldo -= total;
+    aoa.push([
+      i+1,
+      r.fecha || '',
+      r.factura || '',
+      r.nombre || '',
+      parseFloat(r.cantidad || 0),
+      parseFloat(r.p_unitario || 0),
+      total,
+      r.solicitante || '',
+      r.lugar || '',
+      r.forma_pago || '',
+      r.observaciones || '',
+      saldo,
+    ]);
   });
-  lines.push('');
-  lines.push('Total gastado,,,,,,,,,' + (parseFloat(p.monto_inicial || 0) - saldo).toFixed(2));
-  lines.push('Saldo final,,,,,,,,,' + saldo.toFixed(2));
-  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (p.numero || 'CC') + '_' + (p.titulo || 'caja_chica').replace(/[^\w]+/g,'_') + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-  ccToast('📊 CSV descargado');
+  aoa.push([]);
+  const gastado = parseFloat(p.monto_inicial || 0) - saldo;
+  aoa.push(['','','','','','Total gastado', gastado]);
+  aoa.push(['','','','','','Saldo final', saldo]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Anchos de columnas aproximados.
+  ws['!cols'] = [
+    {wch:4},{wch:11},{wch:12},{wch:32},{wch:9},{wch:11},{wch:12},
+    {wch:16},{wch:18},{wch:13},{wch:24},{wch:12},
+  ];
+  // Formato numérico Q para columnas de dinero (P. Unitario, Total, Saldo) del detalle.
+  const money = 'Q#,##0.00';
+  const startRow = headerRow; // 0-indexed en el aoa, es la fila del header
+  for(let ri = startRow + 1; ri < startRow + 1 + p.rows.length; ri++){
+    ['F','G','L'].forEach(col => {
+      const ref = col + (ri + 1);
+      if(ws[ref] && typeof ws[ref].v === 'number') ws[ref].z = money;
+    });
+  }
+  // Formato al footer de totales.
+  ['G' + (aoa.length - 1), 'G' + aoa.length].forEach(ref => {
+    if(ws[ref] && typeof ws[ref].v === 'number') ws[ref].z = money;
+  });
+  // Formato al monto inicial (fila 4 del AOA = celda B4).
+  if(ws['B4'] && typeof ws['B4'].v === 'number') ws['B4'].z = money;
+
+  const wb = XLSX.utils.book_new();
+  const sheetName = (p.numero || 'Caja Chica').slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const filename = (p.numero || 'CC') + '_' + (p.titulo || 'caja_chica').replace(/[^\w]+/g,'_') + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  ccToast('📊 Excel descargado');
 }
 
 /* ============================================================

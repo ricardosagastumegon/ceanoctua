@@ -17,13 +17,15 @@ import { RentasSection } from './rentas/RentasSection';
 import { AcuaticosSection } from './acuaticos/AcuaticosSection';
 import { FerriesSection } from './ferries/FerriesSection';
 import { TerrestresSection } from './terrestres/TerrestresSection';
+import { ActividadesSection } from './actividades/ActividadesSection';
 
-// Servicios con Section implementada (crece con cada bloque de F19-3d).
+// Servicios con Section implementada — TODAS las 14 disponibles.
 const READY_SERVICES: ReadonlySet<ServiceKey> = new Set<ServiceKey>([
   'tickets', 'hotel', 'restaurantes', // F19-3c
   'tiendas', 'ruta', 'poi', 'reunion', // F19-3d bloque 1
   'tours', 'aeronave', 'renta', // F19-3d bloque 2
   'acuatico', 'ferry', 'terrestre', // F19-3d bloque 3
+  'actividades', // F19-3d bloque 4
 ]);
 
 type Props = {
@@ -240,6 +242,12 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
               viajeId={viaje.id}
               canEdit={canEdit}
               autoOpenCreate={autoOpenKey === 'terrestre'}
+              onDidOpenCreate={() => setAutoOpenKey(null)}
+            />
+            <ActividadesSection
+              viajeId={viaje.id}
+              canEdit={canEdit}
+              autoOpenCreate={autoOpenKey === 'actividades'}
               onDidOpenCreate={() => setAutoOpenKey(null)}
             />
             <TiendasSection

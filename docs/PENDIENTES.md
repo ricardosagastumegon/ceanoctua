@@ -91,35 +91,33 @@ Ver [`docs/BITACORA.md`](BITACORA.md) fase 19 completa.
 
 ## Deferred a polish futuro (no bloquean uso)
 
-### DT-5 · 14 Printables (vistas imprimibles por servicio)
+### DT-5 · 14 Printables (vistas imprimibles por servicio) ✅ 10/14 hecho
 
-- **Origen:** F19-3d — el HTML standalone tiene una vista imprimible tipo "boarding pass" por cada servicio con logo Arriaza + gradient + total. En CEA solo el ItineraryModal es imprimible.
-- **Impacto:** No poder exportar/imprimir un ticket individual como PDF (workflow legacy del standalone).
-- **Estimado:** ~4h (1 printable template shared + 14 variantes por servicio).
+- **Origen:** F19-3d — el HTML standalone tiene una vista imprimible tipo "boarding pass" por cada servicio con logo Arriaza + gradient + total.
+- **Estado:** ✅ 10/14 servicios nuevos tienen printable end-to-end (commit `14f5ceb`) usando `ServicePrintable.tsx` shared. Falta portar tickets/hoteles/restaurantes que usan CatalogPage.
+- **DT-5b** — printables para tickets/hoteles/restaurantes (los legacy con CatalogPage). Estimado ~2h.
 
-### DT-6 · Share modal WhatsApp (html2canvas)
+### DT-6 · Share modal WhatsApp (html2canvas) ✅ HECHO
 
-- **Origen:** F19-3f — el HTML tiene botones "🎁 Compartir" que exportan la tarjeta del viaje como imagen PNG para pegar en WhatsApp.
-- **Impacto:** Estético / conveniencia. Los usuarios pueden hacer screenshot manual.
-- **Estimado:** ~2h (agregar html2canvas como lazy dep + generar canvas del TripCard + descargar).
+- **Estado:** ✅ Cerrado en commit `17fec49`. `ShareModal.tsx` con tarjeta pre-renderizada + html2canvas lazy (48 KB gzip chunk propio). Botón 📲 en cada TripCard.
 
-### DT-7 · Calendar interactivo lateral
+### DT-7 · Calendar interactivo lateral ✅ HECHO
 
-- **Origen:** F19-3e — el HTML tiene un calendario lateral que muestra los días con viajes coloreados por estado. En CEA hay solo el mapa Leaflet.
-- **Impacto:** Menor — el listado ya cumple el rol de navegación temporal.
-- **Estimado:** ~3h.
+- **Estado:** ✅ Cerrado en commit `17fec49`. `CalendarPanel.tsx` con auto-pick del mes activo + navegación ‹ ›, celdas coloreadas por trip-start/mid/end + ring hoy. Renderizado en aside sticky de AttPage.
 
-### DT-8 · Skill `check-rls-full` para monitoreo semanal
+### DT-8 · Skill `check-rls-full` para monitoreo semanal ✅ HECHO
 
-- **Origen:** [D-021](PROCESO-Y-DECISIONES.md#d-021) · incidente RLS off en 34 tablas.
-- **Impacto:** Prevenir que se repita el incidente sin ser detectado.
-- **Estimado:** 30 min (query SQL diagnóstico + skill wrapper).
+- **Estado:** ✅ Cerrado en commit `17fec49`. Skill `.claude/skills/check-rls-full.md` + script `supabase/scripts/check-rls-full.sql` con 3 reportes (RLS off + policies, RLS on sin policies, ambos off) + resumen. Correr semanalmente en Supabase Studio.
 
 ### DT-9 · Import backup: mapping completo de servicios en BackupModal UI
 
 - **Origen:** F19-3f MVP.
-- **Impacto:** El botón "Importar JSON" solo importa metadatos del viaje. Los servicios (14 tipos) requieren usar el skill `import-tt-backup` manualmente.
-- **Estimado:** ~3h (portar la lógica del skill al TypeScript del modal).
+- **Impacto:** El botón "Importar JSON" solo importa metadatos del viaje. Los servicios (14 tipos) requieren usar el skill.
+- **Workaround actual:** invocar el skill [`import-tt-backup`](../.claude/skills/import-tt-backup.md) con el path del JSON. El skill genera un `.sql` con INSERTs completos para las 20 tablas att_*. El usuario aplica el SQL en Supabase Studio y refresca. Este flujo es más robusto que un botón UI porque:
+  1. Se puede revisar el SQL antes de aplicarlo
+  2. Errores parciales se ven en el output de SQL Editor
+  3. La conversión JSON→SQL en cliente sería lenta para backups grandes
+- **Estimado si se hace UI-side:** ~3h (portar la lógica del skill a TypeScript). Actualmente diferido a demanda.
 
 ---
 

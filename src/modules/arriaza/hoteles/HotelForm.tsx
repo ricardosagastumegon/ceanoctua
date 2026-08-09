@@ -6,6 +6,7 @@ import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
 import type { AttHotel, AttHotelInsert } from './api';
 import type { Database } from '@/types/database';
 import { HotelServicesPanel } from './HotelServicesPanel';
+import { HabitacionesPanel } from './HabitacionesPanel';
 import { PayRecordsPanel } from '@/modules/arriaza/shared/PayRecordsPanel';
 
 type Currency = Database['public']['Enums']['currency'];
@@ -144,6 +145,8 @@ export function HotelForm({ initial, submitting, onSubmit, onCancel }: CatalogFo
 
       {initial?.id && (
         <>
+          {/* F19-1 · habitaciones múltiples por hotel (paridad hotel.rooms[] del HTML) */}
+          <HabitacionesPanel hotelId={initial.id} canEdit />
           <HotelServicesPanel
             hotelId={initial.id}
             moneda={v.moneda || initial.moneda || 'GTQ'}

@@ -269,6 +269,59 @@ Cuando una decisión se revierte o supersede, no se borra — se marca **Superse
 
 ---
 
+## D-019 · Sub-nav de servicios se apila en vez de tabs (F19-3)
+
+- **Fecha:** 2026-08-09
+- **Contexto:** El AttPage rewrite (F19-3c) puso un sub-nav de tabs para elegir qué servicio ver (tickets/hoteles/restaurantes/…) además del dropdown "+ Agregar Servicios". El usuario reportó duplicidad: dos controles para lo mismo.
+- **Alternativas:**
+  - **A** — Mantener sub-nav, quitar el listado del dropdown → confuso porque el dropdown es acción, el nav es navegación.
+  - **B** — Quitar sub-nav, apilar todas las Sections juntas cuando "Servicios" está expandido (paridad HTML). Cada Section muestra su empty state si vacía.
+  - **C** — Renderizar solo secciones no-vacías + auto-abrir la del servicio que estás agregando.
+- **Decisión:** **B**. Paridad exacta con el standalone HTML (que también apila todas las secciones), y le permite al usuario ver TODOS sus servicios sin navegar.
+- **Consecuencias:**
+  - Si un viaje tiene 0 servicios, ves 10 headers "Sin X agregadas." (ruido visual aceptable — el usuario puede colapsar con el botón "Servicios").
+  - "+ Agregar Servicios > X" ahora abre el modal Nueva de X directamente vía `autoOpenCreate` prop en la Section.
+- **How to apply:** ver [`src/modules/arriaza/TripCard.tsx`](../src/modules/arriaza/TripCard.tsx) tras commit `62d267e`.
+
+---
+
+## D-020 · Auth bootstrap: timeout por operación + auto-nuke storage (C-1 v4)
+
+- **Fecha:** 2026-08-09
+- **Contexto:** El bug C-1 ("No hay perfil cargado") volvió aún con el fix v3 (getUser + refreshSession retry). Cause: supabase-js tiene un lock interno global que si queda held por una operación fallida previa, bloquea TODAS las llamadas auth subsecuentes indefinidamente. El `bootTimeout` de 5s disparaba pero el fallback UI era dead-end porque los botones también se colgaban en el mismo lock.
+- **Alternativas:**
+  - **A** — Aumentar el bootTimeout (paliativo, no arregla).
+  - **B** — Bypassear supabase-js completamente: leer localStorage → parsear JWT expiry → llamar `/auth/v1/token?grant_type=refresh_token` con `fetch` directo → `setSession()` con el resultado.
+  - **C** — Timeout individual (`Promise.race`) por cada operación auth (getUser, refreshSession) + limpiar TODO el storage sb-* si fallan + auto-redirect a `/login`.
+- **Decisión:** **C**. Menos código nuevo que B, más robusto que A. Si supabase-js se cuelga, cortamos rápido y damos al usuario un estado limpio.
+- **Consecuencias:**
+  - Timeout total del bootstrap: 6s máx (2 operaciones × 3s cada una) antes de auto-redirect.
+  - El fallback UI "Sesión no disponible" ya no es dead-end — o se resuelve solo (auto-redirect) o los botones limpian storage manualmente antes de redirect.
+  - Trade-off: en red muy lenta, el timeout puede disparar aunque la operación hubiera resuelto en 4s. Aceptable — el usuario simplemente re-loguea.
+- **Supersedes:** [D-018](#d-018--auth-bootstrap-usa-getuser-en-vez-de-getsession) (que solo cubría el caso base sin token refresh).
+
+---
+
+## D-021 · Incidente RLS off en 34 tablas · re-enable + monitoreo
+
+- **Fecha:** 2026-08-09
+- **Contexto:** Supabase Advisor detectó 34 tablas de `public` con warning CRITICAL "Policy Exists RLS Disabled" — tenían policies pero RLS estaba OFF. Con el anon key expuesto en el bundle (esperable por diseño de Supabase), cualquiera podía leer/escribir esas tablas sin autenticación. Incidente de seguridad activo.
+- **Causa raíz sin confirmar.** Hipótesis:
+  - **H1** — Rollback parcial del primer intento fallido de F19-1 (por el bug `update_updated_at_column`).
+  - **H2** — Acción manual en Supabase Studio (click accidental en "Disable RLS").
+  - **H3** — Cambio silencioso de behavior del "Run without RLS" del SQL Editor con la actualización de ToS de agosto 2026.
+- **Decisión:**
+  1. **Fix inmediato:** migración `20260813000002_fix_rls_reenable.sql` re-habilita RLS en las 34 tablas afectadas (idempotente).
+  2. **Monitoreo futuro:** crear skill `check-rls-full` (deuda técnica DT-5) que se pueda correr semanalmente para detectar la condición antes de que Supabase Advisor la reporte.
+  3. **Regla nueva de proceso:** cada vez que se aplique una migración F1+ (compleja con do $$ blocks), verificar RLS de tablas relacionadas *post-apply* con la query de diagnóstico.
+- **Consecuencias:**
+  - Ventana de exposición: **desconocida** (podrían ser días o solo horas). El audit_log no muestra reads del anon key (solo triggers de writes), así que no podemos saber si hubo scraping.
+  - Rotación de anon key no ayudaría — está en el bundle público de todos modos. La única defensa real es RLS.
+  - Se agregó `supabase/scripts/diag-rls-status.sql` para futuras re-verificaciones manuales.
+- **How to apply:** ver migración de fix + skill `.claude/skills/check-rls.md` para checks manuales periódicos.
+
+---
+
 ## Plantilla de nueva decisión
 
 ```

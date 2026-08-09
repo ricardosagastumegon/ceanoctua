@@ -81,21 +81,45 @@ Ya no depende de GitHub App de Vercel ni de OAuth tokens múltiple-cuenta. Redun
 
 ## Fase actual en curso
 
-**F19-0** · Regla 0 compliance de las 13 tablas `att_*` (Arriaza T&T).
+**F19 · CERRADA** el 2026-08-09. Los 14 servicios T&T ya operan en producción con:
+- Schema 17 tablas nuevas + Regla 0 completa
+- CRUD end-to-end (14 forms + sections)
+- ItineraryModal + BackupModal + FinishedFolder
+- Skill `import-tt-backup` para cargar JSON del standalone HTML
 
-- ✅ Migración aplicada (`20260712000001_fase19_0_att_regla0.sql`)
-- ✅ Types actualizados
-- ✅ Código soft-delete-aware en 10 archivos
-- ✅ Build verde
-- ⏳ Validación end-to-end (bloqueado por HK-2)
+Ver [`docs/BITACORA.md`](BITACORA.md) fase 19 completa.
 
-## Siguiente
+## Deferred a polish futuro (no bloquean uso)
 
-**F19-1** · 5 servicios simples del [`PLAN-TT-TOUR-Y-TRAVEL.md`](../PLAN-TT-TOUR-Y-TRAVEL.md) — tiendas, reuniones, rutas, pois, restaurantes. Estimado 3 h.
+### DT-5 · 14 Printables (vistas imprimibles por servicio)
 
-**Prerequisitos para arrancar F19-1:**
-- HK-2 completo (validación F19-0)
-- Idealmente: DT-1 (vitest setup) para no acumular más deuda
+- **Origen:** F19-3d — el HTML standalone tiene una vista imprimible tipo "boarding pass" por cada servicio con logo Arriaza + gradient + total. En CEA solo el ItineraryModal es imprimible.
+- **Impacto:** No poder exportar/imprimir un ticket individual como PDF (workflow legacy del standalone).
+- **Estimado:** ~4h (1 printable template shared + 14 variantes por servicio).
+
+### DT-6 · Share modal WhatsApp (html2canvas)
+
+- **Origen:** F19-3f — el HTML tiene botones "🎁 Compartir" que exportan la tarjeta del viaje como imagen PNG para pegar en WhatsApp.
+- **Impacto:** Estético / conveniencia. Los usuarios pueden hacer screenshot manual.
+- **Estimado:** ~2h (agregar html2canvas como lazy dep + generar canvas del TripCard + descargar).
+
+### DT-7 · Calendar interactivo lateral
+
+- **Origen:** F19-3e — el HTML tiene un calendario lateral que muestra los días con viajes coloreados por estado. En CEA hay solo el mapa Leaflet.
+- **Impacto:** Menor — el listado ya cumple el rol de navegación temporal.
+- **Estimado:** ~3h.
+
+### DT-8 · Skill `check-rls-full` para monitoreo semanal
+
+- **Origen:** [D-021](PROCESO-Y-DECISIONES.md#d-021) · incidente RLS off en 34 tablas.
+- **Impacto:** Prevenir que se repita el incidente sin ser detectado.
+- **Estimado:** 30 min (query SQL diagnóstico + skill wrapper).
+
+### DT-9 · Import backup: mapping completo de servicios en BackupModal UI
+
+- **Origen:** F19-3f MVP.
+- **Impacto:** El botón "Importar JSON" solo importa metadatos del viaje. Los servicios (14 tipos) requieren usar el skill `import-tt-backup` manualmente.
+- **Estimado:** ~3h (portar la lógica del skill al TypeScript del modal).
 
 ---
 
@@ -103,6 +127,11 @@ Ya no depende de GitHub App de Vercel ni de OAuth tokens múltiple-cuenta. Redun
 
 | Fecha | ID | Cerrado en commit |
 |---|---|---|
+| 2026-08-09 | **F19 completa** · T&T con 14 servicios + backup + itinerary + docs | commits `b347470..683abd3` (~7500 LOC, 40+ archivos) |
+| 2026-08-09 | **INCIDENTE RLS 34 tablas** · re-enable + ADR D-021 | migración `20260813000002_fix_rls_reenable.sql` |
+| 2026-08-09 | **C-1 v4** · auth con timeout + auto-nuke storage | `2bf31cd` fix(auth) · ADR D-020 |
+| 2026-08-09 | **M-3** · Angeles.nombre corregido | aplicado por usuario en Supabase |
+| 2026-08-09 | **DT-4** · usuarios.nombre NULL fix | mismo aplicado por usuario |
 | 2026-08-07 | **HK-3** · Deploy Hook manual GitHub→Vercel | `b3b5802` chore(test) · webhook id 662696047, delivery OK 4.59s |
 | 2026-08-07 | **C-1 · getSession() cuelga forever** · validado por usuario | `895ad26` fix(auth) — reemplazo por getUser() · app cargando OK |
 | 2026-07-12 | **F19-0** · Regla 0 compliance att_* | `1a767d0` feat(arriaza) + `b7ff827` fix defensivo previo |

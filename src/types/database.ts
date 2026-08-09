@@ -714,6 +714,9 @@ export type Database = {
           lat: number | null;
           lng: number | null;
           deleted_at: string | null;
+          // Fase 19-1 · workflow manual + correlativo TT-YYYY-####
+          trip_no: string | null;
+          manual_status: 'Solicitado' | 'En planeación' | 'En curso' | 'Finalizado';
         };
         Insert: AuditInsert & {
           id?: string;
@@ -734,6 +737,8 @@ export type Database = {
           lat?: number | null;
           lng?: number | null;
           deleted_at?: string | null;
+          trip_no?: string | null;
+          manual_status?: 'Solicitado' | 'En planeación' | 'En curso' | 'Finalizado';
         };
         Update: AuditUpdate & {
           miembro_id?: string | null;
@@ -752,6 +757,8 @@ export type Database = {
           lat?: number | null;
           lng?: number | null;
           deleted_at?: string | null;
+          trip_no?: string | null;
+          manual_status?: 'Solicitado' | 'En planeación' | 'En curso' | 'Finalizado';
         };
         Relationships: [];
       };
@@ -1171,6 +1178,637 @@ export type Database = {
         };
         Relationships: [
           { foreignKeyName: 'att_restaurant_pay_records_restaurante_id_fkey'; columns: ['restaurante_id']; referencedRelation: 'att_restaurantes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      // ====================================================
+      // Fase 19-1 · T&T completo · 17 tablas nuevas
+      // ====================================================
+      att_hotel_habitaciones: {
+        Row: AuditCols & {
+          id: string; hotel_id: string;
+          reserva_nombre: string | null; pax: number | null;
+          tipo_hab: string | null; desayuno: string | null;
+          tarifa: number | null; noches: number | null; orden: number | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; hotel_id: string;
+          reserva_nombre?: string | null; pax?: number | null;
+          tipo_hab?: string | null; desayuno?: string | null;
+          tarifa?: number | null; noches?: number | null; orden?: number | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          reserva_nombre?: string | null; pax?: number | null;
+          tipo_hab?: string | null; desayuno?: string | null;
+          tarifa?: number | null; noches?: number | null; orden?: number | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_hotel_habitaciones_hotel_id_fkey'; columns: ['hotel_id']; referencedRelation: 'att_hoteles'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_rentas: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; nombre: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          tipo_veh: string | null; desc_veh: string | null;
+          reservado: string | null; reserva_nombre: string | null; confirmacion: string | null;
+          recepcion_fecha: string | null; recepcion_hora: string | null; recepcion_dir: string | null;
+          entrega_fecha: string | null; entrega_hora: string | null; entrega_dir: string | null;
+          dias: number | null; tarifa: number | null; deposito: number | null;
+          extras: Json;
+          cancelacion: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; nombre: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_veh?: string | null; desc_veh?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          recepcion_fecha?: string | null; recepcion_hora?: string | null; recepcion_dir?: string | null;
+          entrega_fecha?: string | null; entrega_hora?: string | null; entrega_dir?: string | null;
+          dias?: number | null; tarifa?: number | null; deposito?: number | null;
+          extras?: Json; cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_veh?: string | null; desc_veh?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          recepcion_fecha?: string | null; recepcion_hora?: string | null; recepcion_dir?: string | null;
+          entrega_fecha?: string | null; entrega_hora?: string | null; entrega_dir?: string | null;
+          dias?: number | null; tarifa?: number | null; deposito?: number | null;
+          extras?: Json; cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_rentas_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_tours: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; prestador: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          tipo_servicio: string | null; descripcion: string | null;
+          reservado: string | null; reserva_nombre: string | null; confirmacion: string | null;
+          fecha: string | null; hora: string | null;
+          inclusiones: string | null;
+          personas: number | null; dias: number | null; duracion: string | null;
+          tarifa: number | null; cancelacion: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; prestador: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_servicio?: string | null; descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          fecha?: string | null; hora?: string | null;
+          inclusiones?: string | null;
+          personas?: number | null; dias?: number | null; duracion?: string | null;
+          tarifa?: number | null; cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          prestador?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_servicio?: string | null; descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          fecha?: string | null; hora?: string | null;
+          inclusiones?: string | null;
+          personas?: number | null; dias?: number | null; duracion?: string | null;
+          tarifa?: number | null; cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_tours_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_aeronaves: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; prestador: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          tipo_aeronave: string | null; capacidad: string | null;
+          tipo_servicio: string | null; descripcion: string | null;
+          reservado: string | null; reserva_nombre: string | null; confirmacion: string | null;
+          origen: string | null; destino: string | null;
+          fecha: string | null; hora: string | null;
+          inclusiones: string | null;
+          tarifa: number | null; extras: string | null; monto_extras: number | null;
+          cancelacion: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; prestador: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_aeronave?: string | null; capacidad?: string | null;
+          tipo_servicio?: string | null; descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          origen?: string | null; destino?: string | null;
+          fecha?: string | null; hora?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          prestador?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_aeronave?: string | null; capacidad?: string | null;
+          tipo_servicio?: string | null; descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          origen?: string | null; destino?: string | null;
+          fecha?: string | null; hora?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_aeronaves_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_acuaticos: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; prestador: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          tipo_embarcacion: string | null; capacidad: string | null;
+          tipo_servicio: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro: string | null;
+          descripcion: string | null;
+          reservado: string | null; reserva_nombre: string | null; confirmacion: string | null;
+          tipo: 'OW' | 'RT';
+          fecha: string | null; origen: string | null; destino: string | null;
+          etd: string | null; eta: string | null;
+          ret_fecha: string | null; ret_origen: string | null; ret_destino: string | null;
+          ret_etd: string | null; ret_eta: string | null;
+          inclusiones: string | null;
+          tarifa: number | null; extras: string | null; monto_extras: number | null;
+          cancelacion: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; prestador: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_embarcacion?: string | null; capacidad?: string | null;
+          tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro?: string | null;
+          descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          tipo?: 'OW' | 'RT';
+          fecha?: string | null; origen?: string | null; destino?: string | null;
+          etd?: string | null; eta?: string | null;
+          ret_fecha?: string | null; ret_origen?: string | null; ret_destino?: string | null;
+          ret_etd?: string | null; ret_eta?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          prestador?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_embarcacion?: string | null; capacidad?: string | null;
+          tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro?: string | null;
+          descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          tipo?: 'OW' | 'RT';
+          fecha?: string | null; origen?: string | null; destino?: string | null;
+          etd?: string | null; eta?: string | null;
+          ret_fecha?: string | null; ret_origen?: string | null; ret_destino?: string | null;
+          ret_etd?: string | null; ret_eta?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_acuaticos_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_ferries: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; prestador: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          tipo_embarcacion: string | null;
+          servicio_para: 'Personas' | 'Vehículos';
+          tipo_servicio: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro: string | null;
+          descripcion: string | null;
+          reservado: string | null; reserva_nombre: string | null; confirmacion: string | null;
+          tipo: 'OW' | 'RT';
+          fecha: string | null; origen: string | null; destino: string | null;
+          etd: string | null; eta: string | null;
+          ret_fecha: string | null; ret_origen: string | null; ret_destino: string | null;
+          ret_etd: string | null; ret_eta: string | null;
+          inclusiones: string | null;
+          tarifa: number | null; extras: string | null; monto_extras: number | null;
+          cancelacion: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; prestador: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_embarcacion?: string | null;
+          servicio_para?: 'Personas' | 'Vehículos';
+          tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro?: string | null;
+          descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          tipo?: 'OW' | 'RT';
+          fecha?: string | null; origen?: string | null; destino?: string | null;
+          etd?: string | null; eta?: string | null;
+          ret_fecha?: string | null; ret_origen?: string | null; ret_destino?: string | null;
+          ret_etd?: string | null; ret_eta?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          prestador?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_embarcacion?: string | null;
+          servicio_para?: 'Personas' | 'Vehículos';
+          tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro?: string | null;
+          descripcion?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null; confirmacion?: string | null;
+          tipo?: 'OW' | 'RT';
+          fecha?: string | null; origen?: string | null; destino?: string | null;
+          etd?: string | null; eta?: string | null;
+          ret_fecha?: string | null; ret_origen?: string | null; ret_destino?: string | null;
+          ret_etd?: string | null; ret_eta?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_ferries_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_terrestres: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; prestador: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          tipo_veh: string | null;
+          tipo_servicio: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro: string | null;
+          reservado: string | null; reserva_nombre: string | null;
+          personas: number | null; confirmacion: string | null;
+          tipo: 'OW' | 'RT';
+          fecha: string | null; origen: string | null; destino: string | null;
+          etd: string | null; eta: string | null;
+          ret_fecha: string | null; ret_origen: string | null; ret_destino: string | null;
+          ret_etd: string | null; ret_eta: string | null;
+          inclusiones: string | null;
+          tarifa: number | null; extras: string | null; monto_extras: number | null;
+          cancelacion: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; prestador: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_veh?: string | null;
+          tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null;
+          personas?: number | null; confirmacion?: string | null;
+          tipo?: 'OW' | 'RT';
+          fecha?: string | null; origen?: string | null; destino?: string | null;
+          etd?: string | null; eta?: string | null;
+          ret_fecha?: string | null; ret_origen?: string | null; ret_destino?: string | null;
+          ret_etd?: string | null; ret_eta?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          prestador?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          tipo_veh?: string | null;
+          tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
+          tipo_servicio_otro?: string | null;
+          reservado?: string | null; reserva_nombre?: string | null;
+          personas?: number | null; confirmacion?: string | null;
+          tipo?: 'OW' | 'RT';
+          fecha?: string | null; origen?: string | null; destino?: string | null;
+          etd?: string | null; eta?: string | null;
+          ret_fecha?: string | null; ret_origen?: string | null; ret_destino?: string | null;
+          ret_etd?: string | null; ret_eta?: string | null;
+          inclusiones?: string | null;
+          tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
+          cancelacion?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_terrestres_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_tiendas: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; nombre: string;
+          ciudad: string | null; direccion: string | null; telefono: string | null;
+          apertura: string | null; cierre: string | null;
+          detalle: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; nombre: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          apertura?: string | null; cierre?: string | null;
+          detalle?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string;
+          ciudad?: string | null; direccion?: string | null; telefono?: string | null;
+          apertura?: string | null; cierre?: string | null;
+          detalle?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_tiendas_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_actividades: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; evento: string;
+          ciudad: string | null; direccion: string | null; descripcion: string | null;
+          duracion: string | null;
+          fecha: string | null; inicio: string | null; fin: string | null;
+          reservado: string | null; cancelacion: string | null; comentarios: string | null;
+          estatus_pago: string | null;
+          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con: string | null; confirm_file_name: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; evento: string;
+          ciudad?: string | null; direccion?: string | null; descripcion?: string | null;
+          duracion?: string | null;
+          fecha?: string | null; inicio?: string | null; fin?: string | null;
+          reservado?: string | null; cancelacion?: string | null; comentarios?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          evento?: string;
+          ciudad?: string | null; direccion?: string | null; descripcion?: string | null;
+          duracion?: string | null;
+          fecha?: string | null; inicio?: string | null; fin?: string | null;
+          reservado?: string | null; cancelacion?: string | null; comentarios?: string | null;
+          estatus_pago?: string | null;
+          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          pagado_con?: string | null; confirm_file_name?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_actividades_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_actividad_tickets: {
+        Row: AuditCols & {
+          id: string; actividad_id: string;
+          nombres: string | null; personas: number | null; confirmacion: string | null;
+          lugares: string | null; tarifa: number | null;
+          extras: string | null; monto_extras: number | null;
+          tiene_subtickets: boolean; orden: number | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; actividad_id: string;
+          nombres?: string | null; personas?: number | null; confirmacion?: string | null;
+          lugares?: string | null; tarifa?: number | null;
+          extras?: string | null; monto_extras?: number | null;
+          tiene_subtickets?: boolean; orden?: number | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombres?: string | null; personas?: number | null; confirmacion?: string | null;
+          lugares?: string | null; tarifa?: number | null;
+          extras?: string | null; monto_extras?: number | null;
+          tiene_subtickets?: boolean; orden?: number | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_actividad_tickets_actividad_id_fkey'; columns: ['actividad_id']; referencedRelation: 'att_actividades'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_actividad_subtickets: {
+        Row: AuditCols & {
+          id: string; ticket_id: string;
+          nombre: string | null; ticket: string | null; lugar: string | null;
+          orden: number | null; deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; ticket_id: string;
+          nombre?: string | null; ticket?: string | null; lugar?: string | null;
+          orden?: number | null; deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string | null; ticket?: string | null; lugar?: string | null;
+          orden?: number | null; deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_actividad_subtickets_ticket_id_fkey'; columns: ['ticket_id']; referencedRelation: 'att_actividad_tickets'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_reuniones: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; cita: string;
+          asunto: string | null; fecha: string; hora: string;
+          participantes: string | null; ciudad: string | null; direccion: string | null;
+          confirm_file_name: string | null; deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; cita: string;
+          asunto?: string | null; fecha: string; hora: string;
+          participantes?: string | null; ciudad?: string | null; direccion?: string | null;
+          confirm_file_name?: string | null; deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          cita?: string;
+          asunto?: string | null; fecha?: string; hora?: string;
+          participantes?: string | null; ciudad?: string | null; direccion?: string | null;
+          confirm_file_name?: string | null; deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_reuniones_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_rutas: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; nombre: string;
+          fecha: string | null; descripcion: string | null; link: string;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; nombre: string;
+          fecha?: string | null; descripcion?: string | null; link: string;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string;
+          fecha?: string | null; descripcion?: string | null; link?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_rutas_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_pois: {
+        Row: AuditCols & {
+          id: string; viaje_id: string; titulo: string;
+          ciudad: string | null; puntos: Json; deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string; titulo: string;
+          ciudad?: string | null; puntos?: Json; deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          titulo?: string; ciudad?: string | null; puntos?: Json; deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_pois_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_day_plans: {
+        Row: AuditCols & {
+          id: string; viaje_id: string;
+          dia: string | null; fecha: string; lugar: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string;
+          dia?: string | null; fecha: string; lugar?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          dia?: string | null; fecha?: string; lugar?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_day_plans_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_day_plan_rows: {
+        Row: AuditCols & {
+          id: string; day_plan_id: string;
+          horario: string | null; itinerario: string | null; orden: number | null;
+          reunion_id: string | null; es_auto_reunion: boolean;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; day_plan_id: string;
+          horario?: string | null; itinerario?: string | null; orden?: number | null;
+          reunion_id?: string | null; es_auto_reunion?: boolean;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          horario?: string | null; itinerario?: string | null; orden?: number | null;
+          reunion_id?: string | null; es_auto_reunion?: boolean;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_day_plan_rows_day_plan_id_fkey'; columns: ['day_plan_id']; referencedRelation: 'att_day_plans'; referencedColumns: ['id'] },
+          { foreignKeyName: 'att_day_plan_rows_reunion_id_fkey'; columns: ['reunion_id']; referencedRelation: 'att_reuniones'; referencedColumns: ['id'] },
+        ];
+      };
+
+      att_day_notes: {
+        Row: AuditCols & {
+          id: string; viaje_id: string;
+          fecha: string; texto: string;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; viaje_id: string;
+          fecha: string; texto: string;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          fecha?: string; texto?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_day_notes_viaje_id_fkey'; columns: ['viaje_id']; referencedRelation: 'att_viajes'; referencedColumns: ['id'] },
         ];
       };
 

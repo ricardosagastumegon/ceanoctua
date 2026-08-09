@@ -45,3 +45,8 @@ reference/*
 # pero los mockups del refactor SÍ van al repo (referencia para Claude Code)
 !reference/finanzas-mockups/
 !reference/finanzas-mockups/**
+
+# Playwright
+playwright-report/
+test-results/
+.playwright/

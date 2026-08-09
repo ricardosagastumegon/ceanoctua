@@ -5,6 +5,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate, fmtMoney } from '../utils';
 import { EstadoPagoBadge } from '../shared/EstadoPagoBadge';
+import { ServicePrintable } from '../ServicePrintable';
 import { TourForm } from './TourForm';
 import { useAttToursByViaje, useCreateAttTour, useUpdateAttTour, useDeleteAttTour } from './hooks';
 import { tourTotal, type AttTour, type AttTourInsert } from './api';
@@ -19,6 +20,7 @@ export function ToursSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttTour | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttTour | null>(null);
 
   if (autoOpenCreate && editing === undefined) { setEditing(null); onDidOpenCreate?.(); }
 
@@ -74,6 +76,7 @@ export function ToursSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate
           </div>
           <div className="text-xs font-extrabold text-teal-d">{fmtMoney(tourTotal(t))}</div>
           <div className="flex shrink-0 gap-1">
+            <button type="button" onClick={() => setPrinting(t)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
             {canEdit && (
               <>
                 <button type="button" onClick={() => setEditing(t)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Editar">✏️</button>
@@ -83,6 +86,28 @@ export function ToursSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate
           </div>
         </div>
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="tours"
+        title={printing?.prestador ?? ''}
+        subtitle={printing ? `${printing.tipo_servicio ?? ''}${printing.ciudad ? ' · ' + printing.ciudad : ''}` : null}
+        total={printing ? tourTotal(printing) : null}
+        estadoPago={printing?.estado_pago ?? null}
+        pagadoCon={printing?.pagado_con ?? null}
+        confirmacion={printing?.confirmacion ?? null}
+        cancelacion={printing?.cancelacion ?? null}
+        rows={printing ? [
+          { label: 'Reserva a nombre de', value: printing.reserva_nombre ?? '—' },
+          { label: 'Fecha', value: fmtDate(printing.fecha) },
+          { label: 'Hora', value: printing.hora ?? '—' },
+          { label: 'Personas', value: printing.personas ?? '—' },
+          { label: 'Duración', value: printing.duracion ?? '—' },
+          { label: 'Tarifa/persona', value: fmtMoney(printing.tarifa) },
+          { label: 'Inclusiones', value: printing.inclusiones ?? '—' },
+          { label: 'Descripción', value: printing.descripcion ?? '—' },
+        ] : []}
+      />
       <TourForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate } from '../utils';
+import { ServicePrintable } from '../ServicePrintable';
 import { ReunionForm } from './ReunionForm';
 import { useAttReunionesByViaje, useCreateAttReunion, useUpdateAttReunion, useDeleteAttReunion } from './hooks';
 import type { AttReunion, AttReunionInsert } from './api';
@@ -18,6 +19,7 @@ export function ReunionesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCr
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttReunion | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttReunion | null>(null);
 
   if (autoOpenCreate && editing === undefined) { setEditing(null); onDidOpenCreate?.(); }
 
@@ -69,6 +71,7 @@ export function ReunionesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCr
             </div>
           </div>
           <div className="flex shrink-0 gap-1">
+            <button type="button" onClick={() => setPrinting(r)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
             {canEdit && (
               <>
                 <button type="button" onClick={() => setEditing(r)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Editar">✏️</button>
@@ -78,6 +81,19 @@ export function ReunionesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCr
           </div>
         </div>
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="reunion"
+        title={printing?.cita ?? ''}
+        subtitle={printing ? `${fmtDate(printing.fecha)} · ${printing.hora}` : null}
+        rows={printing ? [
+          { label: 'Asunto', value: printing.asunto ?? '—' },
+          { label: 'Participantes', value: printing.participantes ?? '—' },
+          { label: 'Ciudad', value: printing.ciudad ?? '—' },
+          { label: 'Dirección', value: printing.direccion ?? '—' },
+        ] : []}
+      />
       <ReunionForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

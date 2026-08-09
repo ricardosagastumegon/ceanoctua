@@ -3,8 +3,9 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
-import { fmtMoney } from '../utils';
+import { fmtMoney, fmtDate } from '../utils';
 import { EstadoPagoBadge } from '../shared/EstadoPagoBadge';
+import { ServicePrintable } from '../ServicePrintable';
 import { FerryForm } from './FerryForm';
 import { useAttFerriesByViaje, useCreateAttFerry, useUpdateAttFerry, useDeleteAttFerry } from './hooks';
 import { ferryTotal, type AttFerry, type AttFerryInsert } from './api';
@@ -16,6 +17,7 @@ export function FerriesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
   const create = useCreateAttFerry(); const update = useUpdateAttFerry(); const remove = useDeleteAttFerry();
   const toast = useToast(); const confirm = useConfirm();
   const [editing, setEditing] = useState<AttFerry | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttFerry | null>(null);
   if (autoOpenCreate && editing === undefined) { setEditing(null); onDidOpenCreate?.(); }
   const rows = query.data ?? []; const meta = SERVICE_META.ferry;
 
@@ -54,6 +56,7 @@ export function FerriesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
           </div>
           <div className="text-xs font-extrabold text-teal-d">{fmtMoney(ferryTotal(x))}</div>
           <div className="flex shrink-0 gap-1">
+            <button type="button" onClick={() => setPrinting(x)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
             {canEdit && (
               <>
                 <button type="button" onClick={() => setEditing(x)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal">✏️</button>
@@ -63,6 +66,30 @@ export function FerriesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
           </div>
         </div>
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="ferry"
+        title={printing?.prestador ?? ''}
+        subtitle={printing ? `${printing.tipo} · ${printing.servicio_para}` : null}
+        total={printing ? ferryTotal(printing) : null}
+        estadoPago={printing?.estado_pago ?? null}
+        pagadoCon={printing?.pagado_con ?? null}
+        confirmacion={printing?.confirmacion ?? null}
+        cancelacion={printing?.cancelacion ?? null}
+        rows={printing ? [
+          { label: 'Fecha', value: fmtDate(printing.fecha) },
+          { label: 'Ruta', value: `${printing.origen ?? '—'} → ${printing.destino ?? '—'}` },
+          { label: 'ETD/ETA', value: `${printing.etd ?? '—'} / ${printing.eta ?? '—'}` },
+          ...(printing.tipo === 'RT' ? [
+            { label: 'Regreso fecha', value: fmtDate(printing.ret_fecha) },
+            { label: 'Regreso ruta', value: `${printing.ret_origen ?? '—'} → ${printing.ret_destino ?? '—'}` },
+          ] : []),
+          { label: 'Tarifa', value: fmtMoney(printing.tarifa) },
+          { label: 'Extras', value: printing.extras ?? '—' },
+          { label: 'Inclusiones', value: printing.inclusiones ?? '—' },
+        ] : []}
+      />
       <FerryForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

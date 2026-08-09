@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { ServicePrintable } from '../ServicePrintable';
 import { TiendaForm } from './TiendaForm';
 import {
   useAttTiendasByViaje,
@@ -28,6 +29,7 @@ export function TiendasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttTienda | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttTienda | null>(null);
 
   // Si el padre dispara autoOpenCreate (ej. desde "+ Agregar Servicios" > Tienda),
   // abrimos el modal de crear una sola vez.
@@ -113,6 +115,14 @@ export function TiendasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
             </div>
           </div>
           <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              onClick={() => setPrinting(t)}
+              className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal"
+              title="Imprimir"
+            >
+              🖨
+            </button>
             {canEdit && (
               <>
                 <button
@@ -136,6 +146,21 @@ export function TiendasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
           </div>
         </div>
       ))}
+
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="tiendas"
+        title={printing?.nombre ?? ''}
+        subtitle={printing?.ciudad ?? null}
+        rows={printing ? [
+          { label: 'Dirección', value: printing.direccion ?? '—' },
+          { label: 'Teléfono', value: printing.telefono ?? '—' },
+          { label: 'Apertura', value: printing.apertura ?? '—' },
+          { label: 'Cierre', value: printing.cierre ?? '—' },
+          { label: 'Detalle', value: printing.detalle ?? '—' },
+        ] : []}
+      />
 
       <TiendaForm
         open={editing !== undefined}

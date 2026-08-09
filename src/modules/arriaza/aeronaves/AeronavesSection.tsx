@@ -5,6 +5,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate, fmtMoney } from '../utils';
 import { EstadoPagoBadge } from '../shared/EstadoPagoBadge';
+import { ServicePrintable } from '../ServicePrintable';
 import { AeronaveForm } from './AeronaveForm';
 import { useAttAeronavesByViaje, useCreateAttAeronave, useUpdateAttAeronave, useDeleteAttAeronave } from './hooks';
 import { aeronaveTotal, type AttAeronave, type AttAeronaveInsert } from './api';
@@ -19,6 +20,7 @@ export function AeronavesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCr
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttAeronave | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttAeronave | null>(null);
 
   if (autoOpenCreate && editing === undefined) { setEditing(null); onDidOpenCreate?.(); }
 
@@ -74,6 +76,7 @@ export function AeronavesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCr
           </div>
           <div className="text-xs font-extrabold text-teal-d">{fmtMoney(aeronaveTotal(x))}</div>
           <div className="flex shrink-0 gap-1">
+            <button type="button" onClick={() => setPrinting(x)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
             {canEdit && (
               <>
                 <button type="button" onClick={() => setEditing(x)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Editar">✏️</button>
@@ -83,6 +86,28 @@ export function AeronavesSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCr
           </div>
         </div>
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="aeronave"
+        title={printing?.prestador ?? ''}
+        subtitle={printing ? `${printing.tipo_aeronave ?? ''}${printing.capacidad ? ' · ' + printing.capacidad : ''}` : null}
+        total={printing ? aeronaveTotal(printing) : null}
+        estadoPago={printing?.estado_pago ?? null}
+        pagadoCon={printing?.pagado_con ?? null}
+        confirmacion={printing?.confirmacion ?? null}
+        cancelacion={printing?.cancelacion ?? null}
+        rows={printing ? [
+          { label: 'Reserva a nombre de', value: printing.reserva_nombre ?? '—' },
+          { label: 'Ruta', value: `${printing.origen ?? '—'} → ${printing.destino ?? '—'}` },
+          { label: 'Fecha', value: fmtDate(printing.fecha) },
+          { label: 'Hora', value: printing.hora ?? '—' },
+          { label: 'Tarifa', value: fmtMoney(printing.tarifa) },
+          { label: 'Monto extras', value: fmtMoney(printing.monto_extras) },
+          { label: 'Inclusiones', value: printing.inclusiones ?? '—' },
+          { label: 'Descripción', value: printing.descripcion ?? '—' },
+        ] : []}
+      />
       <AeronaveForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

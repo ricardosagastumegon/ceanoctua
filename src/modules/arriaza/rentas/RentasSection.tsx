@@ -3,8 +3,9 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
-import { fmtMoney } from '../utils';
+import { fmtMoney, fmtDate } from '../utils';
 import { EstadoPagoBadge } from '../shared/EstadoPagoBadge';
+import { ServicePrintable } from '../ServicePrintable';
 import { RentaForm } from './RentaForm';
 import { useAttRentasByViaje, useCreateAttRenta, useUpdateAttRenta, useDeleteAttRenta } from './hooks';
 import { rentaTotal, type AttRenta, type AttRentaInsert } from './api';
@@ -19,6 +20,7 @@ export function RentasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreat
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttRenta | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttRenta | null>(null);
 
   if (autoOpenCreate && editing === undefined) { setEditing(null); onDidOpenCreate?.(); }
 
@@ -74,6 +76,7 @@ export function RentasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreat
           </div>
           <div className="text-xs font-extrabold text-teal-d">{fmtMoney(rentaTotal(r))}</div>
           <div className="flex shrink-0 gap-1">
+            <button type="button" onClick={() => setPrinting(r)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
             {canEdit && (
               <>
                 <button type="button" onClick={() => setEditing(r)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Editar">✏️</button>
@@ -83,6 +86,28 @@ export function RentasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreat
           </div>
         </div>
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="renta"
+        title={printing?.nombre ?? ''}
+        subtitle={printing ? `${printing.tipo_veh ?? ''}${printing.ciudad ? ' · ' + printing.ciudad : ''}` : null}
+        total={printing ? rentaTotal(printing) : null}
+        estadoPago={printing?.estado_pago ?? null}
+        pagadoCon={printing?.pagado_con ?? null}
+        confirmacion={printing?.confirmacion ?? null}
+        cancelacion={printing?.cancelacion ?? null}
+        rows={printing ? [
+          { label: 'Reserva a nombre de', value: printing.reserva_nombre ?? '—' },
+          { label: 'Descripción vehículo', value: printing.desc_veh ?? '—' },
+          { label: 'Recepción', value: `${fmtDate(printing.recepcion_fecha)} ${printing.recepcion_hora ?? ''} · ${printing.recepcion_dir ?? '—'}` },
+          { label: 'Entrega', value: `${fmtDate(printing.entrega_fecha)} ${printing.entrega_hora ?? ''} · ${printing.entrega_dir ?? '—'}` },
+          { label: 'Días', value: printing.dias ?? '—' },
+          { label: 'Tarifa/día', value: fmtMoney(printing.tarifa) },
+          { label: 'Depósito', value: fmtMoney(printing.deposito) },
+          { label: 'Teléfono', value: printing.telefono ?? '—' },
+        ] : []}
+      />
       <RentaForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

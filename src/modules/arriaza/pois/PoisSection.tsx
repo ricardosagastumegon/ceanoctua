@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { ServicePrintable } from '../ServicePrintable';
 import { PoiForm } from './PoiForm';
 import { readPoiPuntos } from './api';
 import { useAttPoisByViaje, useCreateAttPoi, useUpdateAttPoi, useDeleteAttPoi } from './hooks';
@@ -18,6 +19,7 @@ export function PoisSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate 
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttPoi | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttPoi | null>(null);
 
   if (autoOpenCreate && editing === undefined) { setEditing(null); onDidOpenCreate?.(); }
 
@@ -71,6 +73,7 @@ export function PoisSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate 
               </div>
             </div>
             <div className="flex shrink-0 gap-1">
+              <button type="button" onClick={() => setPrinting(p)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
               {canEdit && (
                 <>
                   <button type="button" onClick={() => setEditing(p)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Editar">✏️</button>
@@ -81,6 +84,33 @@ export function PoisSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate 
           </div>
         );
       })}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="poi"
+        title={printing?.titulo ?? ''}
+        subtitle={printing?.ciudad ?? null}
+        rows={printing ? [
+          { label: 'Puntos', value: `${readPoiPuntos(printing).length} lugares` },
+        ] : []}
+        extras={
+          printing && readPoiPuntos(printing).length > 0 ? (
+            <ol className="space-y-2">
+              {readPoiPuntos(printing).map((pt, i) => (
+                <li key={i} className="rounded-md border border-gold/20 bg-gold-light/30 p-2">
+                  <div className="font-extrabold text-dark-2">
+                    <span className="mr-1 text-gold">{i + 1}.</span>
+                    {pt.nombre ?? '—'}
+                  </div>
+                  {pt.descripcion && (
+                    <div className="mt-0.5 text-[11px] text-dark-3">{pt.descripcion}</div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : undefined
+        }
+      />
       <PoiForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate } from '../utils';
+import { ServicePrintable } from '../ServicePrintable';
 import { RutaForm } from './RutaForm';
 import { useAttRutasByViaje, useCreateAttRuta, useUpdateAttRuta, useDeleteAttRuta } from './hooks';
 import type { AttRuta, AttRutaInsert } from './api';
@@ -18,6 +19,7 @@ export function RutasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<AttRuta | null | undefined>(undefined);
+  const [printing, setPrinting] = useState<AttRuta | null>(null);
 
   if (autoOpenCreate && editing === undefined) {
     setEditing(null);
@@ -83,6 +85,7 @@ export function RutasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate
           </div>
           <div className="flex shrink-0 gap-1">
             <button type="button" onClick={() => copyLink(r.link)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Copiar link">📋</button>
+            <button type="button" onClick={() => setPrinting(r)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
             {canEdit && (
               <>
                 <button type="button" onClick={() => setEditing(r)} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Editar">✏️</button>
@@ -92,6 +95,17 @@ export function RutasSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate
           </div>
         </div>
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="ruta"
+        title={printing?.nombre ?? ''}
+        subtitle={printing?.fecha ? fmtDate(printing.fecha) : null}
+        rows={printing ? [
+          { label: 'Descripción', value: printing.descripcion ?? '—' },
+          { label: 'Link', value: printing.link },
+        ] : []}
+      />
       <RutaForm open={editing !== undefined} viajeId={viajeId} editing={editing ?? null} submitting={create.isPending || update.isPending} onClose={() => setEditing(undefined)} onSubmit={handleSave} />
     </div>
   );

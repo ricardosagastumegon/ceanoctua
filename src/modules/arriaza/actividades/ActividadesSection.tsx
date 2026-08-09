@@ -5,6 +5,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate, fmtMoney } from '../utils';
 import { EstadoPagoBadge } from '../shared/EstadoPagoBadge';
+import { ServicePrintable } from '../ServicePrintable';
 import { ActividadForm } from './ActividadForm';
 import {
   useAttActividades,
@@ -38,6 +39,16 @@ export function ActividadesSection({ viajeId, canEdit, autoOpenCreate, onDidOpen
 
   const [editing, setEditing] = useState<AttActividad | null | undefined>(undefined);
   const [existingTickets, setExistingTickets] = useState<AttActividadTicket[]>([]);
+  const [printing, setPrinting] = useState<AttActividad | null>(null);
+  const [printTickets, setPrintTickets] = useState<AttActividadTicket[]>([]);
+
+  useEffect(() => {
+    if (printing) {
+      void attActividadTicketsApi.listByActividad(printing.id).then(setPrintTickets);
+    } else {
+      setPrintTickets([]);
+    }
+  }, [printing]);
 
   // Filtro por viaje (la useAttActividades trae todas; filtramos en cliente).
   const rows = (query.data ?? []).filter((r) => r.viaje_id === viajeId);
@@ -132,8 +143,50 @@ export function ActividadesSection({ viajeId, canEdit, autoOpenCreate, onDidOpen
       {query.isLoading && <div className="text-xs text-dark-3">Cargando…</div>}
       {!query.isLoading && rows.length === 0 && <div className="italic text-xs text-dark-3">Sin actividades.</div>}
       {rows.map((x) => (
-        <ActivityRow key={x.id} act={x} canEdit={canEdit} onEdit={() => setEditing(x)} onDelete={() => void handleDelete(x)} />
+        <ActivityRow key={x.id} act={x} canEdit={canEdit} onEdit={() => setEditing(x)} onDelete={() => void handleDelete(x)} onPrint={() => setPrinting(x)} />
       ))}
+      <ServicePrintable
+        open={!!printing}
+        onClose={() => setPrinting(null)}
+        serviceKey="actividades"
+        title={printing?.evento ?? ''}
+        subtitle={printing?.ciudad ?? null}
+        total={printing ? actividadTotal(printTickets) : null}
+        estadoPago={printing?.estado_pago ?? null}
+        pagadoCon={printing?.pagado_con ?? null}
+        cancelacion={printing?.cancelacion ?? null}
+        rows={printing ? [
+          { label: 'Fecha', value: fmtDate(printing.fecha) },
+          { label: 'Inicio – Fin', value: `${printing.inicio ?? '—'} – ${printing.fin ?? '—'}` },
+          { label: 'Duración', value: printing.duracion ?? '—' },
+          { label: 'Dirección', value: printing.direccion ?? '—' },
+          { label: 'Descripción', value: printing.descripcion ?? '—' },
+        ] : []}
+        extras={
+          printTickets.length > 0 ? (
+            <div>
+              <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-purple">
+                🎫 Tickets ({printTickets.length})
+              </div>
+              <div className="space-y-1">
+                {printTickets.map((t) => (
+                  <div key={t.id} className="rounded-md border border-purple/20 bg-purple/5 p-2 text-xs">
+                    <div className="flex justify-between font-semibold text-dark-2">
+                      <span>{t.nombres ?? '—'}</span>
+                      <span className="text-purple">
+                        {fmtMoney(Number(t.tarifa ?? 0) * Number(t.personas ?? 0) + Number(t.monto_extras ?? 0))}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-dark-3">
+                      {t.personas ?? 0} pax · Lugares: {t.lugares ?? '—'} · Conf: {t.confirmacion ?? '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
       <ActividadForm
         open={editing !== undefined}
         viajeId={viajeId}
@@ -147,7 +200,7 @@ export function ActividadesSection({ viajeId, canEdit, autoOpenCreate, onDidOpen
   );
 }
 
-function ActivityRow({ act, canEdit, onEdit, onDelete }: { act: AttActividad; canEdit: boolean; onEdit: () => void; onDelete: () => void }) {
+function ActivityRow({ act, canEdit, onEdit, onDelete, onPrint }: { act: AttActividad; canEdit: boolean; onEdit: () => void; onDelete: () => void; onPrint: () => void }) {
   const meta = SERVICE_META.actividades;
   // Total on-demand: fetch tickets para mostrar el gran total.
   const [total, setTotal] = useState(0);
@@ -173,6 +226,7 @@ function ActivityRow({ act, canEdit, onEdit, onDelete }: { act: AttActividad; ca
       </div>
       <div className="text-xs font-extrabold text-teal-d">{fmtMoney(total)}</div>
       <div className="flex shrink-0 gap-1">
+        <button type="button" onClick={onPrint} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal" title="Imprimir">🖨</button>
         {canEdit && (
           <>
             <button type="button" onClick={onEdit} className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal">✏️</button>

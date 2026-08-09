@@ -32,10 +32,33 @@ export function DashboardPage() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              void signOut().then(() => {
-                window.location.href = '/login';
-              });
+            onClick={async () => {
+              // Nuclear cleanup: signOut() puede fallar (network, token corrupto)
+              // pero necesitamos garantizar que la app arranca limpia. Limpiamos
+              // TODOS los keys de Supabase en localStorage + sessionStorage
+              // antes de redirect. Esto rompe cualquier estado inconsistente.
+              try {
+                await signOut();
+              } catch {
+                /* ignore */
+              }
+              try {
+                const keys = Object.keys(localStorage);
+                for (const k of keys) {
+                  if (k.startsWith('sb-') || k.includes('supabase')) {
+                    localStorage.removeItem(k);
+                  }
+                }
+                const skeys = Object.keys(sessionStorage);
+                for (const k of skeys) {
+                  if (k.startsWith('sb-') || k.includes('supabase')) {
+                    sessionStorage.removeItem(k);
+                  }
+                }
+              } catch {
+                /* ignore */
+              }
+              window.location.href = '/login';
             }}
             className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l"
           >

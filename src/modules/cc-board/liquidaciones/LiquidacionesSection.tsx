@@ -277,7 +277,7 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
     <section className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-heading text-xl font-semibold text-dark">Liquidaciones de caja chica</h2>
+          <h2 className="font-heading text-xl font-semibold text-dark">Liquidaciones de Control Vales</h2>
           <p className="mt-1 text-sm text-dark-2">
             Agrupa compras con motivo, forma de pago y opcional vínculo a un vale.
           </p>

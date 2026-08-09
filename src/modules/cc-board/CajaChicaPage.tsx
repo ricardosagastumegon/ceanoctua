@@ -18,14 +18,14 @@ export function CajaChicaPage() {
   return (
     <section className="space-y-6">
       <header>
-        <h1 className="font-heading text-2xl font-semibold text-dark">CC Board — Caja chica</h1>
+        <h1 className="font-heading text-2xl font-semibold text-dark">Control Vales</h1>
         <p className="mt-1 text-sm text-dark-2">
           Vales individuales y liquidaciones que los agrupan. {canEdit ? '' : 'Solo lectura.'}
         </p>
       </header>
 
       <div className="overflow-hidden rounded-card border border-sand bg-white p-1 shadow-sm">
-        <nav className="flex gap-1" aria-label="Secciones de caja chica">
+        <nav className="flex gap-1" aria-label="Secciones de Control Vales">
           {sections.map((s) => (
             <button
               key={s.key}

@@ -7,6 +7,16 @@ import type { AttViaje } from './viajes/api';
 import { TicketsSection } from './tickets/TicketsSection';
 import { HotelesSection } from './hoteles/HotelesSection';
 import { RestaurantesSection } from './restaurantes/RestaurantesSection';
+import { TiendasSection } from './tiendas/TiendasSection';
+import { RutasSection } from './rutas/RutasSection';
+import { PoisSection } from './pois/PoisSection';
+import { ReunionesSection } from './reuniones/ReunionesSection';
+
+// Servicios con Section implementada (crece con cada bloque de F19-3d).
+const READY_SERVICES: ReadonlySet<ServiceKey> = new Set<ServiceKey>([
+  'tickets', 'hotel', 'restaurantes', // F19-3c
+  'tiendas', 'ruta', 'poi', 'reunion', // F19-3d bloque 1
+]);
 
 type Props = {
   viaje: AttViaje;
@@ -39,17 +49,19 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
   const flag = country?.flag ?? '📍';
   const manualStatus = (viaje.manual_status ?? 'Solicitado') as ManualStatus;
 
+  // Trigger para autoopen del "+ Nueva" en la Section al hacer click desde el dropdown.
+  const [autoOpenKey, setAutoOpenKey] = useState<ServiceKey | null>(null);
+
   function handleSelectService(key: ServiceKey) {
     setAddOpen(false);
-    // De los 14, ya están implementados 3 (tickets/hoteles/restaurantes) —
-    // los otros 11 abren su Section stub o show toast hasta F19-3d.
-    if (key === 'tickets' || key === 'hotel' || key === 'restaurantes') {
+    if (READY_SERVICES.has(key)) {
       setActiveService(key);
       setServicesOpen(true);
+      setAutoOpenKey(key); // La Section correspondiente abre su modal "Nueva".
     } else {
       // eslint-disable-next-line no-alert
       alert(
-        `📌 "${SERVICE_META[key].label}" estará disponible en la próxima subfase (F19-3d).\n\n` +
+        `📌 "${SERVICE_META[key].label}" estará disponible en un próximo bloque de F19-3d.\n\n` +
           `El schema, API y hooks ya están listos — solo falta la UI del formulario.`,
       );
     }
@@ -180,9 +192,9 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
 
         {servicesOpen && (
           <div className="mt-3 space-y-3">
-            {/* Sub-navegación entre los 3 servicios implementados (F19-3c). */}
-            <div className="flex gap-1 rounded-md border border-sand bg-white p-1">
-              {(['tickets', 'hotel', 'restaurantes'] as const).map((s) => {
+            {/* Sub-navegación entre los servicios implementados. */}
+            <div className="flex flex-wrap gap-1 rounded-md border border-sand bg-white p-1">
+              {SERVICE_KEYS.filter((k) => READY_SERVICES.has(k)).map((s) => {
                 const meta = SERVICE_META[s];
                 return (
                   <button
@@ -202,8 +214,38 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
             </div>
             {activeService === 'tickets' && <TicketsSection viajeId={viaje.id} canEdit={canEdit} />}
             {activeService === 'hotel' && <HotelesSection viajeId={viaje.id} canEdit={canEdit} />}
-            {activeService === 'restaurantes' && (
-              <RestaurantesSection viajeId={viaje.id} canEdit={canEdit} />
+            {activeService === 'restaurantes' && <RestaurantesSection viajeId={viaje.id} canEdit={canEdit} />}
+            {activeService === 'tiendas' && (
+              <TiendasSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'tiendas'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {activeService === 'ruta' && (
+              <RutasSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'ruta'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {activeService === 'poi' && (
+              <PoisSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'poi'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {activeService === 'reunion' && (
+              <ReunionesSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'reunion'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
             )}
             {!activeService && (
               <p className="text-xs italic text-dark-3">

@@ -18,6 +18,7 @@ import { AcuaticosSection } from './acuaticos/AcuaticosSection';
 import { FerriesSection } from './ferries/FerriesSection';
 import { TerrestresSection } from './terrestres/TerrestresSection';
 import { ActividadesSection } from './actividades/ActividadesSection';
+import { ItineraryModal } from './ItineraryModal';
 
 // Servicios con Section implementada — TODAS las 14 disponibles.
 const READY_SERVICES: ReadonlySet<ServiceKey> = new Set<ServiceKey>([
@@ -52,6 +53,7 @@ const AUTO_BADGE: Record<ReturnType<typeof autoTripStatus>, string> = {
 export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChange }: Props) {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [itinOpen, setItinOpen] = useState(false);
   // autoOpenKey: al hacer click en "+ Agregar Servicios > X", la Section de X
   // abre su modal "Nueva" automáticamente. Todas las secciones se renderean
   // apiladas (sin sub-nav), así que solo hay que triggear la del servicio elegido.
@@ -108,26 +110,36 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
           {canEdit && (
             <ManualStatusSelect value={manualStatus} onChange={onManualStatusChange} />
           )}
-          {canEdit && (
-            <div className="mt-1 flex gap-1">
-              <button
-                type="button"
-                onClick={onEdit}
-                title="Editar"
-                className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-teal hover:bg-teal-l"
-              >
-                ✏️
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                title="Eliminar"
-                className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-rust hover:bg-rust-l"
-              >
-                🗑
-              </button>
-            </div>
-          )}
+          <div className="mt-1 flex gap-1">
+            <button
+              type="button"
+              onClick={() => setItinOpen(true)}
+              title="Itinerario"
+              className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-teal hover:bg-teal-l"
+            >
+              📋
+            </button>
+            {canEdit && (
+              <>
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  title="Editar"
+                  className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-teal hover:bg-teal-l"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  title="Eliminar"
+                  className="rounded-md border border-sand px-2 py-1 text-[11px] hover:border-rust hover:bg-rust-l"
+                >
+                  🗑
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -277,6 +289,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
           </div>
         )}
       </div>
+      <ItineraryModal open={itinOpen} onClose={() => setItinOpen(false)} viaje={viaje} />
     </article>
   );
 }

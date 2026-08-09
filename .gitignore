@@ -45,6 +45,8 @@ reference/*
 # pero los mockups del refactor SÍ van al repo (referencia para Claude Code)
 !reference/finanzas-mockups/
 !reference/finanzas-mockups/**
+# HTML standalone de Control de Caja Chica (mockup + herramienta usable)
+!reference/CajaChica_control.html
 
 # Playwright
 playwright-report/

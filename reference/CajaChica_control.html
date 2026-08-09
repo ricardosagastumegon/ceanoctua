@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Caja Chica · Board Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Control de Caja Chica · standalone HTML
+   Paleta Board Assistant · Nunito + Montserrat
+   Persistencia: localStorage['cc_control_state']
+   ============================================================ */
+:root{
+  --teal:#077e84; --teal-d:#055a5f; --teal-l:#d0eced;
+  --sand:#e6dfbf; --sand-d:#d4cba0; --sand-l:#f5f2e8;
+  --rust:#bf4609; --rust-l:#f7e6de;
+  --dark:#321201; --dark-2:#5c3a20; --dark-3:#9c7a5a;
+  --gold:#9e7a1a; --gold-l:#f5f0d8;
+  --navy:#0d2b2e; --aqua:#00b4c5; --green:#2a6e24;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito',sans-serif;background:var(--sand-l);color:var(--dark);font-size:14px;min-height:100vh}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--teal);border-radius:4px}
+
+/* topbar */
+.topbar{background:var(--dark);color:var(--sand-l);padding:.9rem 2rem;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--teal)}
+.brand{font-family:'Montserrat',sans-serif;font-weight:800;letter-spacing:.08em;font-size:1.05rem}
+.brand span{color:var(--aqua)}
+.clock{font-size:.72rem;color:var(--sand-d);text-align:right;line-height:1.3}
+.clock b{color:#fff;font-size:.95rem;font-weight:800;display:block}
+
+/* container */
+.main{max-width:1500px;margin:0 auto;padding:1.2rem 1.5rem 2rem}
+
+/* hero card */
+.hero{background:linear-gradient(120deg,var(--navy),var(--teal-d) 55%,var(--teal) 100%);border-radius:20px;padding:1.5rem 2rem;color:#fff;margin-bottom:1.2rem;box-shadow:0 6px 24px rgba(7,126,132,.28);border-bottom:3px solid var(--gold)}
+.hero-eyebrow{font-size:.6rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+.hero-title{font-family:'Montserrat',sans-serif;font-size:1.6rem;font-weight:800;margin-top:.2rem}
+.hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1.2rem}
+.hero-cell{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:.6rem .8rem}
+.hero-cell-label{font-size:.55rem;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.55);font-weight:800;margin-bottom:.3rem}
+.hero-cell-value{font-family:'Montserrat',sans-serif;font-size:1.15rem;font-weight:900;color:#fff}
+.hero-cell input{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;padding:.4rem .6rem;border-radius:8px;font-family:inherit;font-size:.9rem;font-weight:800;width:100%}
+.hero-cell input:focus{outline:none;border-color:var(--aqua);background:rgba(255,255,255,.18)}
+.hero-cell.balance-ok{background:rgba(42,110,36,.25);border-color:rgba(42,110,36,.5)}
+.hero-cell.balance-neg{background:rgba(191,70,9,.25);border-color:rgba(191,70,9,.5)}
+
+/* period selector */
+.periods{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap}
+.periods label{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dark-2)}
+.periods select{background:#fff;border:1.5px solid var(--sand-d);padding:.4rem .7rem;font-family:inherit;font-size:.85rem;font-weight:700;border-radius:9px;color:var(--dark);min-width:200px}
+.btn{background:var(--teal);color:#fff;border:none;padding:.5rem 1rem;font-family:inherit;font-size:.78rem;font-weight:800;cursor:pointer;border-radius:9px;transition:all .15s;letter-spacing:.02em}
+.btn:hover{background:var(--teal-d);transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:#fff;border:1.5px solid var(--sand-d);color:var(--dark-2)}
+.btn.ghost:hover{border-color:var(--teal);color:var(--teal-d);background:var(--teal-l)}
+.btn.gold{background:var(--gold)}
+.btn.gold:hover{background:#7a5e14}
+.btn.rust{background:var(--rust)}
+.btn.rust:hover{background:#8f3406}
+.btn.sm{padding:.35rem .75rem;font-size:.68rem}
+
+/* toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:flex-end;margin-bottom:.75rem}
+
+/* table */
+.table-wrap{background:#fff;border-radius:16px;overflow-x:auto;box-shadow:0 3px 14px rgba(7,126,132,.09);border:1px solid var(--sand)}
+table{width:100%;border-collapse:collapse;min-width:1200px}
+th{background:var(--navy);color:#fff;font-family:'Montserrat',sans-serif;font-weight:700;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;padding:.7rem .5rem;text-align:left;white-space:nowrap}
+th.right{text-align:right}
+th.center{text-align:center}
+tr{border-bottom:1px solid var(--sand)}
+tr:last-child{border-bottom:none}
+tr:hover{background:var(--sand-l)}
+td{padding:.35rem .4rem;vertical-align:middle;font-size:.78rem}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--dark)}
+td.center{text-align:center}
+td input[type="text"],td input[type="date"],td input[type="number"],td select{width:100%;background:transparent;border:1px solid transparent;padding:.35rem .4rem;font-family:inherit;font-size:.78rem;color:var(--dark);border-radius:5px}
+td input:hover,td select:hover{border-color:var(--sand-d)}
+td input:focus,td select:focus{outline:none;border-color:var(--teal);background:var(--teal-l);box-shadow:0 0 0 2px rgba(7,126,132,.15)}
+td input[type="number"]{text-align:right;font-weight:700}
+td.saldo{background:var(--gold-l);font-weight:800;color:var(--gold);text-align:right;font-variant-numeric:tabular-nums}
+td.saldo.neg{background:var(--rust-l);color:var(--rust)}
+td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
+
+/* photo cell */
+.photo-cell{position:relative;text-align:center}
+.photo-cell input[type="file"]{display:none}
+.photo-cell label.upload{display:inline-block;padding:.3rem .55rem;background:var(--sand-l);border:1.5px dashed var(--sand-d);color:var(--dark-2);border-radius:6px;font-size:.68rem;font-weight:700;cursor:pointer}
+.photo-cell label.upload:hover{border-color:var(--teal);color:var(--teal-d);background:var(--teal-l)}
+.photo-cell .thumb{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .5rem;background:var(--teal-l);color:var(--teal-d);border-radius:6px;cursor:pointer;font-size:.65rem;font-weight:700;border:1px solid var(--teal)}
+.photo-cell .thumb:hover{background:var(--teal);color:#fff}
+.photo-cell .remove{background:none;border:none;color:var(--rust);font-size:.7rem;cursor:pointer;padding:0 .2rem;font-weight:800}
+.photo-cell .remove:hover{color:#8f3406}
+
+/* photo modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(13,43,46,.75);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:2rem}
+.overlay.open{display:flex}
+.overlay img{max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.overlay .close{position:absolute;top:1.5rem;right:1.5rem;background:#fff;border:none;padding:.5rem .9rem;border-radius:9px;font-weight:800;cursor:pointer;font-family:inherit}
+
+/* actions column */
+.actions-cell{white-space:nowrap;text-align:center}
+.icon-btn{background:none;border:1.5px solid var(--sand-d);color:var(--dark-3);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;margin:0 1px}
+.icon-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-l)}
+.icon-btn.danger:hover{border-color:var(--rust);color:var(--rust);background:var(--rust-l)}
+
+/* add row bar */
+.add-bar{background:#fff;border:2px dashed var(--sand-d);border-radius:12px;padding:.85rem;margin-top:.5rem;text-align:center}
+.add-bar .btn{margin:0 .3rem}
+
+/* footer totals */
+.totals{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1rem}
+.total-box{background:#fff;border-left:5px solid var(--teal);border-radius:12px;padding:1rem 1.2rem;box-shadow:0 2px 8px rgba(7,126,132,.07)}
+.total-box.spent{border-left-color:var(--rust)}
+.total-box.balance{border-left-color:var(--gold)}
+.total-box.count{border-left-color:var(--aqua)}
+.total-box-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.14em;color:var(--dark-3);font-weight:800;margin-bottom:.4rem}
+.total-box-value{font-family:'Montserrat',sans-serif;font-size:1.5rem;font-weight:900;color:var(--dark)}
+.total-box.spent .total-box-value{color:var(--rust)}
+.total-box.balance .total-box-value{color:var(--gold)}
+.total-box.balance.neg .total-box-value{color:var(--rust)}
+.total-box.count .total-box-value{color:var(--teal-d)}
+
+/* toast */
+.toast{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--dark);color:#fff;padding:.7rem 1.2rem;border-radius:9px;font-size:.78rem;font-weight:700;opacity:0;transform:translateY(10px);transition:.25s;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:400}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* print */
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  @page{margin:8mm;size:landscape}
+  body{background:#fff}
+  .topbar,.no-print,.add-bar,.toolbar,.periods,.icon-btn,.photo-cell label.upload,.photo-cell .remove{display:none!important}
+  .main{padding:0}
+  .hero{background:none!important;color:#000!important;border:2px solid #000;border-radius:0;padding:.8rem}
+  .hero-eyebrow,.hero-cell-label{color:#000!important}
+  .hero-cell{background:none!important;border:1px solid #ccc!important}
+  .hero-cell input{background:none!important;color:#000!important;border:none!important}
+  .hero-cell-value,.hero-title{color:#000!important}
+  .table-wrap{box-shadow:none;border:1px solid #000;border-radius:0}
+  th{background:#000!important;color:#fff!important}
+  td input,td select{border:none!important;background:none!important}
+  .total-box{border-radius:0;border:1px solid #ccc;border-left-width:5px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Board <span>Assistant</span> · Control de Caja Chica</div>
+  <div class="clock">
+    <b id="clock-time">--:--</b>
+    <div id="clock-date"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- HERO · encabezado del período -->
+  <div class="hero">
+    <div class="hero-eyebrow">Registro Físico · Fondo Fijo</div>
+    <div class="hero-title" id="hero-title">Control de Caja Chica</div>
+
+    <div class="hero-grid">
+      <div class="hero-cell">
+        <div class="hero-cell-label">Título del período</div>
+        <input type="text" id="cc-titulo" placeholder="Ej: Caja Chica Agosto 2026" oninput="ccUpdateHero()">
+      </div>
+      <div class="hero-cell">
+        <div class="hero-cell-label">Fecha</div>
+        <input type="date" id="cc-fecha" oninput="ccSave()">
+      </div>
+      <div class="hero-cell">
+        <div class="hero-cell-label">Monto inicial (GTQ)</div>
+        <input type="number" step="0.01" id="cc-monto-inicial" placeholder="0.00" oninput="ccRefreshTotals()">
+      </div>
+      <div class="hero-cell" id="hero-saldo-cell">
+        <div class="hero-cell-label">Saldo restante</div>
+        <div class="hero-cell-value" id="hero-saldo">GTQ 0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERIOD SELECTOR + toolbar -->
+  <div class="periods no-print">
+    <label>Período activo:</label>
+    <select id="cc-period-sel" onchange="ccSwitchPeriod(this.value)"></select>
+    <button class="btn ghost sm" onclick="ccNewPeriod()">+ Nuevo período</button>
+    <button class="btn rust sm" onclick="ccDeletePeriod()">🗑 Borrar período</button>
+    <span style="flex:1"></span>
+    <button class="btn ghost sm" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn ghost sm" onclick="ccExportCsv()">📊 Exportar CSV</button>
+    <button class="btn ghost sm" onclick="ccExportJson()">💾 Backup JSON</button>
+    <button class="btn ghost sm" onclick="document.getElementById('cc-import').click()">📥 Importar JSON</button>
+    <input type="file" id="cc-import" accept=".json" style="display:none" onchange="ccImportJson(this)">
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th style="width:110px">Fecha</th>
+          <th style="width:110px">Factura Nº</th>
+          <th style="width:140px">Nombre</th>
+          <th>Objeto / Concepto</th>
+          <th style="width:130px">Solicitante</th>
+          <th style="width:140px">Entidad / Lugar</th>
+          <th style="width:110px">Forma pago</th>
+          <th class="right" style="width:100px">Cantidad</th>
+          <th class="right" style="width:100px">Saldo</th>
+          <th class="center" style="width:110px">Foto</th>
+          <th class="center no-print" style="width:80px">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="cc-rows"></tbody>
+    </table>
+  </div>
+
+  <!-- ADD ROW -->
+  <div class="add-bar no-print">
+    <button class="btn" onclick="ccAddRow()">➕ Agregar línea</button>
+    <button class="btn ghost sm" onclick="ccAddRow(5)">➕ 5 líneas de golpe</button>
+    <span style="color:var(--dark-3);font-size:.7rem;font-weight:600;margin-left:.6rem;">
+      Cada línea se guarda automáticamente en localStorage al escribir.
+    </span>
+  </div>
+
+  <!-- TOTALS -->
+  <div class="totals">
+    <div class="total-box count">
+      <div class="total-box-label">📝 Líneas registradas</div>
+      <div class="total-box-value" id="tot-count">0</div>
+    </div>
+    <div class="total-box spent">
+      <div class="total-box-label">💸 Total gastado</div>
+      <div class="total-box-value" id="tot-gastado">GTQ 0.00</div>
+    </div>
+    <div class="total-box">
+      <div class="total-box-label">💰 Monto inicial</div>
+      <div class="total-box-value" id="tot-inicial">GTQ 0.00</div>
+    </div>
+    <div class="total-box balance" id="tot-balance-box">
+      <div class="total-box-label">🧮 Saldo p/ liquidar</div>
+      <div class="total-box-value" id="tot-balance">GTQ 0.00</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PHOTO MODAL -->
+<div class="overlay" id="photo-overlay" onclick="ccClosePhoto()">
+  <button class="close" onclick="ccClosePhoto()">✕ Cerrar</button>
+  <img id="photo-view" alt="Comprobante">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Estado en memoria + persistencia localStorage.
+   Múltiples "períodos" (cada uno con su título, fecha, monto y filas).
+   ============================================================ */
+const STORAGE_KEY = 'cc_control_state';
+let state = { periods: {}, activeId: null };
+
+// FORMAS DE PAGO estándar
+const FORMAS_PAGO = ['Efectivo', 'Caja chica', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro'];
+
+// SOLICITANTES sugeridos (editable)
+const SOLICITANTES = ['Lissa Arriaza','Angeles Quezada','JA','JM','AA','EG','PE','MMA','LA','Otro'];
+
+function ccLoad(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch{ /* ignore */ }
+  if(!state.periods || Object.keys(state.periods).length === 0){
+    ccNewPeriod(true);
+  } else if(!state.activeId || !state.periods[state.activeId]){
+    state.activeId = Object.keys(state.periods)[0];
+  }
+}
+
+function ccSave(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ ccToast('⚠ No se pudo guardar (¿storage lleno?)'); console.error(e); }
+}
+
+/* ============================================================
+   Período (cabecera + filas)
+   ============================================================ */
+function ccActive(){ return state.periods[state.activeId]; }
+
+function ccNewPeriod(silent){
+  const today = new Date().toISOString().slice(0,10);
+  const id = 'p_' + Date.now();
+  state.periods[id] = {
+    id, titulo: 'Caja Chica ' + today, fecha: today, monto_inicial: 0, rows: [],
+  };
+  state.activeId = id;
+  if(!silent){ ccToast('✓ Nuevo período creado'); }
+  ccSave(); ccRenderAll();
+}
+
+function ccDeletePeriod(){
+  const p = ccActive();
+  if(!p) return;
+  if(!confirm('¿Borrar el período "' + p.titulo + '" y todas sus líneas? Esta acción no se puede deshacer.')) return;
+  delete state.periods[state.activeId];
+  const ids = Object.keys(state.periods);
+  if(ids.length === 0){ ccNewPeriod(true); }
+  else { state.activeId = ids[0]; }
+  ccSave(); ccRenderAll();
+  ccToast('🗑 Período eliminado');
+}
+
+function ccSwitchPeriod(id){
+  if(!state.periods[id]) return;
+  state.activeId = id;
+  ccSave(); ccRenderAll();
+}
+
+function ccUpdateHero(){
+  const p = ccActive(); if(!p) return;
+  p.titulo = document.getElementById('cc-titulo').value;
+  document.getElementById('hero-title').textContent = p.titulo || 'Control de Caja Chica';
+  ccSave();
+  ccRenderPeriodSelector();
+}
+
+/* ============================================================
+   Filas (gastos)
+   ============================================================ */
+function ccAddRow(n){
+  const p = ccActive(); if(!p) return;
+  const count = n || 1;
+  const today = new Date().toISOString().slice(0,10);
+  for(let i=0;i<count;i++){
+    p.rows.push({
+      id: 'r_' + Date.now() + '_' + i,
+      fecha: today, factura: '', nombre: '', objeto: '',
+      solicitante: '', entidad: '', forma_pago: 'Caja chica',
+      cantidad: '', foto: null, // foto es base64 data URL
+    });
+  }
+  ccSave(); ccRenderRows(); ccRefreshTotals();
+}
+
+function ccRemoveRow(id){
+  const p = ccActive(); if(!p) return;
+  if(!confirm('¿Eliminar esta línea?')) return;
+  p.rows = p.rows.filter(r => r.id !== id);
+  ccSave(); ccRenderRows(); ccRefreshTotals();
+}
+
+function ccDuplicateRow(id){
+  const p = ccActive(); if(!p) return;
+  const idx = p.rows.findIndex(r => r.id === id);
+  if(idx < 0) return;
+  const clone = { ...p.rows[idx], id: 'r_' + Date.now() };
+  p.rows.splice(idx + 1, 0, clone);
+  ccSave(); ccRenderRows(); ccRefreshTotals();
+}
+
+function ccUpdateField(id, field, value){
+  const p = ccActive(); if(!p) return;
+  const r = p.rows.find(x => x.id === id);
+  if(!r) return;
+  r[field] = value;
+  ccSave();
+  if(field === 'cantidad') ccRefreshTotals();
+}
+
+/* ============================================================
+   Fotos (base64 en localStorage — límite ~5MB total)
+   ============================================================ */
+function ccUploadPhoto(id, fileInput){
+  const file = fileInput.files && fileInput.files[0];
+  if(!file){ return; }
+  if(file.size > 1.5 * 1024 * 1024){
+    ccToast('⚠ Foto muy grande. Máx 1.5MB para no llenar storage.');
+    fileInput.value = ''; return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    ccUpdateField(id, 'foto', dataUrl);
+    ccRenderRows();
+    ccToast('📸 Foto guardada');
+  };
+  reader.readAsDataURL(file);
+}
+
+function ccRemovePhoto(id){
+  if(!confirm('¿Eliminar la foto de esta línea?')) return;
+  ccUpdateField(id, 'foto', null);
+  ccRenderRows();
+}
+
+function ccViewPhoto(id){
+  const p = ccActive(); if(!p) return;
+  const r = p.rows.find(x => x.id === id);
+  if(!r || !r.foto) return;
+  document.getElementById('photo-view').src = r.foto;
+  document.getElementById('photo-overlay').classList.add('open');
+}
+
+function ccClosePhoto(){
+  document.getElementById('photo-overlay').classList.remove('open');
+}
+
+/* ============================================================
+   Render
+   ============================================================ */
+function fmtMoney(v){
+  const n = parseFloat(v || 0);
+  return 'GTQ ' + n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function ccRenderAll(){
+  const p = ccActive();
+  if(!p){ return; }
+  document.getElementById('cc-titulo').value = p.titulo || '';
+  document.getElementById('cc-fecha').value = p.fecha || '';
+  document.getElementById('cc-monto-inicial').value = p.monto_inicial || '';
+  document.getElementById('hero-title').textContent = p.titulo || 'Control de Caja Chica';
+  ccRenderPeriodSelector();
+  ccRenderRows();
+  ccRefreshTotals();
+}
+
+function ccRenderPeriodSelector(){
+  const sel = document.getElementById('cc-period-sel');
+  const periods = Object.values(state.periods).sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  sel.innerHTML = periods.map(p =>
+    '<option value="' + p.id + '"' + (p.id === state.activeId ? ' selected' : '') + '>' +
+      esc(p.titulo) + ' (' + (p.fecha || 'sin fecha') + ')' +
+    '</option>'
+  ).join('');
+}
+
+function ccRenderRows(){
+  const p = ccActive(); if(!p) return;
+  const monto = parseFloat(p.monto_inicial || 0);
+  let saldo = monto;
+  const tbody = document.getElementById('cc-rows');
+  if(p.rows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--dark-3);font-style:italic;">Sin líneas todavía. Haz clic en "Agregar línea" para empezar.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = p.rows.map((r, i) => {
+    saldo -= parseFloat(r.cantidad || 0);
+    const saldoNeg = saldo < 0;
+    return '<tr>' +
+      '<td class="idx">' + (i+1) + '</td>' +
+      '<td><input type="date" value="' + esc(r.fecha) + '" onchange="ccUpdateField(\'' + r.id + '\',\'fecha\',this.value)"></td>' +
+      '<td><input type="text" value="' + esc(r.factura) + '" placeholder="Nº" onchange="ccUpdateField(\'' + r.id + '\',\'factura\',this.value)"></td>' +
+      '<td><input type="text" value="' + esc(r.nombre) + '" placeholder="Nombre" onchange="ccUpdateField(\'' + r.id + '\',\'nombre\',this.value)"></td>' +
+      '<td><input type="text" value="' + esc(r.objeto) + '" placeholder="Concepto / detalle" onchange="ccUpdateField(\'' + r.id + '\',\'objeto\',this.value)"></td>' +
+      '<td>' + ccRenderSolicitanteSelect(r) + '</td>' +
+      '<td><input type="text" value="' + esc(r.entidad) + '" placeholder="Entidad o lugar" onchange="ccUpdateField(\'' + r.id + '\',\'entidad\',this.value)"></td>' +
+      '<td>' + ccRenderFormaPagoSelect(r) + '</td>' +
+      '<td><input type="number" step="0.01" value="' + esc(r.cantidad) + '" placeholder="0.00" onchange="ccUpdateField(\'' + r.id + '\',\'cantidad\',this.value)"></td>' +
+      '<td class="saldo' + (saldoNeg ? ' neg' : '') + '">' + fmtMoney(saldo) + '</td>' +
+      '<td class="photo-cell">' + ccRenderPhotoCell(r) + '</td>' +
+      '<td class="actions-cell no-print">' +
+        '<button class="icon-btn" title="Duplicar" onclick="ccDuplicateRow(\'' + r.id + '\')">⧉</button>' +
+        '<button class="icon-btn danger" title="Eliminar" onclick="ccRemoveRow(\'' + r.id + '\')">🗑</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function ccRenderSolicitanteSelect(r){
+  const opts = SOLICITANTES.map(s =>
+    '<option value="' + esc(s) + '"' + (r.solicitante === s ? ' selected' : '') + '>' + esc(s) + '</option>'
+  ).join('');
+  return '<select onchange="ccUpdateField(\'' + r.id + '\',\'solicitante\',this.value)"><option value="">—</option>' + opts + '</select>';
+}
+
+function ccRenderFormaPagoSelect(r){
+  const opts = FORMAS_PAGO.map(f =>
+    '<option value="' + esc(f) + '"' + (r.forma_pago === f ? ' selected' : '') + '>' + esc(f) + '</option>'
+  ).join('');
+  return '<select onchange="ccUpdateField(\'' + r.id + '\',\'forma_pago\',this.value)">' + opts + '</select>';
+}
+
+function ccRenderPhotoCell(r){
+  if(r.foto){
+    return '<span class="thumb" onclick="ccViewPhoto(\'' + r.id + '\')" title="Ver foto"><span>📎</span> ver</span> ' +
+           '<button class="remove no-print" onclick="ccRemovePhoto(\'' + r.id + '\')" title="Quitar foto">✕</button>';
+  }
+  return '<input type="file" id="ph-' + r.id + '" accept="image/*" onchange="ccUploadPhoto(\'' + r.id + '\', this)"><label for="ph-' + r.id + '" class="upload">📷 Subir</label>';
+}
+
+function ccRefreshTotals(){
+  const p = ccActive(); if(!p) return;
+  p.monto_inicial = parseFloat(document.getElementById('cc-monto-inicial').value || 0);
+  const gastado = p.rows.reduce((s, r) => s + parseFloat(r.cantidad || 0), 0);
+  const inicial = p.monto_inicial;
+  const balance = inicial - gastado;
+
+  document.getElementById('tot-count').textContent = p.rows.length;
+  document.getElementById('tot-gastado').textContent = fmtMoney(gastado);
+  document.getElementById('tot-inicial').textContent = fmtMoney(inicial);
+  document.getElementById('tot-balance').textContent = fmtMoney(balance);
+
+  const balBox = document.getElementById('tot-balance-box');
+  const saldoCell = document.getElementById('hero-saldo-cell');
+  const heroSaldo = document.getElementById('hero-saldo');
+  heroSaldo.textContent = fmtMoney(balance);
+  if(balance < 0){
+    balBox.classList.add('neg');
+    saldoCell.classList.add('balance-neg'); saldoCell.classList.remove('balance-ok');
+  } else {
+    balBox.classList.remove('neg');
+    saldoCell.classList.add('balance-ok'); saldoCell.classList.remove('balance-neg');
+  }
+  ccRenderRows();
+  ccSave();
+}
+
+/* ============================================================
+   Export / Import
+   ============================================================ */
+function ccExportJson(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'caja_chica_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  ccToast('💾 Backup descargado');
+}
+
+function ccImportJson(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!parsed.periods) throw new Error('formato inválido');
+      if(!confirm('Esto REEMPLAZA todos los períodos actuales por los del archivo. ¿Continuar?')) return;
+      state = parsed;
+      if(!state.activeId || !state.periods[state.activeId]){
+        state.activeId = Object.keys(state.periods)[0];
+      }
+      ccSave(); ccRenderAll();
+      ccToast('✓ Backup importado');
+    }catch(err){
+      ccToast('⚠ Archivo inválido: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function ccExportCsv(){
+  const p = ccActive(); if(!p) return;
+  const header = ['#','Fecha','Factura','Nombre','Objeto','Solicitante','Entidad','Forma pago','Cantidad'];
+  const lines = [header.join(',')];
+  let saldo = parseFloat(p.monto_inicial || 0);
+  p.rows.forEach((r, i) => {
+    saldo -= parseFloat(r.cantidad || 0);
+    const row = [
+      i+1, r.fecha, r.factura, r.nombre, r.objeto,
+      r.solicitante, r.entidad, r.forma_pago, r.cantidad || 0
+    ].map(v => {
+      const s = String(v == null ? '' : v);
+      return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
+    });
+    lines.push(row.join(','));
+  });
+  lines.push('');
+  lines.push('Monto inicial,,,,,,,,' + (p.monto_inicial || 0));
+  lines.push('Saldo final,,,,,,,,' + saldo);
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (p.titulo || 'caja_chica').replace(/[^\w]+/g,'_') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  ccToast('📊 CSV descargado');
+}
+
+/* ============================================================
+   Toast + clock
+   ============================================================ */
+function ccToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._t);
+  window._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function ccTickClock(){
+  const now = new Date();
+  document.getElementById('clock-time').textContent = now.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('clock-date').textContent = now.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  ccLoad();
+  ccRenderAll();
+  ccTickClock();
+  setInterval(ccTickClock, 30000);
+});
+</script>
+
+</body>
+</html>

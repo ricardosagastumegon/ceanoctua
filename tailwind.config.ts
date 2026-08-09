@@ -36,6 +36,8 @@ const config: Config = {
         coral: '#e05c3a',
         green: '#2a6e24',
         purple: '#5a3472',
+        // Fase 19-3 · T&T · navy usado en gradients del módulo Arriaza.
+        navy: '#0d2b2e',
       },
       fontFamily: {
         sans: ['Nunito', 'system-ui', 'sans-serif'],

@@ -94,21 +94,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    supabase.auth.getUser()
-      .then(async ({ data, error }) => {
+    // Bootstrap con retry vía refreshSession() si el access_token expiró.
+    //
+    // BUG recurrente (C-1 v2): cuando el access_token expira (~1h por default),
+    // getUser() devuelve 401. El código previo salía silencioso con session=null
+    // → "No hay perfil cargado" aunque hubiera refresh_token válido en localStorage.
+    //
+    // Fix: si getUser() falla, intentar refreshSession() explícito. Solo si
+    // ambos fallan, damos por perdida la sesión.
+    async function bootstrapAuth() {
+      // 1) Primer intento: validar token actual.
+      const first = await supabase.auth.getUser();
+      if (first.data.user && !first.error) {
+        return { user: first.data.user, session: readStoredSession() };
+      }
+
+      // 2) Token inválido/expirado → intentar refresh.
+      const refresh = await supabase.auth.refreshSession();
+      if (refresh.data.session && !refresh.error) {
+        // refreshSession devuelve la session nueva completa.
+        return { user: refresh.data.session.user, session: refresh.data.session };
+      }
+
+      // 3) Ambos fallaron: sesión realmente perdida.
+      return { user: null, session: null };
+    }
+
+    bootstrapAuth()
+      .then(async ({ user, session: bootSession }) => {
         if (!mounted) return;
-        if (error || !data.user) {
+        if (!user) {
           setSession(null);
           setProfile(null);
           return;
         }
-        // getUser() valida el token vía HTTP. Si llegamos aquí, el user es real.
-        // Reconstruimos la Session desde localStorage para exponerla al resto de la app.
-        const storedSession = readStoredSession();
-        if (storedSession) setSession(storedSession);
-        lastUserIdRef.current = data.user.id;
+        if (bootSession) setSession(bootSession);
+        lastUserIdRef.current = user.id;
         try {
-          const p = await loadProfile(data.user.id);
+          const p = await loadProfile(user.id);
           if (mounted) setProfile(p);
         } catch (e) {
           // eslint-disable-next-line no-console
@@ -117,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch((e) => {
         // eslint-disable-next-line no-console
-        console.error('[auth] getUser() failed at bootstrap:', e);
+        console.error('[auth] bootstrapAuth failed:', e);
       })
       .finally(() => {
         clearTimeout(bootTimeout);

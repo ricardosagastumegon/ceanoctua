@@ -162,7 +162,10 @@ td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
   <!-- HERO · encabezado del período -->
   <div class="hero">
     <div class="hero-eyebrow">Registro Físico · Fondo Fijo</div>
-    <div class="hero-title" id="hero-title">Control de Caja Chica</div>
+    <div style="display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap;margin-top:.2rem;">
+      <span id="hero-numero" style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:.9rem;letter-spacing:.14em;padding:.2rem .7rem;background:var(--gold);color:#fff;border-radius:8px;box-shadow:0 2px 6px rgba(158,122,26,.4);">CC-—</span>
+      <div class="hero-title" id="hero-title">Control de Caja Chica</div>
+    </div>
 
     <div class="hero-grid">
       <div class="hero-cell">
@@ -171,7 +174,7 @@ td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
       </div>
       <div class="hero-cell">
         <div class="hero-cell-label">Fecha</div>
-        <input type="date" id="cc-fecha" oninput="ccSave()">
+        <input type="date" id="cc-fecha" oninput="ccUpdateFecha()">
       </div>
       <div class="hero-cell">
         <div class="hero-cell-label">Monto inicial (GTQ)</div>
@@ -266,7 +269,8 @@ td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
    Múltiples "períodos" (cada uno con su título, fecha, monto y filas).
    ============================================================ */
 const STORAGE_KEY = 'cc_control_state';
-let state = { periods: {}, activeId: null };
+// state.seqByYear = { 2026: 3 } · usado para generar CC-YYYY-####.
+let state = { periods: {}, activeId: null, seqByYear: {} };
 
 // FORMAS DE PAGO estándar
 const FORMAS_PAGO = ['Efectivo', 'Caja chica', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro'];
@@ -279,11 +283,26 @@ function ccLoad(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){ state = JSON.parse(raw); }
   }catch{ /* ignore */ }
-  if(!state.periods || Object.keys(state.periods).length === 0){
+  // Backward-compat: si state viene de una versión previa sin seqByYear.
+  if(!state.seqByYear) state.seqByYear = {};
+  if(!state.periods) state.periods = {};
+  if(Object.keys(state.periods).length === 0){
     ccNewPeriod(true);
   } else if(!state.activeId || !state.periods[state.activeId]){
     state.activeId = Object.keys(state.periods)[0];
   }
+  // Asignar numero retroactivo a períodos viejos sin numero.
+  Object.values(state.periods).forEach(p => {
+    if(!p.numero){ p.numero = ccNextNumero(p.fecha); }
+  });
+}
+
+// Genera correlativo CC-YYYY-#### · el año viene de la fecha del período
+// (o del año actual si no hay fecha). El contador es por año.
+function ccNextNumero(fechaISO){
+  const year = (fechaISO || new Date().toISOString().slice(0,10)).slice(0,4);
+  state.seqByYear[year] = (state.seqByYear[year] || 0) + 1;
+  return 'CC-' + year + '-' + String(state.seqByYear[year]).padStart(4, '0');
 }
 
 function ccSave(){
@@ -299,12 +318,32 @@ function ccActive(){ return state.periods[state.activeId]; }
 function ccNewPeriod(silent){
   const today = new Date().toISOString().slice(0,10);
   const id = 'p_' + Date.now();
+  const numero = ccNextNumero(today);
   state.periods[id] = {
-    id, titulo: 'Caja Chica ' + today, fecha: today, monto_inicial: 0, rows: [],
+    id, numero, titulo: 'Caja Chica ' + numero,
+    fecha: today, monto_inicial: 0, rows: [],
   };
   state.activeId = id;
-  if(!silent){ ccToast('✓ Nuevo período creado'); }
+  if(!silent){ ccToast('✓ Caja Chica ' + numero + ' abierta'); }
   ccSave(); ccRenderAll();
+}
+
+// Cuando el usuario cambia la fecha, si el año cambió también re-asignamos
+// el numero para que el correlativo refleje el año correcto.
+function ccUpdateFecha(){
+  const p = ccActive(); if(!p) return;
+  const nuevaFecha = document.getElementById('cc-fecha').value;
+  const yearActual = (p.numero || '').split('-')[1];
+  const yearNuevo = (nuevaFecha || '').slice(0,4);
+  if(yearNuevo && yearActual && yearNuevo !== yearActual){
+    if(confirm('Cambiaste el año de la caja chica. ¿Reasignar correlativo a CC-' + yearNuevo + '-####?')){
+      p.numero = ccNextNumero(nuevaFecha);
+      document.getElementById('hero-numero').textContent = p.numero;
+      ccRenderPeriodSelector();
+    }
+  }
+  p.fecha = nuevaFecha;
+  ccSave();
 }
 
 function ccDeletePeriod(){
@@ -433,6 +472,7 @@ function ccRenderAll(){
   document.getElementById('cc-fecha').value = p.fecha || '';
   document.getElementById('cc-monto-inicial').value = p.monto_inicial || '';
   document.getElementById('hero-title').textContent = p.titulo || 'Control de Caja Chica';
+  document.getElementById('hero-numero').textContent = p.numero || 'CC-—';
   ccRenderPeriodSelector();
   ccRenderRows();
   ccRefreshTotals();
@@ -443,7 +483,7 @@ function ccRenderPeriodSelector(){
   const periods = Object.values(state.periods).sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
   sel.innerHTML = periods.map(p =>
     '<option value="' + p.id + '"' + (p.id === state.activeId ? ' selected' : '') + '>' +
-      esc(p.titulo) + ' (' + (p.fecha || 'sin fecha') + ')' +
+      (p.numero || '?') + ' — ' + esc(p.titulo) + ' (' + (p.fecha || 'sin fecha') + ')' +
     '</option>'
   ).join('');
 }
@@ -568,14 +608,21 @@ function ccImportJson(input){
 
 function ccExportCsv(){
   const p = ccActive(); if(!p) return;
-  const header = ['#','Fecha','Factura','Nombre','Objeto','Solicitante','Entidad','Forma pago','Cantidad'];
-  const lines = [header.join(',')];
+  const lines = [];
+  // Cabecera con el numero de caja chica.
+  lines.push('Caja Chica,' + (p.numero || ''));
+  lines.push('Título,' + (p.titulo || ''));
+  lines.push('Fecha,' + (p.fecha || ''));
+  lines.push('Monto inicial,' + (p.monto_inicial || 0));
+  lines.push('');
+  const header = ['#','Fecha','Factura','Nombre','Objeto','Solicitante','Entidad','Forma pago','Cantidad','Saldo'];
+  lines.push(header.join(','));
   let saldo = parseFloat(p.monto_inicial || 0);
   p.rows.forEach((r, i) => {
     saldo -= parseFloat(r.cantidad || 0);
     const row = [
       i+1, r.fecha, r.factura, r.nombre, r.objeto,
-      r.solicitante, r.entidad, r.forma_pago, r.cantidad || 0
+      r.solicitante, r.entidad, r.forma_pago, r.cantidad || 0, saldo.toFixed(2)
     ].map(v => {
       const s = String(v == null ? '' : v);
       return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
@@ -583,13 +630,13 @@ function ccExportCsv(){
     lines.push(row.join(','));
   });
   lines.push('');
-  lines.push('Monto inicial,,,,,,,,' + (p.monto_inicial || 0));
-  lines.push('Saldo final,,,,,,,,' + saldo);
+  lines.push('Total gastado,,,,,,,,,' + (parseFloat(p.monto_inicial || 0) - saldo).toFixed(2));
+  lines.push('Saldo final,,,,,,,,,' + saldo.toFixed(2));
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (p.titulo || 'caja_chica').replace(/[^\w]+/g,'_') + '.csv';
+  a.download = (p.numero || 'CC') + '_' + (p.titulo || 'caja_chica').replace(/[^\w]+/g,'_') + '.csv';
   a.click();
   URL.revokeObjectURL(url);
   ccToast('📊 CSV descargado');

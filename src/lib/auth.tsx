@@ -94,29 +94,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Bootstrap con retry vía refreshSession() si el access_token expiró.
+    // Bootstrap con timeout AGRESIVO por operación + auto-nuke si todo falla.
     //
-    // BUG recurrente (C-1 v2): cuando el access_token expira (~1h por default),
-    // getUser() devuelve 401. El código previo salía silencioso con session=null
-    // → "No hay perfil cargado" aunque hubiera refresh_token válido en localStorage.
-    //
-    // Fix: si getUser() falla, intentar refreshSession() explícito. Solo si
-    // ambos fallan, damos por perdida la sesión.
+    // Bugs previos:
+    //   C-1 v1 (getSession) → hang forever en INITIAL_SESSION
+    //   C-1 v2 (getUser)    → 401 al expirar sin retry
+    //   C-1 v3 (+refresh)   → getUser/refresh se cuelgan por el lock interno
+    //                        de supabase-js si hubo una operación previa fallida
+    //   C-1 v4 (este)       → timeout de 3s POR operación (Promise.race) +
+    //                        limpieza total de storage si nada resuelve, luego
+    //                        redirect a /login. NO más fallback UI dead-end.
+    function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error(`timeout:${label}`)), ms);
+        p.then(
+          (v) => {
+            clearTimeout(t);
+            resolve(v);
+          },
+          (e) => {
+            clearTimeout(t);
+            reject(e);
+          },
+        );
+      });
+    }
+
+    function nukeSessionStorage() {
+      try {
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith('sb-') || k.includes('supabase')) {
+            localStorage.removeItem(k);
+          }
+        }
+        for (const k of Object.keys(sessionStorage)) {
+          if (k.startsWith('sb-') || k.includes('supabase')) {
+            sessionStorage.removeItem(k);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     async function bootstrapAuth() {
-      // 1) Primer intento: validar token actual.
-      const first = await supabase.auth.getUser();
-      if (first.data.user && !first.error) {
-        return { user: first.data.user, session: readStoredSession() };
+      // 1) getUser con timeout de 3s.
+      try {
+        const first = await withTimeout(supabase.auth.getUser(), 3000, 'getUser');
+        if (first.data.user && !first.error) {
+          return { user: first.data.user, session: readStoredSession() };
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[auth] getUser failed/timeout:', (e as Error).message);
       }
 
-      // 2) Token inválido/expirado → intentar refresh.
-      const refresh = await supabase.auth.refreshSession();
-      if (refresh.data.session && !refresh.error) {
-        // refreshSession devuelve la session nueva completa.
-        return { user: refresh.data.session.user, session: refresh.data.session };
+      // 2) refreshSession con timeout de 3s.
+      try {
+        const refresh = await withTimeout(supabase.auth.refreshSession(), 3000, 'refreshSession');
+        if (refresh.data.session && !refresh.error) {
+          return { user: refresh.data.session.user, session: refresh.data.session };
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[auth] refreshSession failed/timeout:', (e as Error).message);
       }
 
-      // 3) Ambos fallaron: sesión realmente perdida.
+      // 3) Nada funcionó. Nuke storage y forzar re-login.
+      // eslint-disable-next-line no-console
+      console.warn('[auth] bootstrap failed completely — clearing storage + redirect to /login');
+      nukeSessionStorage();
+      // Solo redirigir si no estamos ya en /login (evitar loops).
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
       return { user: null, session: null };
     }
 
@@ -140,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch((e) => {
         // eslint-disable-next-line no-console
-        console.error('[auth] bootstrapAuth failed:', e);
+        console.error('[auth] bootstrapAuth threw:', e);
       })
       .finally(() => {
         clearTimeout(bootTimeout);

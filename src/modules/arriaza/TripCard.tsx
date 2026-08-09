@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { fmtDate, autoTripStatus, autoStatusLabel } from './utils';
 import { findCountry } from './constants/countries';
 import { ManualStatusSelect } from './shared/ManualStatusSelect';
@@ -54,12 +55,36 @@ const AUTO_BADGE: Record<ReturnType<typeof autoTripStatus>, string> = {
 export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChange }: Props) {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [addPos, setAddPos] = useState<{ top: number; left: number } | null>(null);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
   const [itinOpen, setItinOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   // autoOpenKey: al hacer click en "+ Agregar Servicios > X", la Section de X
   // abre su modal "Nueva" automáticamente. Todas las secciones se renderean
   // apiladas (sin sub-nav), así que solo hay que triggear la del servicio elegido.
   const [autoOpenKey, setAutoOpenKey] = useState<ServiceKey | null>(null);
+
+  // Posicionar dropdown "+ Agregar Servicios" en coordenadas viewport (Portal
+  // escapa del overflow-hidden del article para que el menú no quede clippeado).
+  useEffect(() => {
+    if (!addOpen) return;
+    const rect = addBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      const menuW = 288; // w-72
+      let left = rect.left;
+      if (left + menuW > window.innerWidth - 12) left = window.innerWidth - menuW - 12;
+      setAddPos({ top: rect.bottom + 4, left });
+    }
+    // Click fuera cierra.
+    const onDoc = (e: MouseEvent) => {
+      if (addBtnRef.current?.contains(e.target as Node)) return;
+      const menu = document.getElementById('tt-addserv-menu');
+      if (menu?.contains(e.target as Node)) return;
+      setAddOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [addOpen]);
 
   const auto = autoTripStatus(viaje);
   const country = findCountry(viaje.pais);
@@ -184,16 +209,21 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
           </button>
 
           {canEdit && (
-            <div className="relative">
+            <>
               <button
+                ref={addBtnRef}
                 type="button"
                 onClick={() => setAddOpen((v) => !v)}
                 className="rounded-md border border-teal/40 bg-white px-3 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
               >
                 + Agregar Servicios
               </button>
-              {addOpen && (
-                <div className="absolute z-40 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg border border-sand bg-white p-1 shadow-lg">
+              {addOpen && addPos && createPortal(
+                <div
+                  id="tt-addserv-menu"
+                  style={{ position: 'fixed', top: addPos.top, left: addPos.left, width: 288 }}
+                  className="z-50 max-h-80 overflow-y-auto rounded-lg border border-sand bg-white p-1 shadow-2xl"
+                >
                   {SERVICE_KEYS.map((k) => {
                     const meta = SERVICE_META[k];
                     const isReady = READY_SERVICES.has(k);
@@ -204,9 +234,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
                         onClick={() => handleSelectService(k)}
                         className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs font-semibold text-dark-2 hover:bg-teal-l"
                       >
-                        <span>
-                          {meta.icon} {meta.label}
-                        </span>
+                        <span>{meta.icon} {meta.label}</span>
                         {!isReady && (
                           <span className="rounded-full bg-gold-light px-2 py-0.5 text-[9px] font-extrabold uppercase text-gold">
                             Pronto
@@ -215,9 +243,10 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
                       </button>
                     );
                   })}
-                </div>
+                </div>,
+                document.body,
               )}
-            </div>
+            </>
           )}
         </div>
 

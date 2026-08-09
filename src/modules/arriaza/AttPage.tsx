@@ -6,6 +6,8 @@ import { describeError } from '@/modules/admin/hooks';
 import { ArriazaMap } from './ArriazaMap';
 import { TripFormModal } from './TripFormModal';
 import { TripCard } from './TripCard';
+import { BackupModal } from './BackupModal';
+import { FinishedFolder } from './FinishedFolder';
 import {
   useAttViajes,
   useCreateAttViaje,
@@ -38,6 +40,7 @@ export function AttPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [sortMode, setSortMode] = useState<SortMode>('start-asc');
+  const [backupOpen, setBackupOpen] = useState(false);
 
   const viajes = query.data ?? [];
 
@@ -172,6 +175,13 @@ export function AttPage() {
           <option value="start-desc">Fecha inicio ↓</option>
           <option value="created-desc">Creado recientemente</option>
         </select>
+        <button
+          type="button"
+          onClick={() => setBackupOpen(true)}
+          className="ml-auto rounded-md border border-gold/40 bg-gold-light px-3 py-2 text-xs font-extrabold text-gold hover:opacity-90"
+        >
+          💾 Respaldo
+        </button>
       </div>
 
       {/* GRID: viajes (izq) + mapa (der) */}
@@ -225,6 +235,8 @@ export function AttPage() {
         </aside>
       </div>
 
+      <FinishedFolder viajes={viajes} canEdit={canEdit} />
+
       <TripFormModal
         open={editing !== undefined}
         editing={editing ?? null}
@@ -232,6 +244,8 @@ export function AttPage() {
         onClose={() => setEditing(undefined)}
         onSubmit={handleSave}
       />
+
+      <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} />
     </section>
   );
 }

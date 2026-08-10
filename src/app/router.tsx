@@ -19,6 +19,7 @@ const CeaPage = lazy(() => import('@/modules/cea/page'));
 const AdminPage = lazy(() => import('@/modules/admin/page'));
 const MielSjPage = lazy(() => import('@/modules/miel-sj/page'));
 const FinanzasPage = lazy(() => import('@/modules/finanzas/page'));
+const CajaChicaPage = lazy(() => import('@/modules/caja-chica/page'));
 
 function withSuspense(node: ReactNode) {
   return (
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
       { path: 'admin', element: withSuspense(<AdminPage />) },
       { path: 'miel-sj', element: withSuspense(<MielSjPage />) },
       { path: 'finanzas', element: withSuspense(<FinanzasPage />) },
+      { path: 'caja-chica', element: withSuspense(<CajaChicaPage />) },
     ],
   },
 ]);

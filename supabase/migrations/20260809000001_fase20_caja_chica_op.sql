@@ -157,7 +157,7 @@ create policy cco_vale_fact_write on public.caja_chica_op_vale_facturas
   with check (public.auth_rol() in ('admin','asistente'));
 
 -- ---------- Audit log ----------
--- Reusa la función public.audit_log_trigger() creada en fase 24000004.
+-- Reusa la función public.audit_trigger() creada en 20260524000004_audit_triggers.sql.
 -- Solo se enganchan los triggers.
 drop trigger if exists trg_audit_cco_periodos      on public.caja_chica_op_periodos;
 drop trigger if exists trg_audit_cco_lineas        on public.caja_chica_op_lineas;
@@ -165,15 +165,15 @@ drop trigger if exists trg_audit_cco_vale_facturas on public.caja_chica_op_vale_
 
 create trigger trg_audit_cco_periodos
   after insert or update or delete on public.caja_chica_op_periodos
-  for each row execute function public.audit_log_trigger();
+  for each row execute function public.audit_trigger();
 
 create trigger trg_audit_cco_lineas
   after insert or update or delete on public.caja_chica_op_lineas
-  for each row execute function public.audit_log_trigger();
+  for each row execute function public.audit_trigger();
 
 create trigger trg_audit_cco_vale_facturas
   after insert or update or delete on public.caja_chica_op_vale_facturas
-  for each row execute function public.audit_log_trigger();
+  for each row execute function public.audit_trigger();
 
 -- ---------- Fuerza reload del schema en PostgREST ----------
 notify pgrst, 'reload schema';

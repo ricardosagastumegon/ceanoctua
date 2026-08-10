@@ -108,6 +108,14 @@ td.idx{color:var(--dark-3);font-size:.68rem;text-align:center;font-weight:700}
 .icon-btn{background:none;border:1.5px solid var(--sand-d);color:var(--dark-3);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;margin:0 1px}
 .icon-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-l)}
 .icon-btn.danger:hover{border-color:var(--rust);color:var(--rust);background:var(--rust-l)}
+.icon-btn.ok{border-color:var(--green);color:var(--green)}
+.icon-btn.ok:hover{background:var(--green);color:#fff}
+
+/* row en modo edición: fondo suave para distinguir del resto + inputs disabled con look diferente */
+tr.row-editing{background:#fff8e6}
+tr.row-editing:hover{background:#fff3d6}
+td input:disabled,td select:disabled{background:transparent;color:var(--dark);cursor:default;border-color:transparent;-webkit-text-fill-color:var(--dark);opacity:1}
+td input:disabled:hover,td select:disabled:hover{border-color:transparent}
 
 /* add row bar */
 .add-bar{background:#fff;border:2px dashed var(--sand-d);border-radius:12px;padding:.85rem;margin-top:.5rem;text-align:center}
@@ -409,8 +417,53 @@ function ccAddRow(n){
       solicitante: '', lugar: '',
       forma_pago: 'Caja chica', observaciones: '',
       foto: null, // base64 data URL
+      _editing: true, // Empieza abierta para llenar. Snapshot vacío = Cancel elimina.
+      _snapshot: null,
       // Legacy: campo 'objeto' y 'entidad' preservados para backup previo si existieran.
     });
+  }
+  ccSave(); ccRenderRows(); ccRefreshTotals();
+}
+
+// Abre la fila para editar: guarda snapshot inmutable para poder revertir con Cancel.
+function ccBeginEdit(id){
+  const p = ccActive(); if(!p) return;
+  const r = p.rows.find(x => x.id === id);
+  if(!r || r._editing) return;
+  // Clone limpio de todos los campos "de negocio" (sin metadata _editing/_snapshot).
+  const { _editing, _snapshot, ...clean } = r;
+  r._snapshot = JSON.parse(JSON.stringify(clean));
+  r._editing = true;
+  ccSave(); ccRenderRows();
+}
+
+// Cierra la fila y persiste (los cambios ya están en memoria + localStorage).
+function ccSaveEdit(id){
+  const p = ccActive(); if(!p) return;
+  const r = p.rows.find(x => x.id === id);
+  if(!r) return;
+  delete r._snapshot;
+  r._editing = false;
+  ccSave(); ccRenderRows(); ccRefreshTotals();
+  ccToast('✅ Línea guardada');
+}
+
+// Descarta cambios: si había snapshot, restaura desde él;
+// si no (fila recién agregada), elimina la fila entera.
+function ccCancelEdit(id){
+  const p = ccActive(); if(!p) return;
+  const idx = p.rows.findIndex(x => x.id === id);
+  if(idx < 0) return;
+  const r = p.rows[idx];
+  if(r._snapshot){
+    // Restaurar todos los campos desde el snapshot, preservando el id original.
+    const restored = { ...r._snapshot, id: r.id, _editing: false, _snapshot: null };
+    p.rows[idx] = restored;
+    ccToast('↩ Cambios descartados');
+  } else {
+    // Fila nueva sin snapshot: si el user cancela, se elimina.
+    p.rows.splice(idx, 1);
+    ccToast('🗑 Línea nueva descartada');
   }
   ccSave(); ccRenderRows(); ccRefreshTotals();
 }
@@ -433,7 +486,10 @@ function ccDuplicateRow(id){
   const p = ccActive(); if(!p) return;
   const idx = p.rows.findIndex(r => r.id === id);
   if(idx < 0) return;
-  const clone = { ...p.rows[idx], id: 'r_' + Date.now() };
+  const src = p.rows[idx];
+  // El clone empieza en modo edit para que el user pueda ajustar antes de guardar,
+  // y sin snapshot heredado (así Cancel elimina la fila duplicada limpiamente).
+  const clone = { ...src, id: 'r_' + Date.now(), _editing: true, _snapshot: null };
   p.rows.splice(idx + 1, 0, clone);
   ccSave(); ccRenderRows(); ccRefreshTotals();
 }
@@ -538,46 +594,59 @@ function ccRenderRows(){
     saldo -= total;
     const saldoNeg = saldo < 0;
     const esOtro = r.forma_pago === 'Otro';
-    return '<tr>' +
-      '<td class="idx">' + (i+1) + '</td>' +
-      '<td><input type="date" value="' + esc(r.fecha) + '" onchange="ccUpdateField(\'' + r.id + '\',\'fecha\',this.value)"></td>' +
-      '<td><input type="text" value="' + esc(r.factura) + '" placeholder="Nº" onchange="ccUpdateField(\'' + r.id + '\',\'factura\',this.value)"></td>' +
-      '<td><input type="text" value="' + esc(r.nombre) + '" placeholder="Nombre / producto" onchange="ccUpdateField(\'' + r.id + '\',\'nombre\',this.value)"></td>' +
-      '<td><input type="number" step="0.01" value="' + esc(r.cantidad) + '" placeholder="1" onchange="ccUpdateField(\'' + r.id + '\',\'cantidad\',this.value)"></td>' +
-      '<td><input type="number" step="0.01" value="' + esc(r.p_unitario) + '" placeholder="0.00" onchange="ccUpdateField(\'' + r.id + '\',\'p_unitario\',this.value)"></td>' +
-      '<td class="num" style="background:var(--teal-l);font-weight:800;color:var(--teal-d);">' + fmtMoney(total) + '</td>' +
-      '<td>' + ccRenderSolicitanteSelect(r) + '</td>' +
-      '<td><input type="text" value="' + esc(r.lugar) + '" placeholder="Lugar / dirección" onchange="ccUpdateField(\'' + r.id + '\',\'lugar\',this.value)"></td>' +
-      '<td>' + ccRenderFormaPagoSelect(r) + '</td>' +
-      '<td><input type="text" value="' + esc(r.observaciones) + '" placeholder="' + (esOtro ? '(requerido si "Otro")' : 'Notas opcionales') + '" onchange="ccUpdateField(\'' + r.id + '\',\'observaciones\',this.value)" style="' + (esOtro ? 'background:var(--gold-l);border-color:var(--gold);' : '') + '"></td>' +
-      '<td class="saldo' + (saldoNeg ? ' neg' : '') + '">' + fmtMoney(saldo) + '</td>' +
-      '<td class="photo-cell">' + ccRenderPhotoCell(r) + '</td>' +
-      '<td class="actions-cell no-print">' +
+    const editing = !!r._editing;
+    const dis = editing ? '' : ' disabled';
+    const rowClass = editing ? ' class="row-editing"' : '';
+    // Acciones: en modo edit solo Guardar/Cancelar; en modo lock, Editar/Duplicar/Eliminar.
+    const actions = editing
+      ? '<button class="icon-btn ok" title="Guardar cambios" onclick="ccSaveEdit(\'' + r.id + '\')">💾</button>' +
+        '<button class="icon-btn danger" title="Descartar cambios" onclick="ccCancelEdit(\'' + r.id + '\')">↩</button>'
+      : '<button class="icon-btn" title="Editar" onclick="ccBeginEdit(\'' + r.id + '\')">✏️</button>' +
         '<button class="icon-btn" title="Duplicar" onclick="ccDuplicateRow(\'' + r.id + '\')">⧉</button>' +
-        '<button class="icon-btn danger" title="Eliminar" onclick="ccRemoveRow(\'' + r.id + '\')">🗑</button>' +
-      '</td>' +
+        '<button class="icon-btn danger" title="Eliminar" onclick="ccRemoveRow(\'' + r.id + '\')">🗑</button>';
+    return '<tr' + rowClass + '>' +
+      '<td class="idx">' + (i+1) + '</td>' +
+      '<td><input type="date"' + dis + ' value="' + esc(r.fecha) + '" onchange="ccUpdateField(\'' + r.id + '\',\'fecha\',this.value)"></td>' +
+      '<td><input type="text"' + dis + ' value="' + esc(r.factura) + '" placeholder="Nº" onchange="ccUpdateField(\'' + r.id + '\',\'factura\',this.value)"></td>' +
+      '<td><input type="text"' + dis + ' value="' + esc(r.nombre) + '" placeholder="Nombre / producto" onchange="ccUpdateField(\'' + r.id + '\',\'nombre\',this.value)"></td>' +
+      '<td><input type="number"' + dis + ' step="0.01" value="' + esc(r.cantidad) + '" placeholder="1" onchange="ccUpdateField(\'' + r.id + '\',\'cantidad\',this.value)"></td>' +
+      '<td><input type="number"' + dis + ' step="0.01" value="' + esc(r.p_unitario) + '" placeholder="0.00" onchange="ccUpdateField(\'' + r.id + '\',\'p_unitario\',this.value)"></td>' +
+      '<td class="num" style="background:var(--teal-l);font-weight:800;color:var(--teal-d);">' + fmtMoney(total) + '</td>' +
+      '<td>' + ccRenderSolicitanteSelect(r, editing) + '</td>' +
+      '<td><input type="text"' + dis + ' value="' + esc(r.lugar) + '" placeholder="Lugar / dirección" onchange="ccUpdateField(\'' + r.id + '\',\'lugar\',this.value)"></td>' +
+      '<td>' + ccRenderFormaPagoSelect(r, editing) + '</td>' +
+      '<td><input type="text"' + dis + ' value="' + esc(r.observaciones) + '" placeholder="' + (esOtro ? '(requerido si "Otro")' : 'Notas opcionales') + '" onchange="ccUpdateField(\'' + r.id + '\',\'observaciones\',this.value)" style="' + (esOtro ? 'background:var(--gold-l);border-color:var(--gold);' : '') + '"></td>' +
+      '<td class="saldo' + (saldoNeg ? ' neg' : '') + '">' + fmtMoney(saldo) + '</td>' +
+      '<td class="photo-cell">' + ccRenderPhotoCell(r, editing) + '</td>' +
+      '<td class="actions-cell no-print">' + actions + '</td>' +
     '</tr>';
   }).join('');
 }
 
-function ccRenderSolicitanteSelect(r){
+function ccRenderSolicitanteSelect(r, editing){
   const opts = SOLICITANTES.map(s =>
     '<option value="' + esc(s) + '"' + (r.solicitante === s ? ' selected' : '') + '>' + esc(s) + '</option>'
   ).join('');
-  return '<select onchange="ccUpdateField(\'' + r.id + '\',\'solicitante\',this.value)"><option value="">—</option>' + opts + '</select>';
+  const dis = editing ? '' : ' disabled';
+  return '<select' + dis + ' onchange="ccUpdateField(\'' + r.id + '\',\'solicitante\',this.value)"><option value="">—</option>' + opts + '</select>';
 }
 
-function ccRenderFormaPagoSelect(r){
+function ccRenderFormaPagoSelect(r, editing){
   const opts = FORMAS_PAGO.map(f =>
     '<option value="' + esc(f) + '"' + (r.forma_pago === f ? ' selected' : '') + '>' + esc(f) + '</option>'
   ).join('');
-  return '<select onchange="ccUpdateField(\'' + r.id + '\',\'forma_pago\',this.value)">' + opts + '</select>';
+  const dis = editing ? '' : ' disabled';
+  return '<select' + dis + ' onchange="ccUpdateField(\'' + r.id + '\',\'forma_pago\',this.value)">' + opts + '</select>';
 }
 
-function ccRenderPhotoCell(r){
+function ccRenderPhotoCell(r, editing){
   if(r.foto){
-    return '<span class="thumb" onclick="ccViewPhoto(\'' + r.id + '\')" title="Ver foto"><span>📎</span> ver</span> ' +
-           '<button class="remove no-print" onclick="ccRemovePhoto(\'' + r.id + '\')" title="Quitar foto">✕</button>';
+    // Foto siempre visible; el botón "quitar" solo aparece si está en modo edit.
+    return '<span class="thumb" onclick="ccViewPhoto(\'' + r.id + '\')" title="Ver foto"><span>📎</span> ver</span>' +
+           (editing ? ' <button class="remove no-print" onclick="ccRemovePhoto(\'' + r.id + '\')" title="Quitar foto">✕</button>' : '');
+  }
+  if(!editing){
+    return '<span style="color:var(--dark-3);font-size:.7rem;font-style:italic">—</span>';
   }
   return '<input type="file" id="ph-' + r.id + '" accept="image/*" onchange="ccUploadPhoto(\'' + r.id + '\', this)"><label for="ph-' + r.id + '" class="upload">📷 Subir</label>';
 }

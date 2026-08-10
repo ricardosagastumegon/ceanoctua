@@ -148,10 +148,16 @@ Estado actual: fase **17** (Refactor Finanzas F-1 a F-5). Historial completo en 
 Cada fase sigue el ciclo:
 
 ```
-Plan (.md en raíz)  →  Migración SQL  →  Types actualizados  →
-   Código React     →  Build verde     →  Commit(s)          →
-Aplicar en Supabase → Verificar cache  →  Bitácora actualizada
+Plan (.md en raíz)  →  Migración SQL  →  Aplicar vía apply-sql.mjs →
+   Types actualizados → Código React → Build verde → Commit(s) →
+Verificar cache      →  Bitácora actualizada
 ```
+
+Migraciones se aplican **automáticamente** desde el terminal con
+`node scripts/apply-sql.mjs supabase/migrations/xxx.sql` — requiere
+`SUPABASE_PAT` + `SUPABASE_PROJECT_REF` en `.env` local (no en repo).
+El script auto-appendea `NOTIFY pgrst 'reload schema'` dos veces para
+bustear el cache de PostgREST.
 
 ### 5.2 · Antes de empezar una fase
 
@@ -169,8 +175,9 @@ Aplicar en Supabase → Verificar cache  →  Bitácora actualizada
 
 ### 5.4 · Al cerrar la fase
 
-1. Aplicar migración en Supabase Studio (o vía `scripts/apply-sql.mjs`).
-2. Correr `NOTIFY pgrst, 'reload schema';` (auto-append si se usó el script).
+1. Aplicar migración con `node scripts/apply-sql.mjs supabase/migrations/xxx.sql`
+   (auto-NOTIFY incluido). Solo caer a Supabase Studio si el script falla.
+2. Verificar tablas + RLS + policies con un query de check al schema real.
 3. Verificar en la app deployada (Ctrl+Shift+R para bustear browser cache).
 4. Agregar entrada a `docs/BITACORA.md` con fecha + commits + notas.
 5. Si hubo una decisión de arquitectura, agregarla a `docs/PROCESO-Y-DECISIONES.md`.

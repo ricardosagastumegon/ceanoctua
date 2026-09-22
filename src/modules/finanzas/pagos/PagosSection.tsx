@@ -19,6 +19,7 @@ import {
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
+import { SolicitudPagoPrintable } from './SolicitudPagoPrintable';
 import { NotificacionesPanel } from './NotificacionesPanel';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -51,6 +52,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
 
   const [editing, setEditing] = useState<Pago | null | undefined>(undefined);
   const [viewing, setViewing] = useState<Pago | null>(null);
+  const [formato, setFormato] = useState<Pago | null>(null);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStep, setFilterStep] = useState<string>('');
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -357,6 +359,14 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                     >
                       👁
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormato(p)}
+                      className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                      title="Formato oficial FZ-RG-0185 · listo para imprimir y firmar"
+                    >
+                      📄
+                    </button>
                     {canEdit && (
                       <>
                       {!isLast && (
@@ -448,6 +458,14 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         title={viewing?.serial ?? 'Pago'}
       >
         {viewing && <PagoPrintable pago={viewing} />}
+      </PrintableModal>
+
+      <PrintableModal
+        open={formato !== null}
+        onClose={() => setFormato(null)}
+        title={`Solicitud de trámite de pago · ${formato?.serial ?? ''}`}
+      >
+        {formato && <SolicitudPagoPrintable pago={formato} />}
       </PrintableModal>
       </div>
       </div>

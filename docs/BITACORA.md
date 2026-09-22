@@ -6,6 +6,24 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Formato oficial SP · 2026-09-22 · FZ-RG-0185 imprimible desde Pagos
+
+**Objetivo:** que la asistente imprima la solicitud de pago en el formato oficial de la empresa directamente desde el sistema, sin volver a teclear los datos en el Excel. El documento se firma en físico, así que el entregable es papel, no archivo.
+
+**Cambios de UI:**
+- `src/modules/finanzas/pagos/SolicitudPagoPrintable.tsx` — réplica del formato FZ-RG-0185 v04 (Tesorería). Se reconstruyó celda por celda desde el `.xlsx` original: 6 columnas con su ancho relativo, 43 filas con su altura en puntos, textos fijos y recuadro de firmas.
+- `src/modules/finanzas/pagos/logo-fz.png` — logo extraído del Excel (`xl/media/image1.png`).
+- `PagosSection.tsx` — botón 📄 a la par del 👁, con su propio `PrintableModal`. El printable genérico anterior queda intacto.
+
+**Comentarios:**
+- **Se descartó generar un `.xlsx` relleno.** Habría necesitado `exceljs` en el bundle y, peor, escribir en coordenadas fijas: si alguien reacomoda la plantilla el archivo sale mal llenado **sin error**. El printable + `window.print` es además el patrón que ya usan Vales, Liquidaciones y Consumos.
+- **`K` y `SHEET_W` van juntos** y están documentados en el componente. `@media print` estira `.printable` al 100% de la página, así que sin un ancho propio la hoja se desborda a dos páginas. Medido: 8.96in de 9.56in disponibles en carta.
+- **El Excel está tipografiado en Gisha, que no está instalada.** La caída a Segoe UI es más ancha y partía en dos "Fecha Aprobación:" y las descripciones de la tabla de anticipos; se compensó con 170mm de ancho en vez de los 160mm del escalado puro. Si se instala Gisha, volver a 160mm.
+- **Centro Productivo se deja siempre en blanco** — se llena a mano, por pedido del usuario.
+- **Pendiente decidir:** el formato no tiene casilla para el correlativo, así que la hoja firmada no queda amarrada a su `SP-YYYY-####`. Igual "Autorizado Por" va vacío aunque `autorizador_id` exista.
+
+---
+
 ## Bootstrap fix · 2026-07-12 · C-1 CRITICAL del AUDIT
 
 **Objetivo:** arreglar el bug intermitente "Cargando…" eterno / "No hay perfil cargado" que bloqueaba la app en producción para la mayoría de sesiones.

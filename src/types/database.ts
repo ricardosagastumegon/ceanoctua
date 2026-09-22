@@ -1086,6 +1086,17 @@ export type Database = {
           cancel_policy: string | null;
           stars: number | null;
           notas: string | null;
+          michelin: boolean | null;
+          tiempo_espera: string | null;
+          tipo_servicio: string | null;
+          reservado_por: string | null;
+          cancelacion_gratuita: boolean | null;
+          cancelacion_fecha: string | null;
+          tarifa_pax: number | null;
+          estatus_pago: string | null;
+          estado_pago: string | null;
+          pagado_con: string | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1108,16 +1119,18 @@ export type Database = {
           reserva?: string | null;
           detalles?: string | null;
           cancel_policy?: string | null;
-          services_total?: number | null;
           stars?: number | null;
           notas?: string | null;
-          telefono?: string | null;
+          michelin?: boolean | null;
+          tiempo_espera?: string | null;
+          tipo_servicio?: string | null;
           reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
+          cancelacion_gratuita?: boolean | null;
+          cancelacion_fecha?: string | null;
+          tarifa_pax?: number | null;
           estatus_pago?: string | null;
           estado_pago?: string | null;
-          comentarios?: string | null;
+          pagado_con?: string | null;
           confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
@@ -1138,16 +1151,18 @@ export type Database = {
           reserva?: string | null;
           detalles?: string | null;
           cancel_policy?: string | null;
-          services_total?: number | null;
           stars?: number | null;
           notas?: string | null;
-          telefono?: string | null;
+          michelin?: boolean | null;
+          tiempo_espera?: string | null;
+          tipo_servicio?: string | null;
           reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
+          cancelacion_gratuita?: boolean | null;
+          cancelacion_fecha?: string | null;
+          tarifa_pax?: number | null;
           estatus_pago?: string | null;
           estado_pago?: string | null;
-          comentarios?: string | null;
+          pagado_con?: string | null;
           confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
@@ -1199,14 +1214,6 @@ export type Database = {
           tarifa_nota?: string | null;
           extras?: number | null;
           extras_nota?: string | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1226,14 +1233,6 @@ export type Database = {
           tarifa_nota?: string | null;
           extras?: number | null;
           extras_nota?: string | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1264,14 +1263,6 @@ export type Database = {
           ruta?: string | null;
           tiempo_vuelo?: string | null;
           fecha_llegada?: string | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1283,14 +1274,6 @@ export type Database = {
           ruta?: string | null;
           tiempo_vuelo?: string | null;
           fecha_llegada?: string | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1314,28 +1297,12 @@ export type Database = {
           segmento_id?: string | null;
           codigo: string;
           orden?: number;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: {
           segmento_id?: string | null;
           codigo?: string;
           orden?: number;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -1358,14 +1325,6 @@ export type Database = {
           ciudad?: string | null;
           tiempo?: string | null;
           orden?: number;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -1373,14 +1332,6 @@ export type Database = {
           ciudad?: string | null;
           tiempo?: string | null;
           orden?: number;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -1396,27 +1347,11 @@ export type Database = {
           id?: string; legacy_id?: number | null; ticket_id: string;
           metodo?: string | null; tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           metodo?: string | null; tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1434,26 +1369,10 @@ export type Database = {
         Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; hotel_id: string;
           nombre: string; monto?: number; notas?: string | null; orden?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           nombre?: string; monto?: number; notas?: string | null; orden?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1472,27 +1391,11 @@ export type Database = {
           id?: string; legacy_id?: number | null; hotel_id: string;
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1515,14 +1418,6 @@ export type Database = {
           id?: string; legacy_id?: number | null; restaurante_id: string;
           nombre: string; notas?: string | null; orden?: number | null;
           created_by?: string | null; updated_by?: string | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -1543,26 +1438,10 @@ export type Database = {
         Insert: AuditInsert & {
           id?: string; legacy_id?: number | null; restaurante_id: string;
           nombre: string; monto?: number; orden?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           nombre?: string; monto?: number; orden?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1581,27 +1460,11 @@ export type Database = {
           id?: string; legacy_id?: number | null; restaurante_id: string;
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           tc_id?: string | null; titular?: string | null;
           autorizado_por?: string | null; monto?: number | null;
-          telefono?: string | null;
-          reservado_por?: string | null;
-          pagado_con?: string | null;
-          early_checkin?: string | null;
-          estatus_pago?: string | null;
-          estado_pago?: string | null;
-          comentarios?: string | null;
-          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [

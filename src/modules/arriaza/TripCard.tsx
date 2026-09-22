@@ -294,7 +294,13 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
               />
             )}
             {visibles.has('restaurantes') && (
-              <RestaurantesSection viajeId={viaje.id} canEdit={canEdit} />
+              <RestaurantesSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                tripNo={viaje.trip_no}
+                autoOpenCreate={autoOpenKey === 'restaurantes'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
             )}
             {visibles.has('renta') && (
               <RentasSection

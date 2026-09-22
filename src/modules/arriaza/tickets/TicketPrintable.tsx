@@ -31,7 +31,7 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
       tripNo={tripNo}
       total={ticket.monto != null ? Number(ticket.monto) : null}
       moneda={moneda}
-      estadoPago={ticket.estatus_pago}
+      estadoPago={ticket.estado_pago}
       pagadoCon={ticket.pagado_con}
       rows={[
         { label: 'Línea aérea', value: ticket.aerolinea ?? '—' },

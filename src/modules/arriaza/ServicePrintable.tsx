@@ -22,6 +22,11 @@ type Props = {
   rows: Array<{ label: string; value: ReactNode }>;
   /** Bloques extra al final (pasajeros, habitaciones, tickets de actividad…). */
   extras?: ReactNode;
+  /**
+   * Franja sobre el encabezado. El hotel la usa para el rango de fechas, que
+   * es lo primero que se busca en la hoja de una reserva.
+   */
+  band?: ReactNode;
 };
 
 /**
@@ -37,12 +42,20 @@ type Props = {
  */
 export function ServicePrintable({
   open, onClose, serviceKey, title, subtitle, tripNo, total, moneda,
-  estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras,
+  estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras, band,
 }: Props) {
   const meta = SERVICE_META[serviceKey];
   return (
     <PrintableModal open={open} onClose={onClose} title={`${meta.icon} ${meta.label} — ${title}`}>
       <article style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
+        {band && (
+          <div
+            className="px-8 py-2 font-heading text-lg font-extrabold text-white"
+            style={{ background: meta.dark }}
+          >
+            {band}
+          </div>
+        )}
         {/* Encabezado con el color del servicio */}
         <header
           className="relative px-8 py-6 text-white"

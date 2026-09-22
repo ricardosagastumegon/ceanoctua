@@ -109,7 +109,8 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
   const [checkinFin, setCheckinFin] = useState('');
   const [segmentos, setSegmentos] = useState<SegmentoInput[]>([]);
   const [pax, setPax] = useState<PaxInput[]>([]);
-  const [estatusPago, setEstatusPago] = useState<string>('HOLD');
+  const [estadoPago, setEstadoPago] = useState<string>('HOLD');
+  const [estatusNota, setEstatusNota] = useState('');
   const [formasPago, setFormasPago] = useState<string[]>([]);
   const [penalidadDesc, setPenalidadDesc] = useState('');
   const [penalidadMonto, setPenalidadMonto] = useState('');
@@ -133,7 +134,8 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
     setCheckinFin(t?.checkin_fin ?? '');
     setSegmentos(d?.segmentos.length ? d.segmentos : [segmentoVacio('ida')]);
     setPax(d?.pax.length ? d.pax : [paxVacio()]);
-    setEstatusPago(t?.estatus_pago ?? 'HOLD');
+    setEstadoPago(t?.estado_pago ?? 'HOLD');
+    setEstatusNota(t?.estatus_pago ?? '');
     setFormasPago(t?.formas_pago ?? []);
     setPenalidadDesc(t?.penalidad_desc ?? '');
     setPenalidadMonto(t?.penalidad_monto != null ? String(t.penalidad_monto) : '');
@@ -186,7 +188,8 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
       num_escalas: numEscalas.trim() === '' ? null : Number(numEscalas),
       checkin_ini: checkinIni || null,
       checkin_fin: checkinFin || null,
-      estatus_pago: estatusPago,
+      estado_pago: estadoPago,
+      estatus_pago: estatusNota.trim() || null,
       formas_pago: formasPago.length ? formasPago : null,
       penalidad_desc: penalidadDesc.trim() || null,
       penalidad_monto: penalidadMonto.trim() === '' ? null : Number(penalidadMonto),
@@ -398,7 +401,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
 
           <Bloque titulo="Pago">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Select label="Estatus de pago" value={estatusPago} onChange={(e) => setEstatusPago(e.target.value)}>
+              <Select label="Estado" value={estadoPago} onChange={(e) => setEstadoPago(e.target.value)}>
                 {ESTATUS_PAGO.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -418,6 +421,12 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
                 onChange={(e) => setPenalidadMonto(e.target.value)}
               />
             </div>
+            <TextInput
+              label="Estatus de pago"
+              value={estatusNota}
+              onChange={(e) => setEstatusNota(e.target.value)}
+              placeholder="Ej: Depósito 50% pagado"
+            />
             <TextInput
               label="Detalle de la penalidad"
               value={penalidadDesc}

@@ -127,12 +127,12 @@ export function TicketsSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
                 <span className="truncate text-sm font-extrabold" style={{ color: META.dark }}>
                   {t.titulo ?? `${t.origen ?? '?'} → ${t.destino ?? '?'}`}
                 </span>
-                {t.estatus_pago && (
+                {t.estado_pago && (
                   <span
                     className="rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider"
                     style={{ backgroundColor: META.light, color: META.dark }}
                   >
-                    {t.estatus_pago}
+                    {t.estado_pago}
                   </span>
                 )}
                 {t.codigo_reserva && (

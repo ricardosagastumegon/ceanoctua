@@ -6,6 +6,38 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 21 · 2026-09-22 → en curso · T&T Dashboard inicial
+
+**Objetivo:** dejar Arriaza T&T como lo describe `TT_Dashboard_inicial.docx`. Plan completo en [`PLAN-TT-DASHBOARD.md`](../PLAN-TT-DASHBOARD.md).
+
+**Hallazgo de arranque:** el usuario subió el paquete `TT_modulo.html` para "trasladarlo", pero ese mismo HTML ya se había portado en la Fase 19. Las instrucciones del handoff (pegar el JS vanilla, cambiar `ttSave()` por `save()`) eran para el monolito legacy con localStorage y no aplican a React + Supabase: violarían la Regla 0. Se acordó construir por partes desde el documento en vez de trasladar.
+
+**Estado real que justificó reconstruir:** el módulo estaba prácticamente sin estrenar — 2 viajes, 1 hotel, 0 tickets, 0 day_plans, 0 notas. Reconstruir no cuesta datos.
+
+### Nombres de los miembros de junta (2026-09-22)
+
+Migraciones `20260922000001/2/3`. `miembros_board.nombre` pasó de repetir el código a llevar el cargo: MAA→Presidencia, JA→Gerencia Agrícola, LA→Gerencia Administrativa, JM→Gerencia LUM, EG→Gerente General, AA y PE→Board.
+
+**Por qué no se tocó `codigo`:** es la llave técnica — ruta `/maa`, control de acceso de `board_member`, importación por CSV. Cambiarlo obligaba a mover ruta, carpeta y política sin ganar nada visible.
+
+**Por qué la pestaña sigue mostrando iniciales:** se midió el ancho real de la barra. Con los cargos completos son 1471px contra 1352px útiles → dos filas. Con iniciales, 922px. El cargo quedó como tooltip y como título de la página.
+
+### F21-1 · Destinos múltiples (2026-09-22)
+
+Migración `20260922000004`: `att_viaje_paises`, `att_viaje_ciudades`, `att_viaje_paradas`, las tres con Regla 0 completa y RLS Pattern A. `att_viajes.pais/ciudad/destino` quedan marcadas como deprecadas vía `comment on column`.
+
+**Incidente:** el backfill derivó el código de país con `upper(left(pais,2))` — las dos primeras letras del **nombre**, no el ISO. "Estados Unidos" quedó como `ES`, que es España. Se detectó al verificar y se corrigió en `20260922000005`. De ahí salió `isoFromFlag()`, que deriva el ISO de la bandera del catálogo en vez de adivinarlo.
+
+### F21-2 · Formulario del viaje (2026-09-22)
+
+`TripFormModal` reescrito: países y ciudades múltiples como chips, paradas con fechas propias, motivo como Placer/Trabajo/Otros, más Pagado por y Notas — estas dos ya existían en la tabla desde antes y nunca se habían mostrado.
+
+`viajes/destinos-api.ts` expone `sync()`: recibe la lista completa y reconcilia contra la base (inserta, actualiza, marca `deleted_at` lo quitado). Se eligió así porque el formulario edita colecciones, no filas sueltas.
+
+**Banderas descartadas:** Windows no dibuja banderas emoji. Se queda el chip de dos letras; el ISO igual se guarda por si algún día se quieren.
+
+---
+
 ## Fix notificaciones · 2026-09-22 · La notificación se cierra al generar su acción
 
 **Objetivo:** que una notificación de pago desaparezca del panel cuando ya generó la solicitud que pedía, para que el dashboard muestre solo lo que falta hacer.

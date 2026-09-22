@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { ArriazaMap } from './ArriazaMap';
-import { TripFormModal } from './TripFormModal';
+import { TripFormModal, type TripDestinos } from './TripFormModal';
 import { TripCard } from './TripCard';
 import { BackupModal } from './BackupModal';
 import { FinishedFolder } from './FinishedFolder';
@@ -16,6 +16,7 @@ import {
   useUpdateAttViaje,
 } from './viajes/hooks';
 import type { AttViaje, AttViajeInsert } from './viajes/api';
+import { useSyncViajeDestinos } from './viajes/destinos-hooks';
 import { autoTripStatus } from './utils';
 import type { ManualStatus } from './constants/serviceMeta';
 
@@ -34,6 +35,7 @@ export function AttPage() {
   const create = useCreateAttViaje();
   const update = useUpdateAttViaje();
   const remove = useDeleteAttViaje();
+  const syncDestinos = useSyncViajeDestinos();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -74,15 +76,16 @@ export function AttPage() {
     };
   }, [viajes]);
 
-  async function handleSave(values: AttViajeInsert) {
+  async function handleSave(values: AttViajeInsert, destinos: TripDestinos) {
     try {
-      if (editing && editing.id) {
-        await update.mutateAsync({ id: editing.id, patch: values });
-        toast.success('Viaje actualizado.');
-      } else {
-        await create.mutateAsync(values);
-        toast.success('Viaje creado.');
-      }
+      // El viaje va primero porque los destinos necesitan su id. En creación el
+      // id no existe hasta que la base lo devuelve.
+      const viajeId =
+        editing && editing.id
+          ? (await update.mutateAsync({ id: editing.id, patch: values }), editing.id)
+          : (await create.mutateAsync(values)).id;
+      await syncDestinos.mutateAsync({ viajeId, ...destinos });
+      toast.success(editing?.id ? 'Viaje actualizado.' : 'Viaje creado.');
       setEditing(undefined);
     } catch (err) {
       toast.error(describeError(err));
@@ -241,7 +244,7 @@ export function AttPage() {
       <TripFormModal
         open={editing !== undefined}
         editing={editing ?? null}
-        submitting={create.isPending || update.isPending}
+        submitting={create.isPending || update.isPending || syncDestinos.isPending}
         onClose={() => setEditing(undefined)}
         onSubmit={handleSave}
       />

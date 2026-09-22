@@ -762,6 +762,89 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Fase 21 · destinos múltiples del viaje.
+      // pais/ciudad/destino de att_viajes quedaron deprecadas en favor de estas.
+      att_viaje_paises: {
+        Row: AuditCols & {
+          id: string;
+          viaje_id: string;
+          codigo: string;
+          nombre: string;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          viaje_id: string;
+          codigo: string;
+          nombre: string;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          codigo?: string;
+          nombre?: string;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      att_viaje_ciudades: {
+        Row: AuditCols & {
+          id: string;
+          viaje_id: string;
+          nombre: string;
+          pais_codigo: string | null;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          viaje_id: string;
+          nombre: string;
+          pais_codigo?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          nombre?: string;
+          pais_codigo?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      att_viaje_paradas: {
+        Row: AuditCols & {
+          id: string;
+          viaje_id: string;
+          nombre: string;
+          pais_codigo: string | null;
+          fecha_ini: string | null;
+          fecha_fin: string | null;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          viaje_id: string;
+          nombre: string;
+          pais_codigo?: string | null;
+          fecha_ini?: string | null;
+          fecha_fin?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          nombre?: string;
+          pais_codigo?: string | null;
+          fecha_ini?: string | null;
+          fecha_fin?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
       att_tickets: {
         Row: AuditCols & {
           id: string;

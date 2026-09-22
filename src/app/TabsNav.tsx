@@ -12,17 +12,24 @@ type Tab = {
   end?: boolean;
   roles: AppRol[];
   memberCode?: string;
+  /**
+   * Cargo del miembro, para quien no conoce las siglas. Va como tooltip y no
+   * como etiqueta: con los cargos completos la barra se parte en dos filas
+   * (1471px contra 1352px útiles). El cargo sí se muestra completo en el
+   * título de la página, que lo lee de `miembros_board.nombre`.
+   */
+  hint?: string;
 };
 
 const tabs: Tab[] = [
   { to: '/', label: 'Dashboard', end: true, roles: ['admin', 'asistente', 'board_member', 'solo_lectura'] },
-  { to: '/maa', label: 'MAA', roles: ['admin', 'asistente', 'board_member'], memberCode: 'MAA' },
-  { to: '/ja',  label: 'JA',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JA' },
-  { to: '/la',  label: 'LA',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'LA' },
-  { to: '/jm',  label: 'JM',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JM' },
-  { to: '/aa',  label: 'AA',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'AA' },
-  { to: '/eg',  label: 'EG',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'EG' },
-  { to: '/pe',  label: 'PE',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'PE' },
+  { to: '/maa', label: 'MAA', hint: 'Presidencia', roles: ['admin', 'asistente', 'board_member'], memberCode: 'MAA' },
+  { to: '/ja',  label: 'JA',  hint: 'Gerencia Agrícola',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JA' },
+  { to: '/la',  label: 'LA',  hint: 'Gerencia Administrativa',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'LA' },
+  { to: '/jm',  label: 'JM',  hint: 'Gerencia LUM',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JM' },
+  { to: '/aa',  label: 'AA',  hint: 'Board',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'AA' },
+  { to: '/eg',  label: 'EG',  hint: 'Gerente General',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'EG' },
+  { to: '/pe',  label: 'PE',  hint: 'Board',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'PE' },
   // CC Board pestaña eliminada en Fase 16 · F-0. Vales y Liquidaciones viven ahora dentro de Finanzas.
   { to: '/arriaza',  label: 'Arriaza T&T', roles: ['admin', 'asistente'] },
   { to: '/cea',      label: 'CEA',         roles: ['admin', 'asistente'] },
@@ -93,6 +100,7 @@ export function TabsNav() {
                 <NavLink
                   to={tab.to}
                   end={tab.end}
+                  title={tab.hint}
                   className={({ isActive }) =>
                     [
                       'inline-flex h-11 items-center gap-1.5 border-b-2 px-1 text-xs font-semibold uppercase tracking-wider transition-colors',

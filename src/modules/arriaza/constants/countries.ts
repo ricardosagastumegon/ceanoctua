@@ -230,3 +230,27 @@ export function findCountry(name: string | null | undefined): Country | undefine
   if (!name) return undefined;
   return COUNTRIES.find((c) => c.name === name);
 }
+
+/**
+ * Código ISO-2 a partir de la bandera emoji.
+ *
+ * La bandera son dos "regional indicator symbols" (U+1F1E6..U+1F1FF) que mapean
+ * 1:1 con A..Z, así que el código sale de restar el offset. De ahí se saca sin
+ * mantener una segunda lista que se pueda desincronizar del catálogo.
+ *
+ * Windows no dibuja banderas emoji — pinta las dos letras — y por eso el código
+ * es justo lo que la UI muestra en el chip del viaje.
+ */
+export function isoFromFlag(flag: string): string {
+  return [...flag]
+    .map((ch) => ch.codePointAt(0) ?? 0)
+    .filter((cp) => cp >= 0x1f1e6 && cp <= 0x1f1ff)
+    .map((cp) => String.fromCharCode(cp - 0x1f1e6 + 65))
+    .join('');
+}
+
+/** Código ISO-2 de un país por su nombre del catálogo. '' si no está. */
+export function isoForCountry(name: string | null | undefined): string {
+  const c = findCountry(name);
+  return c ? isoFromFlag(c.flag) : '';
+}

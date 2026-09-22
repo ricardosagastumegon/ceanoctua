@@ -6,6 +6,23 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fix notificaciones · 2026-09-22 · La notificación se cierra al generar su acción
+
+**Objetivo:** que una notificación de pago desaparezca del panel cuando ya generó la solicitud que pedía, para que el dashboard muestre solo lo que falta hacer.
+
+**Bug doble, confirmado contra la base de producción:**
+1. Crear la SP desde el panel solo abría el form pre-rellenado. Nadie marcaba `procesado`, así que la notificación quedaba pendiente para siempre y se limpiaba a mano con la ✕.
+2. `PagosSection` sí ponía `origen_notificacion_id` en el objeto inicial, pero `PagoForm.toInput()` no lo incluye al armar el insert y el campo se **descartaba en silencio**. Evidencia: `SP-2026-0004` nació de una notificación y tiene el campo en `null`. Sin ese vínculo no hay a quién cerrarle nada ni cómo auditarlo.
+
+**Cambios de UI:**
+- `PagosSection.tsx` — estado `fromNotif` con la notificación que abrió el form; al crear con éxito se persiste `origen_notificacion_id` y se marca `procesado` + `procesado_at`. Cancelar **no** cierra la notificación. Si el marcado falla, el pago no se revierte: se avisa que quedó pendiente.
+
+**Comentarios:**
+- No se corrigió la data vieja (`be4d0a36`, VCH-0004) desde la Management API: eso saltaría RLS y `audit_log`, contra la Regla 0. Se cierra con la ✕ del panel, que sí pasa por la app.
+- Ojo al patrón: `toInput()` del form es la única fuente del insert. Cualquier campo que se precargue fuera del `FormState` se pierde sin error. Si aparece otro caso, revisar ahí primero.
+
+---
+
 ## Formato oficial SP · 2026-09-22 · FZ-RG-0185 imprimible desde Pagos
 
 **Objetivo:** que la asistente imprima la solicitud de pago en el formato oficial de la empresa directamente desde el sistema, sin volver a teclear los datos en el Excel. El documento se firma en físico, así que el entregable es papel, no archivo.

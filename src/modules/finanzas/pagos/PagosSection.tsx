@@ -51,6 +51,8 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
   const confirm = useConfirm();
 
   const [editing, setEditing] = useState<Pago | null | undefined>(undefined);
+  /** Notificación que originó el form abierto — se marca procesada al guardar. */
+  const [fromNotif, setFromNotif] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Pago | null>(null);
   const [formato, setFormato] = useState<Pago | null>(null);
   const [filterTipo, setFilterTipo] = useState('');
@@ -164,6 +166,22 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
     },
   });
 
+  /**
+   * Una notificación existe solo para pedir una acción: cuando esa acción ya
+   * se generó deja de estar pendiente y sale del panel. No se borra — queda
+   * con `procesado_at` para poder rastrear qué la cerró.
+   */
+  const marcarNotifProcesada = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('pagos_notificaciones')
+        .update({ procesado: true, procesado_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['pagos_notificaciones'] }),
+  });
+
   const all = query.data ?? [];
 
   const filtered = useMemo(() => {
@@ -188,16 +206,35 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
     return Array.from(s).sort();
   }, [all]);
 
+  function closeForm() {
+    setEditing(undefined);
+    setFromNotif(null);
+  }
+
   async function handleSave(values: PagoInsert) {
     try {
       if (editing && editing.id) {
         await update.mutateAsync({ id: editing.id, patch: values });
         toast.success('Pago actualizado.');
       } else {
-        await create.mutateAsync(values);
-        toast.success('Pago creado.');
+        // El origen se guarda en el pago: sin esto la notificación que lo
+        // disparó queda huérfana y no hay forma de auditar el vínculo.
+        await create.mutateAsync(
+          fromNotif ? { ...values, origen_notificacion_id: fromNotif } : values,
+        );
+        if (fromNotif) {
+          try {
+            await marcarNotifProcesada.mutateAsync(fromNotif);
+            toast.success('Pago creado. Notificación procesada.');
+          } catch (e) {
+            // El pago sí se creó: no lo revertimos por esto, solo avisamos.
+            toast.error(`Pago creado, pero la notificación sigue pendiente: ${describeError(e)}`);
+          }
+        } else {
+          toast.success('Pago creado.');
+        }
       }
-      setEditing(undefined);
+      closeForm();
     } catch (e) {
       toast.error(describeError(e));
     }
@@ -243,7 +280,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
             </button>
             <button
               type="button"
-              onClick={() => setEditing(null)}
+              onClick={() => { setFromNotif(null); setEditing(null); }}
               className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
             >
               + Nueva solicitud
@@ -256,6 +293,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         <NotificacionesPanel
           onCreateFromNotif={(notif) => {
             // Pre-rellena los campos del nuevo pago con los datos del origen.
+            setFromNotif(notif.id);
             setEditing({
               id: '',
               monto: notif.monto ?? 0,
@@ -413,7 +451,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                       )}
                       <button
                         type="button"
-                        onClick={() => setEditing(p)}
+                        onClick={() => { setFromNotif(null); setEditing(p); }}
                         className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
                       >
                         ✏️
@@ -440,7 +478,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
 
       <Modal
         open={editing !== undefined}
-        onClose={() => setEditing(undefined)}
+        onClose={closeForm}
         title={editing?.id ? `Editar pago — ${editing.serial ?? editing.proveedor ?? ''}` : 'Nueva solicitud de pago'}
         size="xl"
       >
@@ -448,7 +486,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
           initial={editing ?? null}
           submitting={create.isPending || update.isPending}
           onSubmit={handleSave}
-          onCancel={() => setEditing(undefined)}
+          onCancel={closeForm}
         />
       </Modal>
 

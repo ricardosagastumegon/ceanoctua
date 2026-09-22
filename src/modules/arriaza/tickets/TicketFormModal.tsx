@@ -8,7 +8,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { AirportPicker } from '../shared/AirportPicker';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
-import { NACIONALIDADES } from '../constants/nationalities';
+import { NationalityPicker } from '../shared/NationalityPicker';
 import {
   CATEGORIAS,
   TIPOS_PAX,
@@ -800,28 +800,11 @@ function PaxCard({
             })}
           </div>
         </div>
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-dark-2">
-            Nacionalidad(es)
-          </label>
-          <select
-            multiple
-            size={3}
-            value={pax.nacionalidades}
-            onChange={(e) =>
-              onChange({
-                nacionalidades: Array.from(e.target.selectedOptions).map((o) => o.value),
-              })
-            }
-            className="mt-1 block w-full rounded-md border border-sand bg-white px-2 py-1 text-sm text-dark focus:border-teal focus:outline-none"
-          >
-            {NACIONALIDADES.map((n) => (
-              <option key={n.code} value={n.code}>
-                {n.code} — {n.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+        <NationalityPicker
+          label="Nacionalidad(es)"
+          value={pax.nacionalidades}
+          onChange={(codes) => onChange({ nacionalidades: codes })}
+        />
         <TextInput label="No. de pasaporte" value={pax.pasaporte_num} onChange={(e) => onChange({ pasaporte_num: e.target.value })} />
       </div>
 

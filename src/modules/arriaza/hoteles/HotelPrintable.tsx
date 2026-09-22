@@ -67,35 +67,38 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
       ]}
       extras={
         <div className="space-y-5">
-          <div>
+          {/* Las habitaciones son lo que se verifica al llegar al hotel, así que
+              van en un panel con cabecera de color y filas alternadas, no como
+              una tabla suelta que se pierde entre el resto. */}
+          <div className="overflow-hidden rounded-lg border" style={{ borderColor: META.solid }}>
             <div
-              className="mb-2 text-[11px] font-extrabold uppercase tracking-wider"
-              style={{ color: META.dark }}
+              className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white"
+              style={{ backgroundColor: META.dark }}
             >
-              Habitaciones
+              🛏 Habitaciones · {habitaciones.length}
             </div>
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[12px]">
               <thead>
-                <tr style={{ color: META.dark }} className="text-left">
-                  <th className="border-b border-sand py-1">Reserva a nombre de</th>
-                  <th className="border-b border-sand py-1">Tipo</th>
-                  <th className="border-b border-sand py-1">Pax</th>
-                  <th className="border-b border-sand py-1">Desayuno</th>
-                  <th className="border-b border-sand py-1 text-right">Tarifa</th>
-                  <th className="border-b border-sand py-1 text-right">Noches</th>
-                  <th className="border-b border-sand py-1 text-right">Total</th>
+                <tr style={{ backgroundColor: META.light, color: META.dark }} className="text-left">
+                  <th className="px-4 py-1.5 font-extrabold">Reserva a nombre de</th>
+                  <th className="px-2 py-1.5 font-extrabold">Tipo</th>
+                  <th className="px-2 py-1.5 font-extrabold">Pax</th>
+                  <th className="px-2 py-1.5 font-extrabold">Desayuno</th>
+                  <th className="px-2 py-1.5 text-right font-extrabold">Tarifa</th>
+                  <th className="px-2 py-1.5 text-right font-extrabold">Noches</th>
+                  <th className="px-4 py-1.5 text-right font-extrabold">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {habitaciones.map((h, i) => (
-                  <tr key={i}>
-                    <td className="border-b border-sand py-1 font-semibold text-dark-2">{h.reserva_nombre || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">{h.tipo_hab || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">{h.pax || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">{h.desayuno || '—'}</td>
-                    <td className="border-b border-sand py-1 text-right text-dark-3">{h.tarifa || '—'}</td>
-                    <td className="border-b border-sand py-1 text-right text-dark-3">{h.noches || '—'}</td>
-                    <td className="border-b border-sand py-1 text-right font-extrabold" style={{ color: META.dark }}>
+                  <tr key={i} style={{ backgroundColor: i % 2 ? '#ffffff' : 'rgba(0,0,0,.02)' }}>
+                    <td className="px-4 py-1.5 font-semibold text-dark">{h.reserva_nombre || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">{h.tipo_hab || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">{h.pax || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">{h.desayuno || '—'}</td>
+                    <td className="px-2 py-1.5 text-right text-dark-2">{h.tarifa || '—'}</td>
+                    <td className="px-2 py-1.5 text-right text-dark-2">{h.noches || '—'}</td>
+                    <td className="px-4 py-1.5 text-right font-extrabold" style={{ color: META.dark }}>
                       {moneda} {totalHabitacion(h).toFixed(2)}
                     </td>
                   </tr>
@@ -113,8 +116,8 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
                 Servicios extras
               </div>
               {extras.map((e, i) => (
-                <div key={i} className="flex justify-between border-b border-sand py-1 text-[11px]">
-                  <span className="text-dark-2">{e.nombre || '—'}</span>
+                <div key={i} className="flex justify-between border-b border-sand py-1 text-[12px]">
+                  <span className="text-dark">{e.nombre || '—'}</span>
                   <span className="font-extrabold" style={{ color: META.dark }}>
                     {moneda} {(Number(e.monto) || 0).toFixed(2)}
                   </span>
@@ -124,8 +127,11 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
           )}
 
           {hotel.comentarios && (
-            <div className="rounded-md border border-sand px-3 py-2 text-[11px] text-dark-3">
-              <b>Comentarios:</b> {hotel.comentarios}
+            <div
+              className="rounded-md border-l-4 px-3 py-2 text-[12px] text-dark"
+              style={{ borderLeftColor: META.solid, backgroundColor: META.light }}
+            >
+              <b style={{ color: META.dark }}>Comentarios:</b> {hotel.comentarios}
             </div>
           )}
         </div>

@@ -74,7 +74,7 @@ export function ServicePrintable({
           className="relative px-8 py-6 text-white"
           style={{ background: meta.grad ?? meta.dark }}
         >
-          <div style={{ position: 'absolute', top: '1.6rem', right: '1.9rem', textAlign: 'right' }}>
+          <div style={{ position: 'absolute', top: '1.1rem', right: '1.9rem', textAlign: 'right' }}>
             <img src={logoBlanco} alt="Arriaza Tour &amp; Travel" style={{ height: '38px' }} />
             {headerRight && (
               <div
@@ -125,29 +125,19 @@ export function ServicePrintable({
         <section
           className={
             rowsLayout === 'compacto'
-              ? 'grid grid-cols-4 gap-x-6 gap-y-2 px-8 pb-4 pt-5'
-              : 'grid grid-cols-2 gap-x-6 gap-y-2 px-8 py-6'
+              ? 'grid grid-cols-4 gap-x-5 gap-y-3 px-8 pb-4 pt-5'
+              : 'grid grid-cols-2 gap-x-8 gap-y-3 px-8 py-5'
           }
         >
           {rows.map(({ label, value }, i) => (
-            <div key={i} className={rowsLayout === 'compacto' ? 'py-0.5' : 'border-b border-sand py-1'}>
-              <div
-                className={
-                  rowsLayout === 'compacto'
-                    ? 'text-[9px] font-extrabold uppercase tracking-wider'
-                    : 'text-[10px] font-extrabold uppercase tracking-wider'
-                }
-                style={{ color: meta.dark }}
+            <div key={i}>
+              <span
+                className="inline-block rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider"
+                style={{ backgroundColor: meta.light, color: meta.dark }}
               >
                 {label}
-              </div>
-              <div
-                className={
-                  rowsLayout === 'compacto' ? 'text-[12px] text-dark-2' : 'mt-0.5 text-sm text-dark-2'
-                }
-              >
-                {value ?? '—'}
-              </div>
+              </span>
+              <div className="mt-1 text-[13px] leading-snug text-dark">{value ?? '—'}</div>
             </div>
           ))}
         </section>

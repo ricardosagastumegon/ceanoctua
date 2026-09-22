@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { ArriazaMap } from './ArriazaMap';
+import { AttHero } from './AttHero';
 import { TripFormModal, type TripDestinos } from './TripFormModal';
 import { TripCard } from './TripCard';
 import { BackupModal } from './BackupModal';
@@ -123,33 +124,13 @@ export function AttPage() {
 
   return (
     <section className="space-y-4">
-      {/* HERO */}
-      <div className="relative overflow-hidden rounded-card border-b-4 border-gold bg-gradient-to-br from-navy via-teal-d to-aqua p-6 text-white shadow-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-[.22em] text-white/50">
-              Arriaza · Tour &amp; Travel
-            </div>
-            <h1 className="mt-1 font-heading text-2xl font-extrabold">
-              Investigación · Planeación · Organización · Ejecución · Seguimiento
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Kpi label="Viajes" value={kpis.total} />
-            <Kpi label="En curso" value={kpis.curso} />
-            <Kpi label="Próximos" value={kpis.proximo} />
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                className="rounded-lg border border-white/30 bg-white/20 px-4 py-2 text-sm font-extrabold text-white backdrop-blur hover:bg-white/30"
-              >
-                ➕ Crear Viaje
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <AttHero
+        viajes={kpis.total}
+        curso={kpis.curso}
+        proximos={kpis.proximo}
+        canEdit={canEdit}
+        onCreate={() => setEditing(null)}
+      />
 
       {/* TOOLBAR */}
       <div className="flex flex-wrap items-center gap-2">
@@ -254,11 +235,3 @@ export function AttPage() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="text-center">
-      <div className="font-heading text-xl font-extrabold text-white">{value}</div>
-      <div className="text-[10px] font-extrabold uppercase tracking-wider text-white/60">{label}</div>
-    </div>
-  );
-}

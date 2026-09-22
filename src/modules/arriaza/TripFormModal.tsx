@@ -30,6 +30,14 @@ type Motivo = (typeof MOTIVOS)[number];
 
 const vacio: TripDestinos = { paises: [], ciudades: [], paradas: [] };
 
+/** Texto de `acompanantes` → lista. Solo corta por coma (ver nota en el estado). */
+function splitParticipantes(texto: string | null | undefined): string[] {
+  return (texto ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 // Modal Crear/Editar viaje · Fase 21.
 // El viaje es el encabezado del "carrito": aquí se define a dónde se va y por
 // qué, y los servicios se agregan después desde la pantalla del viaje.
@@ -37,7 +45,14 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
   const [titulo, setTitulo] = useState('');
   const [fechaIni, setFechaIni] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  const [participantes, setParticipantes] = useState('');
+  // Los participantes viven en una sola columna de texto (`acompanantes`)
+  // separados por coma. En la UI se editan uno por uno, pero no ameritan tabla
+  // propia: son nombres sueltos, sin datos que colgar de cada uno. Cuando un
+  // pasajero necesita pasaporte o asiento, eso ya vive en att_ticket_pax.
+  // Ojo con el separador: se parte solo por coma, porque "Fulano & Mengana"
+  // es una pareja y cuenta como un participante.
+  const [participantes, setParticipantes] = useState<string[]>([]);
+  const [participanteDraft, setParticipanteDraft] = useState('');
   const [motivo, setMotivo] = useState<Motivo>('Trabajo');
   const [motivoOtro, setMotivoOtro] = useState('');
   const [pagadoPor, setPagadoPor] = useState('');
@@ -54,7 +69,7 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       setTitulo(editing.titulo ?? '');
       setFechaIni(editing.fecha_ini ?? '');
       setFechaFin(editing.fecha_fin ?? '');
-      setParticipantes(editing.acompanantes ?? '');
+      setParticipantes(splitParticipantes(editing.acompanantes));
       setPagadoPor(editing.paidby ?? '');
       setNotas(editing.notas ?? '');
       // Los viajes viejos traen el motivo como texto libre. Si no es una de las
@@ -71,7 +86,7 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       setTitulo('');
       setFechaIni('');
       setFechaFin('');
-      setParticipantes('');
+      setParticipantes([]);
       setMotivo('Trabajo');
       setMotivoOtro('');
       setPagadoPor('');
@@ -79,6 +94,7 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       setDestinos(vacio);
     }
     setCiudadDraft('');
+    setParticipanteDraft('');
     setError(null);
   }, [open, editing]);
 
@@ -125,6 +141,17 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
   function removeCiudad(i: number) {
     setDestinos((d) => ({ ...d, ciudades: d.ciudades.filter((_, k) => k !== i) }));
   }
+  function addParticipante() {
+    const nombre = participanteDraft.trim();
+    if (!nombre) return;
+    setParticipantes((ps) =>
+      ps.some((x) => x.toLowerCase() === nombre.toLowerCase()) ? ps : [...ps, nombre],
+    );
+    setParticipanteDraft('');
+  }
+  function removeParticipante(i: number) {
+    setParticipantes((ps) => ps.filter((_, k) => k !== i));
+  }
   function addParada() {
     setDestinos((d) => ({
       ...d,
@@ -165,7 +192,7 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       titulo: titulo.trim(),
       fecha_ini: fechaIni,
       fecha_fin: fechaFin,
-      acompanantes: participantes.trim() || null,
+      acompanantes: participantes.join(', ') || null,
       proposito: motivo,
       other_reason: motivo === 'Otros' ? motivoOtro.trim() || null : null,
       paidby: pagadoPor.trim() || null,
@@ -367,13 +394,56 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
           </button>
         </fieldset>
 
+        {/* ── Participantes ─────────────────────────────────────────── */}
+        <fieldset className="rounded-md border border-sand p-3">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-dark-2">
+            Participantes
+          </legend>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={participanteDraft}
+              onChange={(e) => setParticipanteDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addParticipante();
+                }
+              }}
+              placeholder="Nombre del participante"
+              className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
+            />
+            <button
+              type="button"
+              onClick={addParticipante}
+              className="shrink-0 rounded-md border border-teal/40 px-3 py-2 text-xs font-semibold text-teal-d hover:bg-teal-l"
+            >
+              ＋ Agregar
+            </button>
+          </div>
+          {participantes.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {participantes.map((nombre, i) => (
+                <li
+                  key={`${nombre}-${i}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-purple/10 px-3 py-1 text-xs font-semibold text-purple"
+                >
+                  👤 {nombre}
+                  <button
+                    type="button"
+                    onClick={() => removeParticipante(i)}
+                    className="text-purple/60 hover:text-rust"
+                    aria-label={`Quitar ${nombre}`}
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </fieldset>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <TextInput
-            label="Participantes"
-            value={participantes}
-            onChange={(e) => setParticipantes(e.target.value)}
-            placeholder="Nombres separados por coma"
-          />
           <TextInput
             label="Pagado por"
             value={pagadoPor}

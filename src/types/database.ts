@@ -865,6 +865,23 @@ export type Database = {
           moneda: Database['public']['Enums']['currency'] | null;
           notas: string | null;
           comentarios: string | null;
+          // Fase 22 · modelo del documento de Ticket Aéreo
+          titulo: string | null;
+          reservado_por: string | null;
+          categoria: string | null;
+          tipo_ticket: string | null;
+          vuelo_directo: boolean | null;
+          num_escalas: number | null;
+          checkin_ini: string | null;
+          checkin_fin: string | null;
+          estatus_pago: string | null;
+          formas_pago: string[] | null;
+          penalidad_desc: string | null;
+          penalidad_monto: number | null;
+          pagado_con_tc_id: string | null;
+          pdf_boleto_path: string | null;
+          pdf_boarding_path: string | null;
+          pdf_sat_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -886,6 +903,22 @@ export type Database = {
           moneda?: Database['public']['Enums']['currency'] | null;
           notas?: string | null;
           comentarios?: string | null;
+          titulo?: string | null;
+          reservado_por?: string | null;
+          categoria?: string | null;
+          tipo_ticket?: string | null;
+          vuelo_directo?: boolean | null;
+          num_escalas?: number | null;
+          checkin_ini?: string | null;
+          checkin_fin?: string | null;
+          estatus_pago?: string | null;
+          formas_pago?: string[] | null;
+          penalidad_desc?: string | null;
+          penalidad_monto?: number | null;
+          pagado_con_tc_id?: string | null;
+          pdf_boleto_path?: string | null;
+          pdf_boarding_path?: string | null;
+          pdf_sat_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -904,6 +937,22 @@ export type Database = {
           moneda?: Database['public']['Enums']['currency'] | null;
           notas?: string | null;
           comentarios?: string | null;
+          titulo?: string | null;
+          reservado_por?: string | null;
+          categoria?: string | null;
+          tipo_ticket?: string | null;
+          vuelo_directo?: boolean | null;
+          num_escalas?: number | null;
+          checkin_ini?: string | null;
+          checkin_fin?: string | null;
+          estatus_pago?: string | null;
+          formas_pago?: string[] | null;
+          penalidad_desc?: string | null;
+          penalidad_monto?: number | null;
+          pagado_con_tc_id?: string | null;
+          pdf_boleto_path?: string | null;
+          pdf_boarding_path?: string | null;
+          pdf_sat_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1071,6 +1120,16 @@ export type Database = {
           libreta_num: string | null; visa_pais: string | null;
           visa_num: string | null; visa_exp: string | null;
           ffn: string | null; programa: string | null;
+          nacionalidades: string[] | null;
+          numero_ticket: string | null;
+          asiento: string | null;
+          eq_personal: string | null;
+          eq_carryon: string | null;
+          eq_documentado: string | null;
+          tarifa: number | null;
+          tarifa_nota: string | null;
+          extras: number | null;
+          extras_nota: string | null;
           orden: number | null;
           deleted_at: string | null;
         };
@@ -1081,6 +1140,16 @@ export type Database = {
           libreta_num?: string | null; visa_pais?: string | null;
           visa_num?: string | null; visa_exp?: string | null;
           ffn?: string | null; programa?: string | null; orden?: number | null;
+          nacionalidades?: string[] | null;
+          numero_ticket?: string | null;
+          asiento?: string | null;
+          eq_personal?: string | null;
+          eq_carryon?: string | null;
+          eq_documentado?: string | null;
+          tarifa?: number | null;
+          tarifa_nota?: string | null;
+          extras?: number | null;
+          extras_nota?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1089,6 +1158,16 @@ export type Database = {
           libreta_num?: string | null; visa_pais?: string | null;
           visa_num?: string | null; visa_exp?: string | null;
           ffn?: string | null; programa?: string | null; orden?: number | null;
+          nacionalidades?: string[] | null;
+          numero_ticket?: string | null;
+          asiento?: string | null;
+          eq_personal?: string | null;
+          eq_carryon?: string | null;
+          eq_documentado?: string | null;
+          tarifa?: number | null;
+          tarifa_nota?: string | null;
+          extras?: number | null;
+          extras_nota?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1104,6 +1183,8 @@ export type Database = {
           destino_iata: string | null; destino_ciudad: string | null;
           fecha: string | null; checkin: string | null; etd: string | null; eta: string | null;
           numero_vuelo: string | null; orden: number | null;
+          ruta: string | null;
+          fecha_llegada: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1113,6 +1194,8 @@ export type Database = {
           destino_iata?: string | null; destino_ciudad?: string | null;
           fecha?: string | null; checkin?: string | null; etd?: string | null; eta?: string | null;
           numero_vuelo?: string | null; orden?: number | null;
+          ruta?: string | null;
+          fecha_llegada?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1121,6 +1204,8 @@ export type Database = {
           destino_iata?: string | null; destino_ciudad?: string | null;
           fecha?: string | null; checkin?: string | null; etd?: string | null; eta?: string | null;
           numero_vuelo?: string | null; orden?: number | null;
+          ruta?: string | null;
+          fecha_llegada?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1128,6 +1213,61 @@ export type Database = {
         ];
       };
 
+      // Fase 22 · un ticket (o un segmento) puede llevar varios PNR.
+      att_ticket_pnrs: {
+        Row: AuditCols & {
+          id: string;
+          ticket_id: string;
+          segmento_id: string | null;
+          codigo: string;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          ticket_id: string;
+          segmento_id?: string | null;
+          codigo: string;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          segmento_id?: string | null;
+          codigo?: string;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      // Fase 22 · escalas de un segmento de vuelo.
+      att_segmento_escalas: {
+        Row: AuditCols & {
+          id: string;
+          segmento_id: string;
+          iata: string | null;
+          ciudad: string | null;
+          tiempo: string | null;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          segmento_id: string;
+          iata?: string | null;
+          ciudad?: string | null;
+          tiempo?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          iata?: string | null;
+          ciudad?: string | null;
+          tiempo?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
       att_ticket_pay_records: {
         Row: AuditCols & {
           id: string; legacy_id: number | null; ticket_id: string;

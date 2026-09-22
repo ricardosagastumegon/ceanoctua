@@ -275,7 +275,14 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
                 Sin servicios agregados todavía. Usa “+ Agregar Servicios”.
               </p>
             )}
-            {visibles.has('tickets') && <TicketsSection viajeId={viaje.id} canEdit={canEdit} />}
+            {visibles.has('tickets') && (
+              <TicketsSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'tickets'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
             {visibles.has('hotel') && <HotelesSection viajeId={viaje.id} canEdit={canEdit} />}
             {visibles.has('restaurantes') && (
               <RestaurantesSection viajeId={viaje.id} canEdit={canEdit} />

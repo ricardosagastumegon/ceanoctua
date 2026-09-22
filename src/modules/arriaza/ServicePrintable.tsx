@@ -74,8 +74,8 @@ export function ServicePrintable({
           className="relative px-8 py-6 text-white"
           style={{ background: meta.grad ?? meta.dark }}
         >
-          <div style={{ position: 'absolute', top: '1.4rem', right: '1.75rem', textAlign: 'right' }}>
-            <img src={logoBlanco} alt="Arriaza Tour &amp; Travel" style={{ height: '26px' }} />
+          <div style={{ position: 'absolute', top: '1.6rem', right: '1.9rem', textAlign: 'right' }}>
+            <img src={logoBlanco} alt="Arriaza Tour &amp; Travel" style={{ height: '38px' }} />
             {headerRight && (
               <div
                 style={{
@@ -125,12 +125,12 @@ export function ServicePrintable({
         <section
           className={
             rowsLayout === 'compacto'
-              ? 'grid grid-cols-4 gap-x-5 gap-y-1 px-8 pb-3 pt-4'
+              ? 'grid grid-cols-4 gap-x-6 gap-y-2 px-8 pb-4 pt-5'
               : 'grid grid-cols-2 gap-x-6 gap-y-2 px-8 py-6'
           }
         >
           {rows.map(({ label, value }, i) => (
-            <div key={i} className="border-b border-sand py-1">
+            <div key={i} className={rowsLayout === 'compacto' ? 'py-0.5' : 'border-b border-sand py-1'}>
               <div
                 className={
                   rowsLayout === 'compacto'

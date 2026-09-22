@@ -125,7 +125,7 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                     )}
                   </div>
 
-                  <div className="mt-1 flex items-center justify-between gap-4">
+                  <div className="mt-2 flex items-center justify-between gap-4">
                     <Extremo
                       iata={sg.origen_iata}
                       ciudad={sg.origen_ciudad}
@@ -240,7 +240,10 @@ function Extremo({
 }) {
   return (
     <div className={`flex-1 ${alineado === 'derecha' ? 'text-right' : 'text-left'}`}>
-      <div className="font-heading text-3xl font-extrabold leading-none" style={{ color: META.dark }}>
+      <div
+        className="font-heading font-extrabold leading-none"
+        style={{ color: META.dark, fontSize: '3.2rem' }}
+      >
         {iata || '—'}
       </div>
       {ciudad && <div className="mt-0.5 text-[11px] text-dark-3">{ciudad}</div>}

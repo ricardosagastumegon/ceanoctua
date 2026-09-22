@@ -34,6 +34,11 @@ type Props = {
   headerRight?: ReactNode;
   /** Título a mayor tamaño cuando es el dato principal de la hoja. */
   titleSize?: 'normal' | 'grande';
+  /**
+   * 'compacto' aprieta los datos del encabezado en cuatro columnas. Sirve
+   * cuando lo importante de la hoja está más abajo y estos son de referencia.
+   */
+  rowsLayout?: 'normal' | 'compacto';
 };
 
 /**
@@ -50,7 +55,7 @@ type Props = {
 export function ServicePrintable({
   open, onClose, serviceKey, title, subtitle, tripNo, total, moneda,
   estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras, band,
-  headerRight, titleSize = 'normal',
+  headerRight, titleSize = 'normal', rowsLayout = 'normal',
 }: Props) {
   const meta = SERVICE_META[serviceKey];
   return (
@@ -117,21 +122,37 @@ export function ServicePrintable({
           )}
         </header>
 
-        <section className="grid grid-cols-2 gap-x-6 gap-y-2 px-8 py-6">
+        <section
+          className={
+            rowsLayout === 'compacto'
+              ? 'grid grid-cols-4 gap-x-5 gap-y-1 px-8 pb-3 pt-4'
+              : 'grid grid-cols-2 gap-x-6 gap-y-2 px-8 py-6'
+          }
+        >
           {rows.map(({ label, value }, i) => (
             <div key={i} className="border-b border-sand py-1">
               <div
-                className="text-[10px] font-extrabold uppercase tracking-wider"
+                className={
+                  rowsLayout === 'compacto'
+                    ? 'text-[9px] font-extrabold uppercase tracking-wider'
+                    : 'text-[10px] font-extrabold uppercase tracking-wider'
+                }
                 style={{ color: meta.dark }}
               >
                 {label}
               </div>
-              <div className="mt-0.5 text-sm text-dark-2">{value ?? '—'}</div>
+              <div
+                className={
+                  rowsLayout === 'compacto' ? 'text-[12px] text-dark-2' : 'mt-0.5 text-sm text-dark-2'
+                }
+              >
+                {value ?? '—'}
+              </div>
             </div>
           ))}
         </section>
 
-        {extras && <section className="px-8 pb-6">{extras}</section>}
+        {extras && <section className="px-8 pb-6 pt-2">{extras}</section>}
 
         {(total != null || estadoPago) && (
           <footer

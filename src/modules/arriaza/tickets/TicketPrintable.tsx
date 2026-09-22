@@ -43,6 +43,7 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
       title={ticket.titulo ?? `${ticket.origen ?? '?'} → ${ticket.destino ?? '?'}`}
       subtitle={ticket.aerolinea}
       titleSize="grande"
+      rowsLayout="compacto"
       headerRight={
         (() => {
           // La fecha sale del primer segmento; si no hay, del encabezado.
@@ -96,45 +97,76 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
       ]}
       extras={
         <div className="space-y-5">
-          {/* Ruta */}
-          <div>
-            <div
-              className="mb-2 text-[11px] font-extrabold uppercase tracking-wider"
-              style={{ color: META.dark }}
-            >
-              Ruta
-            </div>
+          {/* Ruta · el dato principal de la hoja, así que va como pase de
+              abordar: origen y destino grandes y el tiempo de vuelo bajo el
+              avión. La versión en tabla era ilegible de un vistazo. */}
+          <div className="space-y-3">
             {segmentos.length === 0 && <p className="text-xs italic text-dark-3">Sin segmentos.</p>}
-            {segmentos.map((s, i) => (
-              <div
-                key={i}
-                className="mb-1 rounded-md border-l-4 px-3 py-2"
-                style={{ borderLeftColor: META.solid, backgroundColor: META.light }}
-              >
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-heading text-sm font-extrabold" style={{ color: META.dark }}>
-                    {s.origen_iata || '?'} → {s.destino_iata || '?'}
-                  </span>
-                  {s.direccion === 'retorno' && (
-                    <span className="rounded-full bg-white px-2 text-[9px] font-extrabold uppercase text-dark-3">
-                      retorno
+            {segmentos.map((sg, i) => (
+              <div key={i}>
+                <div
+                  className="rounded-lg px-5 py-4"
+                  style={{ backgroundColor: META.light }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="text-[10px] font-extrabold uppercase tracking-wider"
+                      style={{ color: META.dark }}
+                    >
+                      Ruta{segmentos.length > 1 ? ` · tramo ${i + 1}` : ''}
                     </span>
-                  )}
-                  {s.numero_vuelo && <span className="font-mono text-[11px] text-dark-2">{s.numero_vuelo}</span>}
+                    {sg.direccion === 'retorno' && (
+                      <span
+                        className="rounded-full bg-white px-2 text-[9px] font-extrabold uppercase"
+                        style={{ color: META.dark }}
+                      >
+                        retorno
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-1 flex items-center justify-between gap-4">
+                    <Extremo
+                      iata={sg.origen_iata}
+                      ciudad={sg.origen_ciudad}
+                      hora={sg.etd}
+                    />
+                    <div className="shrink-0 text-center">
+                      <div className="text-lg leading-none" style={{ color: META.solid }}>
+                        ✈&nbsp;→
+                      </div>
+                      {sg.tiempo_vuelo && (
+                        <div className="mt-1 text-[11px] font-extrabold" style={{ color: META.dark }}>
+                          {sg.tiempo_vuelo}
+                        </div>
+                      )}
+                      {sg.numero_vuelo && (
+                        <div className="text-[10px] font-mono text-dark-3">{sg.numero_vuelo}</div>
+                      )}
+                    </div>
+                    <Extremo
+                      iata={sg.destino_iata}
+                      ciudad={sg.destino_ciudad}
+                      hora={sg.eta}
+                      alineado="derecha"
+                    />
+                  </div>
                 </div>
-                <div className="text-[11px] text-dark-3">
+
+                <div className="mt-1 text-center text-[11px] text-dark-3">
                   {[
-                    s.origen_ciudad && s.destino_ciudad ? `${s.origen_ciudad} — ${s.destino_ciudad}` : null,
-                    s.fecha ? `Salida ${fmtDate(s.fecha)}${s.etd ? ` ${s.etd.slice(0, 5)}` : ''}` : null,
-                    s.fecha_llegada ? `Llegada ${fmtDate(s.fecha_llegada)}${s.eta ? ` ${s.eta.slice(0, 5)}` : ''}` : null,
-                    s.tiempo_vuelo ? `Vuelo ${s.tiempo_vuelo}` : null,
+                    sg.fecha ? `📅 Salida: ${fmtDate(sg.fecha)}` : null,
+                    sg.fecha_llegada && sg.fecha_llegada !== sg.fecha
+                      ? `Llegada: ${fmtDate(sg.fecha_llegada)}`
+                      : null,
+                    i === 0 && ticket.checkin_ini
+                      ? `Check-in: ${ticket.checkin_ini.slice(0, 5)} – ${ticket.checkin_fin?.slice(0, 5) ?? ''}`
+                      : null,
+                    sg.escalas.length
+                      ? `Escalas: ${sg.escalas.map((e) => `${e.iata || '?'}${e.tiempo ? ` (${e.tiempo})` : ''}`).join(', ')}`
+                      : null,
                   ].filter(Boolean).join(' · ')}
                 </div>
-                {s.escalas.length > 0 && (
-                  <div className="mt-1 text-[11px] text-dark-3">
-                    Escalas: {s.escalas.map((e) => `${e.iata || '?'}${e.tiempo ? ` (${e.tiempo})` : ''}`).join(' · ')}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -155,6 +187,9 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                   <th className="border-b border-sand py-1">Pasaporte</th>
                   <th className="border-b border-sand py-1">Ticket</th>
                   <th className="border-b border-sand py-1">Asiento</th>
+                  <th className="border-b border-sand py-1" title="Artículo personal · carry on · documentado">
+                    Equipaje
+                  </th>
                   <th className="border-b border-sand py-1 text-right">Total</th>
                 </tr>
               </thead>
@@ -169,6 +204,9 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                     <td className="border-b border-sand py-1 text-dark-3">{p.pasaporte_num || '—'}</td>
                     <td className="border-b border-sand py-1 text-dark-3">{p.numero_ticket || '—'}</td>
                     <td className="border-b border-sand py-1 text-dark-3">{p.asiento || '—'}</td>
+                    <td className="border-b border-sand py-1 text-dark-3">
+                      <Equipaje personal={p.eq_personal} carryon={p.eq_carryon} documentado={p.eq_documentado} />
+                    </td>
                     <td className="border-b border-sand py-1 text-right font-extrabold" style={{ color: META.dark }}>
                       {moneda} {((Number(p.tarifa) || 0) + (Number(p.extras) || 0)).toFixed(2)}
                     </td>
@@ -176,21 +214,6 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                 ))}
               </tbody>
             </table>
-            {pax.some((p) => p.eq_personal || p.eq_carryon || p.eq_documentado) && (
-              <div className="mt-2 text-[11px] text-dark-3">
-                {pax.map((p, i) =>
-                  p.eq_personal || p.eq_carryon || p.eq_documentado ? (
-                    <div key={i}>
-                      <b>{p.nombre}</b> · equipaje:{' '}
-                      {[p.eq_personal && `personal ${p.eq_personal}`,
-                        p.eq_carryon && `carry on ${p.eq_carryon}`,
-                        p.eq_documentado && `documentado ${p.eq_documentado}`]
-                        .filter(Boolean).join(' · ')}
-                    </div>
-                  ) : null,
-                )}
-              </div>
-            )}
           </div>
 
           {ticket.penalidad_desc && (
@@ -202,5 +225,58 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
         </div>
       }
     />
+  );
+}
+
+
+/** Un extremo del vuelo: código grande, ciudad y hora. */
+function Extremo({
+  iata, ciudad, hora, alineado = 'izquierda',
+}: {
+  iata: string;
+  ciudad: string;
+  hora: string;
+  alineado?: 'izquierda' | 'derecha';
+}) {
+  return (
+    <div className={`flex-1 ${alineado === 'derecha' ? 'text-right' : 'text-left'}`}>
+      <div className="font-heading text-3xl font-extrabold leading-none" style={{ color: META.dark }}>
+        {iata || '—'}
+      </div>
+      {ciudad && <div className="mt-0.5 text-[11px] text-dark-3">{ciudad}</div>}
+      {hora && (
+        <div className="mt-0.5 text-sm font-extrabold" style={{ color: META.solid }}>
+          {hora.slice(0, 5)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Equipaje en íconos: 👜 artículo personal · 🎒 carry on · 🧳 documentado.
+ * Antes iba como párrafos sueltos debajo de la tabla y ocupaba media hoja.
+ */
+function Equipaje({
+  personal, carryon, documentado,
+}: {
+  personal: string;
+  carryon: string;
+  documentado: string;
+}) {
+  const piezas = [
+    { icono: '👜', valor: personal, titulo: 'Artículo personal' },
+    { icono: '🎒', valor: carryon, titulo: 'Carry on' },
+    { icono: '🧳', valor: documentado, titulo: 'Equipaje documentado' },
+  ].filter((p) => p.valor && p.valor.trim());
+  if (piezas.length === 0) return <span>—</span>;
+  return (
+    <span className="whitespace-nowrap">
+      {piezas.map((p) => (
+        <span key={p.titulo} title={p.titulo} className="mr-1.5">
+          {p.icono} {p.valor}
+        </span>
+      ))}
+    </span>
   );
 }

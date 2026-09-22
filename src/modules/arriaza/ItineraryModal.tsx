@@ -5,6 +5,9 @@ import type { AttViaje } from './viajes/api';
 import { useAttDayPlans } from './day-plans/hooks';
 import { useAttDayPlanRowsByViaje } from './day-plans/hooks';
 import { useAttDayNotes } from './day-notes/hooks';
+import { useItineraryEvents } from './viajes/itinerary-events';
+import { SERVICE_META } from './constants/serviceMeta';
+import logoColor from './arriaza-logo-color.png';
 
 type Props = { open: boolean; onClose: () => void; viaje: AttViaje | null };
 
@@ -16,6 +19,9 @@ export function ItineraryModal({ open, onClose, viaje }: Props) {
   const plansQuery = useAttDayPlans();
   const rowsQuery = useAttDayPlanRowsByViaje(viaje?.id);
   const notesQuery = useAttDayNotes();
+  // Los servicios reservados entran al itinerario por su cuenta: un vuelo o un
+  // hotel no deberían depender de que alguien los escriba a mano en el día.
+  const eventsQuery = useItineraryEvents(viaje?.id, open);
 
   const days = useMemo(() => {
     if (!viaje) return [];
@@ -23,25 +29,36 @@ export function ItineraryModal({ open, onClose, viaje }: Props) {
     const plans = (plansQuery.data ?? []).filter((p) => p.viaje_id === viaje.id);
     const rows = rowsQuery.data ?? [];
     const notes = (notesQuery.data ?? []).filter((n) => n.viaje_id === viaje.id);
+    const eventos = eventsQuery.data ?? [];
     return dates.map((dateStr, i) => {
       const plan = plans.find((p) => p.fecha === dateStr);
       const dayRows = plan ? rows.filter((r) => r.day_plan_id === plan.id) : [];
       const note = notes.find((n) => n.fecha === dateStr);
-      return { i: i + 1, dateStr, plan, dayRows, note };
+      const servicios = eventos.filter((e) => e.fecha === dateStr);
+      return { i: i + 1, dateStr, plan, dayRows, note, servicios };
     });
-  }, [viaje, plansQuery.data, rowsQuery.data, notesQuery.data]);
+  }, [viaje, plansQuery.data, rowsQuery.data, notesQuery.data, eventsQuery.data]);
 
   if (!viaje) return null;
 
   return (
     <Modal open={open} onClose={onClose} title={`📋 Itinerario · ${viaje.titulo}`} size="xl">
       <div id="tt-itinerary-print" className="space-y-4">
+        <header className="flex items-center justify-between rounded-lg border-b-4 border-gold bg-sand-l px-5 py-3">
+          <img src={logoColor} alt="Arriaza Tour & Travel" className="h-9 w-auto" />
+          <div className="text-right">
+            <div className="font-heading text-lg font-extrabold text-dark">{viaje.titulo}</div>
+            <div className="text-[11px] font-semibold text-dark-3">
+              {viaje.trip_no ? `${viaje.trip_no} · ` : ''}Itinerario final
+            </div>
+          </div>
+        </header>
         {days.length === 0 && (
           <p className="text-sm italic text-dark-3">
             Este viaje no tiene fechas de inicio/fin definidas — no puedo generar el itinerario por día.
           </p>
         )}
-        {days.map(({ i, dateStr, plan, dayRows, note }) => (
+        {days.map(({ i, dateStr, plan, dayRows, note, servicios }) => (
           <section key={dateStr} className="rounded-lg border border-sand bg-white p-4">
             <header className="mb-2 flex items-baseline justify-between border-b border-sand pb-2">
               <div className="text-sm font-extrabold text-teal-d">Día {i}</div>
@@ -50,8 +67,31 @@ export function ItineraryModal({ open, onClose, viaje }: Props) {
             {plan?.lugar && (
               <div className="mb-2 text-xs font-semibold text-dark-2">📍 {plan.lugar}</div>
             )}
-            {dayRows.length === 0 && !note && (
+            {dayRows.length === 0 && !note && servicios.length === 0 && (
               <p className="text-xs italic text-dark-3">Sin actividades planificadas para este día.</p>
+            )}
+
+            {/* Servicios reservados que caen en este día. */}
+            {servicios.length > 0 && (
+              <div className="mb-2 space-y-1">
+                {servicios.map((e, k) => {
+                  const meta = SERVICE_META[e.servicio];
+                  return (
+                    <div
+                      key={`${e.servicio}-${k}`}
+                      className="flex items-center gap-2 rounded-md border-l-4 px-3 py-1.5 text-xs"
+                      style={{ borderLeftColor: meta.solid, backgroundColor: meta.light }}
+                    >
+                      <span className="w-12 shrink-0 font-extrabold" style={{ color: meta.dark }}>
+                        {e.hora || '—'}
+                      </span>
+                      <span className="shrink-0">{meta.icon}</span>
+                      <span className="font-extrabold" style={{ color: meta.dark }}>{e.titulo}</span>
+                      {e.detalle && <span className="truncate text-dark-3">· {e.detalle}</span>}
+                    </div>
+                  );
+                })}
+              </div>
             )}
             {dayRows.length > 0 && (
               <div className="space-y-1">

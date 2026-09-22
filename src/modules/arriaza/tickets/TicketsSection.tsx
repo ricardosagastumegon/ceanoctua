@@ -8,6 +8,7 @@ import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate } from '../utils';
 import { useDeleteTicket, useTickets } from './hooks';
 import { TicketFormModal } from './TicketFormModal';
+import { TicketPrintable } from './TicketPrintable';
 import type { AttTicket } from './api';
 
 const META = SERVICE_META.tickets;
@@ -15,6 +16,8 @@ const META = SERVICE_META.tickets;
 type Props = {
   viajeId: string;
   canEdit: boolean;
+  /** Correlativo del viaje, para que la hoja impresa se pueda rastrear. */
+  tripNo?: string | null;
   autoOpenCreate?: boolean;
   onDidOpenCreate?: () => void;
 };
@@ -45,12 +48,13 @@ function usePaxPorTicket(ticketIds: string[]) {
  * estatus y total — y el detalle completo vive en el formulario. Si hay varios
  * tickets se apilan uno debajo del otro.
  */
-export function TicketsSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCreate }: Props) {
+export function TicketsSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDidOpenCreate }: Props) {
   const query = useTickets(viajeId);
   const remove = useDeleteTicket(viajeId);
   const toast = useToast();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<{ id?: string } | null>(null);
+  const [viendo, setViendo] = useState<AttTicket | null>(null);
 
   const rows = query.data ?? [];
   const paxCounts = usePaxPorTicket(rows.map((r) => r.id));
@@ -152,6 +156,14 @@ export function TicketsSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
               </div>
             </div>
             <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                onClick={() => setViendo(t)}
+                className="rounded border border-sand px-1.5 py-0.5 text-[10px] hover:border-teal"
+                title="Vista previa · imprimir o descargar"
+              >
+                👁
+              </button>
               {canEdit && (
                 <>
                   <button
@@ -176,6 +188,10 @@ export function TicketsSection({ viajeId, canEdit, autoOpenCreate, onDidOpenCrea
           </div>
         );
       })}
+
+      {viendo && (
+        <TicketPrintable open onClose={() => setViendo(null)} ticket={viendo} tripNo={tripNo} />
+      )}
 
       {editing && (
         <TicketFormModal

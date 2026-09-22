@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react';
 import { PrintableModal } from '@/components/ui/PrintableModal';
-import { SERVICE_META, type ServiceKey, type EstadoPago } from './constants/serviceMeta';
+import { SERVICE_META, type ServiceKey } from './constants/serviceMeta';
 import { fmtMoney } from './utils';
-import { logoCornerHTML } from './branding';
+import logoBlanco from './arriaza-logo-blanco.png';
 
 type Props = {
   open: boolean;
@@ -10,50 +10,90 @@ type Props = {
   serviceKey: ServiceKey;
   title: string;
   subtitle?: string | null;
+  /** Correlativo del viaje, para que la hoja se pueda rastrear. */
+  tripNo?: string | null;
   total?: number | null;
-  estadoPago?: EstadoPago | null;
+  moneda?: string | null;
+  estadoPago?: string | null;
   pagadoCon?: string | null;
   confirmacion?: string | null;
   cancelacion?: string | null;
-  /** Rows del cuerpo · cada uno con label + value.  */
+  /** Filas del cuerpo, cada una label + valor. */
   rows: Array<{ label: string; value: ReactNode }>;
-  /** Bloques extra al final (habitaciones, tickets de actividad, etc.) */
+  /** Bloques extra al final (pasajeros, habitaciones, tickets de actividad…). */
   extras?: ReactNode;
 };
 
-// Template genérico para todos los printables de servicios T&T.
-// Header con gradient del serviceMeta + logo Arriaza + subtitle.
-// Cuerpo con grid de rows label|value.
-// Footer con total + estado_pago + pagado_con + cancelacion.
+/**
+ * Vista previa imprimible, compartida por los 11 servicios.
+ *
+ * Cada servicio entra con su propio color — el de `SERVICE_META` — así que la
+ * hoja de un hotel y la de un vuelo se distinguen de un vistazo sin cambiar de
+ * plantilla.
+ *
+ * El logo va como imagen importada: antes esto se armaba con `innerHTML` y un
+ * helper que devolvía un placeholder de texto porque el logo real nunca se
+ * había incorporado.
+ */
 export function ServicePrintable({
-  open, onClose, serviceKey, title, subtitle, total, estadoPago, pagadoCon,
-  confirmacion, cancelacion, rows, extras,
+  open, onClose, serviceKey, title, subtitle, tripNo, total, moneda,
+  estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras,
 }: Props) {
   const meta = SERVICE_META[serviceKey];
   return (
     <PrintableModal open={open} onClose={onClose} title={`${meta.icon} ${meta.label} — ${title}`}>
-      <article style={{ fontFamily: 'Nunito, sans-serif' }} className="overflow-hidden">
-        {/* Header con gradient + logo */}
+      <article style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
+        {/* Encabezado con el color del servicio */}
         <header
-          style={{ background: meta.grad }}
           className="relative px-8 py-6 text-white"
-          dangerouslySetInnerHTML={{
-            __html: `
-              ${logoCornerHTML('white')}
-              <div style="font-size:.6rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:.3rem;">
-                Servicio · ${meta.label}
-              </div>
-              <div style="font-family:Montserrat,sans-serif;font-size:1.6rem;font-weight:800;line-height:1.15;">${escapeHtml(title)}</div>
-              ${subtitle ? `<div style="margin-top:.4rem;font-size:.85rem;color:rgba(255,255,255,.75);font-weight:600;">${escapeHtml(subtitle)}</div>` : ''}
-            `,
-          }}
-        />
+          style={{ background: meta.grad ?? meta.dark }}
+        >
+          <img
+            src={logoBlanco}
+            alt="Arriaza Tour &amp; Travel"
+            style={{ position: 'absolute', top: '1.4rem', right: '1.75rem', height: '26px' }}
+          />
+          <div
+            style={{
+              fontSize: '.6rem', fontWeight: 800, letterSpacing: '.2em',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,.55)',
+            }}
+          >
+            Servicio · {meta.label}
+          </div>
+          <div
+            style={{
+              fontFamily: 'Montserrat, sans-serif', fontSize: '1.6rem',
+              fontWeight: 800, lineHeight: 1.15, marginTop: '.3rem',
+            }}
+          >
+            {title}
+          </div>
+          {subtitle && (
+            <div style={{ marginTop: '.4rem', fontSize: '.85rem', fontWeight: 600, color: 'rgba(255,255,255,.75)' }}>
+              {subtitle}
+            </div>
+          )}
+          {tripNo && (
+            <div
+              style={{
+                marginTop: '.6rem', display: 'inline-block', borderRadius: '999px',
+                background: 'rgba(255,255,255,.18)', padding: '.15rem .6rem',
+                fontFamily: 'monospace', fontSize: '.7rem', fontWeight: 800,
+              }}
+            >
+              {tripNo}
+            </div>
+          )}
+        </header>
 
-        {/* Rows del cuerpo */}
         <section className="grid grid-cols-2 gap-x-6 gap-y-2 px-8 py-6">
           {rows.map(({ label, value }, i) => (
             <div key={i} className="border-b border-sand py-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: meta.dark }}>
+              <div
+                className="text-[10px] font-extrabold uppercase tracking-wider"
+                style={{ color: meta.dark }}
+              >
                 {label}
               </div>
               <div className="mt-0.5 text-sm text-dark-2">{value ?? '—'}</div>
@@ -63,43 +103,41 @@ export function ServicePrintable({
 
         {extras && <section className="px-8 pb-6">{extras}</section>}
 
-        {/* Footer con total + estado */}
         {(total != null || estadoPago) && (
-          <footer style={{ background: meta.grad }} className="mt-4 flex items-center justify-between px-8 py-4 text-white">
+          <footer
+            className="flex items-center justify-between px-8 py-4 text-white"
+            style={{ background: meta.grad ?? meta.dark }}
+          >
             <div>
               <div className="text-[10px] font-extrabold uppercase tracking-wider text-white/70">
                 {meta.icon} Total del servicio
               </div>
               {pagadoCon && <div className="mt-0.5 text-[10px] text-white/60">Pagado con: {pagadoCon}</div>}
-              {estadoPago && <div className="mt-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white/70">Estado: {estadoPago}</div>}
+              {estadoPago && (
+                <div className="mt-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white/70">
+                  Estado: {estadoPago}
+                </div>
+              )}
             </div>
             {total != null && (
-              <div className="font-heading text-2xl font-extrabold text-white">{fmtMoney(total)}</div>
+              <div className="font-heading text-2xl font-extrabold text-white">
+                {moneda ? `${moneda} ${total.toFixed(2)}` : fmtMoney(total)}
+              </div>
             )}
           </footer>
         )}
 
         {(confirmacion || cancelacion) && (
           <section className="border-t border-sand px-8 py-4 text-xs text-dark-3">
-            {confirmacion && (
-              <div><b>ConfirmaciÓn:</b> {confirmacion}</div>
-            )}
-            {cancelacion && (
-              <div><b>Cancelación:</b> {cancelacion}</div>
-            )}
+            {confirmacion && <div><b>Confirmación:</b> {confirmacion}</div>}
+            {cancelacion && <div><b>Cancelación:</b> {cancelacion}</div>}
           </section>
         )}
 
         <div className="bg-dark px-8 py-2 text-center text-[10px] font-extrabold uppercase tracking-widest text-white/40">
-          CEA · Arriaza Tour &amp; Travel · Documento de uso interno
+          Arriaza Tour &amp; Travel · Documento de uso interno
         </div>
       </article>
     </PrintableModal>
-  );
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 }

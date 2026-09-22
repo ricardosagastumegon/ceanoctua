@@ -13,6 +13,20 @@ type Props = {
   tripNo?: string | null;
 };
 
+/**
+ * "24 SEP" a partir de 'YYYY-MM-DD'.
+ *
+ * Se parte la cadena en vez de usar `new Date()` porque una fecha sin hora se
+ * interpreta como UTC y en Guatemala eso la corre un día hacia atrás.
+ */
+function diaMes(fecha: string | null | undefined): string {
+  if (!fecha) return '';
+  const [y, m, d] = fecha.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  return `${String(d).padStart(2, '0')} ${MESES[m - 1]}`;
+}
+
 /** Vista previa imprimible de un ticket aéreo, con su ruta y sus pasajeros. */
 export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
   const full = useTicketCompleto(open ? ticket.id : undefined);
@@ -28,6 +42,22 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
       serviceKey="tickets"
       title={ticket.titulo ?? `${ticket.origen ?? '?'} → ${ticket.destino ?? '?'}`}
       subtitle={ticket.aerolinea}
+      titleSize="grande"
+      headerRight={
+        (() => {
+          // La fecha sale del primer segmento; si no hay, del encabezado.
+          const salida = diaMes(segmentos[0]?.fecha ?? ticket.fecha_salida);
+          const pnr = pnrs[0] ?? ticket.codigo_reserva ?? '';
+          if (!salida && !pnr) return null;
+          return (
+            <>
+              {salida}
+              {salida && pnr ? ' · ' : ''}
+              {pnr ? `PNR: ${pnr}` : ''}
+            </>
+          );
+        })()
+      }
       tripNo={tripNo}
       total={ticket.monto != null ? Number(ticket.monto) : null}
       moneda={moneda}

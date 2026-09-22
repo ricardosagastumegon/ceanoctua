@@ -551,6 +551,9 @@ function ListaChips({
               add();
             }
           }}
+          // Se agrega también al salir del campo: escribir el PNR y guardar sin
+          // presionar "Agregar" lo perdía en silencio.
+          onBlur={add}
           placeholder={placeholder}
           className={`block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal ${mono ? 'font-mono' : ''}`}
         />

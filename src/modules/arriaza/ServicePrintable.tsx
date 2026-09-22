@@ -27,6 +27,13 @@ type Props = {
    * es lo primero que se busca en la hoja de una reserva.
    */
   band?: ReactNode;
+  /**
+   * Dato corto bajo el logo, alineado a la derecha. El ticket lo usa para la
+   * fecha de salida y el PNR: es lo que se busca con la hoja en la mano.
+   */
+  headerRight?: ReactNode;
+  /** Título a mayor tamaño cuando es el dato principal de la hoja. */
+  titleSize?: 'normal' | 'grande';
 };
 
 /**
@@ -43,6 +50,7 @@ type Props = {
 export function ServicePrintable({
   open, onClose, serviceKey, title, subtitle, tripNo, total, moneda,
   estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras, band,
+  headerRight, titleSize = 'normal',
 }: Props) {
   const meta = SERVICE_META[serviceKey];
   return (
@@ -61,11 +69,19 @@ export function ServicePrintable({
           className="relative px-8 py-6 text-white"
           style={{ background: meta.grad ?? meta.dark }}
         >
-          <img
-            src={logoBlanco}
-            alt="Arriaza Tour &amp; Travel"
-            style={{ position: 'absolute', top: '1.4rem', right: '1.75rem', height: '26px' }}
-          />
+          <div style={{ position: 'absolute', top: '1.4rem', right: '1.75rem', textAlign: 'right' }}>
+            <img src={logoBlanco} alt="Arriaza Tour &amp; Travel" style={{ height: '26px' }} />
+            {headerRight && (
+              <div
+                style={{
+                  marginTop: '.5rem', fontSize: '.8rem', fontWeight: 800,
+                  letterSpacing: '.04em', color: '#ffffff',
+                }}
+              >
+                {headerRight}
+              </div>
+            )}
+          </div>
           <div
             style={{
               fontSize: '.6rem', fontWeight: 800, letterSpacing: '.2em',
@@ -76,8 +92,9 @@ export function ServicePrintable({
           </div>
           <div
             style={{
-              fontFamily: 'Montserrat, sans-serif', fontSize: '1.6rem',
-              fontWeight: 800, lineHeight: 1.15, marginTop: '.3rem',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: titleSize === 'grande' ? '2.4rem' : '1.6rem',
+              fontWeight: 800, lineHeight: 1.1, marginTop: '.3rem',
             }}
           >
             {title}

@@ -6,6 +6,49 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 22 · 2026-09-22 → en curso · T&T Servicios, uno por documento
+
+**Objetivo:** reconstruir los 11 servicios del viaje según los documentos Word que el usuario escribe para cada uno. Van dos: Ticket Aéreo y Hotel. Plan del primero en [`PLAN-TT-TICKET-AEREO.md`](../PLAN-TT-TICKET-AEREO.md).
+
+**Ritmo acordado:** un documento por servicio → comparar contra el esquema real de la base → listar huecos y decisiones → migración → código → revisar en pantalla → commit → el usuario autoriza el push y lo revisa en producción.
+
+### Ticket Aéreo (`b8f77fb`, `cc070d3`)
+
+**Hallazgo:** el ticket que había era el de la Fase 13, pensado para control migratorio — vencimiento de pasaporte, libreta, visa, programa de viajero. El documento pide equipaje, tarifa y extras por pasajero, escalas y varios PNR. Casi nada existía, así que fue rehacer el modelo, no agregar campos. Había 0 tickets, riesgo nulo.
+
+Migraciones `20260922000006` y `...007`: 16 columnas nuevas en `att_tickets`, `ruta`/`fecha_llegada`/`tiempo_vuelo` en los segmentos, equipaje y tarifas en los pasajeros, más `att_ticket_pnrs` y `att_segmento_escalas`.
+
+**Decisiones:**
+
+- **El total es Σ(tarifa + extras) por pasajero, sin multiplicar.** El documento dice "por el número de pasajeros" pero su propia imagen aclara "1 pasajero — suma de tarifa + extras". Multiplicarlo duplicaría el monto.
+- **Un formulario, una pasada.** El anterior obligaba a guardar el ticket antes de poder agregarle un pasajero. `full-api.ts` expone `load` y `save`: `save` reconcilia el árbol completo contra la base. Mismo patrón que los destinos del viaje.
+- **Tipo de pasajero es selección múltiple** (AD/CHD/INF/SSA) a propósito: un adulto puede además requerir asistencia especial.
+- **Bucket `tt-documentos` propio** para los PDF del módulo. El usuario pidió que no se mezclen con los comprobantes de Finanzas; separarlos por bucket y no por carpeta hace que la separación la imponga la política de la base y no la disciplina de quien sube el archivo.
+- **Nacionalidades ISO alfa-3** (GTM, USA, MEX) — las del pasaporte, no las de dos letras del destino. El catálogo se generó cruzando la lista oficial ISO con los 214 países del módulo; ninguno quedó sin código.
+
+**Corrección propia:** al principio usé `estatus_pago` para el desplegable, pero en los otros diez servicios `estatus_pago` es la nota libre ("Depósito 50% pagado") y `estado_pago` el desplegable. El documento del hotel confirmó esa división y se corrigió el ticket en `20260922000008`.
+
+### Hotel (`b085129`)
+
+El hotel ya traía habitaciones múltiples y servicios extras desde la Fase 19. Faltaban teléfono, early check-in, estado de pago, comentarios y el adjunto de confirmación.
+
+**Unificación de vocabulario:** el hotel guardaba "reservado a través de" en `ota` y "pagado con" en `pay`; el ticket los llama `reservado_por` y `pagado_con`. Con once servicios por construir, que cada uno bautice lo mismo distinto obliga a recordar el sinónimo en cada printable. Se agregaron las columnas con el nombre común y se copió el dato de la única fila existente.
+
+**Estado de pago unificado:** las cinco opciones del documento del ticket (HOLD, PAGO PARCIAL, CONFIRMADO, CANCELADO, ABIERTO) más `A PAGAR EN PROPIEDAD`, que es un estado real de los hoteles que esa lista no cubría. El CHECK se puso **solo** en tickets y hoteles: los otros nueve conservan su lista vieja hasta que les toque su documento, porque ponerles la restricción ahora invalidaría datos sin revisar.
+
+### Transversales (`9e03608`, `74d6061`, `da2e8e8`, `56f2844`)
+
+- **Vista previa con logo** en `ServicePrintable`, que sirve a los 11 servicios. Antes armaba el encabezado con `innerHTML` y un helper que devolvía un placeholder de texto, porque el logo real nunca se había incorporado. Ahora es JSX con la imagen importada.
+- **Los servicios entran solos al itinerario.** `useItineraryEvents` recoge los 11 tipos con fecha. Hasta ahora el Itinerario Final solo mostraba lo escrito a mano en el plan del día: un vuelo reservado no aparecía. Los vuelos entran **por segmento** y no por ticket, porque un ida y vuelta con escalas son varios movimientos en días distintos; los servicios con dos extremos aportan dos eventos.
+- **El PDF del ticket se rediseñó** tras la revisión del usuario: la ruta pasó de línea de texto a pase de abordar, con los códigos IATA grandes y el tiempo de vuelo bajo el avión. Los datos de referencia se apretaron a cuatro columnas sin subrayados y el equipaje pasó a íconos dentro de la tabla.
+- **Buscador de nacionalidades** en vez del `<select multiple>` nativo, que obligaba a desplazarse por 214 países y a saber que se elegía con Ctrl.
+
+**Trampa de UI que costó un dato real:** los campos de chips (PNR, ciudades, participantes) perdían en silencio lo escrito si el usuario guardaba sin presionar "Agregar". El PNR del primer ticket real se perdió así. Ahora los chips también se agregan al salir del campo.
+
+**Pendiente:** los nueve servicios restantes, la pantalla propia del viaje con botón Regresar (el cambio de fondo del documento del dashboard, aún sin hacer) y unificar el estado de pago en esos nueve.
+
+---
+
 ## Fase 21 · 2026-09-22 → en curso · T&T Dashboard inicial
 
 **Objetivo:** dejar Arriaza T&T como lo describe `TT_Dashboard_inicial.docx`. Plan completo en [`PLAN-TT-DASHBOARD.md`](../PLAN-TT-DASHBOARD.md).

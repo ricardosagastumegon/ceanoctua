@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/query-client';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { formatDateTime } from '@/lib/dates';
@@ -7,6 +8,9 @@ import { formatMoney } from '@/lib/money';
 import type { Database } from '@/types/database';
 
 type Notif = Database['public']['Tables']['pagos_notificaciones']['Row'];
+
+/** Key única del panel — que todos invaliden la misma y no se desincronicen. */
+export const PAGOS_NOTIF_KEY = ['pagos_notificaciones'] as const;
 
 function fmt(n: number, currency: string | null): string {
   if (currency === 'GTQ' || !currency) return formatMoney(n);
@@ -23,7 +27,7 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
   const toast = useToast();
 
   const query = useQuery<Notif[], Error>({
-    queryKey: ['pagos_notificaciones'],
+    queryKey: PAGOS_NOTIF_KEY,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pagos_notificaciones')
@@ -43,7 +47,7 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['pagos_notificaciones'] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: PAGOS_NOTIF_KEY }),
   });
 
   async function handleDismiss(id: string) {
@@ -141,4 +145,9 @@ export async function pushPagoNotificacion(input: {
     resumen: input.resumen,
   });
   if (error) throw error;
+  // La invalidación va AQUÍ y no en cada caller: con `staleTime: 30s` el panel
+  // sigue sirviendo su lista cacheada al cambiar de pestaña, y la notificación
+  // recién creada no aparece hasta refrescar. Dejarlo a cada caller significa
+  // que el próximo que se agregue lo olvide y el bug vuelva.
+  await queryClient.invalidateQueries({ queryKey: PAGOS_NOTIF_KEY });
 }

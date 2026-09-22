@@ -20,7 +20,7 @@ import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api'
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
 import { SolicitudPagoPrintable } from './SolicitudPagoPrintable';
-import { NotificacionesPanel } from './NotificacionesPanel';
+import { NotificacionesPanel, PAGOS_NOTIF_KEY } from './NotificacionesPanel';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
@@ -179,7 +179,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['pagos_notificaciones'] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: PAGOS_NOTIF_KEY }),
   });
 
   const all = query.data ?? [];

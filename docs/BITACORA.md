@@ -17,6 +17,11 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 **Cambios de UI:**
 - `PagosSection.tsx` — estado `fromNotif` con la notificación que abrió el form; al crear con éxito se persiste `origen_notificacion_id` y se marca `procesado` + `procesado_at`. Cancelar **no** cierra la notificación. Si el marcado falla, el pago no se revierte: se avisa que quedó pendiente.
 
+**Segunda pasada — la notificación tampoco aparecía al crearse:**
+- `pushPagoNotificacion()` insertaba la fila pero nadie invalidaba la query del panel. Con `staleTime: 30_000` y `refetchOnWindowFocus: false`, cambiar de pestaña seguía sirviendo la lista cacheada: la notificación recién creada no salía hasta refrescar el navegador. No era red ni base.
+- La invalidación se puso **dentro del helper**, no en cada caller (Consumos TC y Liquidaciones), para que el próximo que despache no pueda olvidarla.
+- `PAGOS_NOTIF_KEY` exportada desde `NotificacionesPanel` — las 4 referencias a la key ahora son la misma constante.
+
 **Comentarios:**
 - No se corrigió la data vieja (`be4d0a36`, VCH-0004) desde la Management API: eso saltaría RLS y `audit_log`, contra la Regla 0. Se cierra con la ✕ del panel, que sí pasa por la app.
 - Ojo al patrón: `toInput()` del form es la única fuente del insert. Cualquier campo que se precargue fuera del `FormState` se pierde sin error. Si aparece otro caso, revisar ahí primero.

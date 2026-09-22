@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { fmtDate, autoTripStatus, autoStatusLabel } from './utils';
 import { findCountry } from './constants/countries';
 import { ManualStatusSelect } from './shared/ManualStatusSelect';
-import { SERVICE_META, SERVICE_KEYS, type ServiceKey, type ManualStatus } from './constants/serviceMeta';
+import { SERVICE_META, SERVICE_KEYS_MENU, type ServiceKey, type ManualStatus } from './constants/serviceMeta';
 import type { AttViaje } from './viajes/api';
+import { useServiceCounts } from './viajes/service-counts';
 import { TicketsSection } from './tickets/TicketsSection';
 import { HotelesSection } from './hoteles/HotelesSection';
 import { RestaurantesSection } from './restaurantes/RestaurantesSection';
@@ -60,9 +61,19 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
   const [itinOpen, setItinOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   // autoOpenKey: al hacer click en "+ Agregar Servicios > X", la Section de X
-  // abre su modal "Nueva" automáticamente. Todas las secciones se renderean
-  // apiladas (sin sub-nav), así que solo hay que triggear la del servicio elegido.
+  // abre su modal "Nueva" automáticamente.
   const [autoOpenKey, setAutoOpenKey] = useState<ServiceKey | null>(null);
+  // Qué secciones se muestran. Antes se apilaban las 14 de golpe y saturaban
+  // la pantalla; ahora solo salen las que ya tienen registros y las que el
+  // usuario abre a mano desde "+ Agregar Servicios".
+  const [abiertos, setAbiertos] = useState<ReadonlySet<ServiceKey>>(new Set());
+  const counts = useServiceCounts(viaje.id, servicesOpen);
+
+  const visibles = useMemo(() => {
+    const s = new Set<ServiceKey>(abiertos);
+    for (const k of Object.keys(counts.data ?? {}) as ServiceKey[]) s.add(k);
+    return s;
+  }, [abiertos, counts.data]);
 
   // Posicionar dropdown "+ Agregar Servicios" en coordenadas viewport (Portal
   // escapa del overflow-hidden del article para que el menú no quede clippeado).
@@ -95,6 +106,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
     setAddOpen(false);
     if (READY_SERVICES.has(key)) {
       setServicesOpen(true);
+      setAbiertos((s) => new Set(s).add(key));
       setAutoOpenKey(key);
     } else {
       // eslint-disable-next-line no-alert
@@ -224,7 +236,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
                   style={{ position: 'fixed', top: addPos.top, left: addPos.left, width: 288 }}
                   className="z-50 max-h-80 overflow-y-auto rounded-lg border border-sand bg-white p-1 shadow-2xl"
                 >
-                  {SERVICE_KEYS.map((k) => {
+                  {SERVICE_KEYS_MENU.map((k) => {
                     const meta = SERVICE_META[k];
                     const isReady = READY_SERVICES.has(k);
                     return (
@@ -252,79 +264,110 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
 
         {servicesOpen && (
           <div className="mt-3 space-y-4">
-            {/* Todas las secciones se apilan (no hay sub-nav duplicado con
-                "+ Agregar Servicios"). Cada Section muestra su lista o el
-                empty state minimalista. autoOpenCreate abre el modal Nuevo
-                cuando el usuario elige el servicio desde "+ Agregar Servicios". */}
-            <TicketsSection viajeId={viaje.id} canEdit={canEdit} />
-            <HotelesSection viajeId={viaje.id} canEdit={canEdit} />
-            <RestaurantesSection viajeId={viaje.id} canEdit={canEdit} />
-            <RentasSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'renta'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <ToursSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'tours'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <AeronavesSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'aeronave'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <AcuaticosSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'acuatico'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <FerriesSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'ferry'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <TerrestresSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'terrestre'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <ActividadesSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'actividades'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <TiendasSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'tiendas'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <ReunionesSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'reunion'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <RutasSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'ruta'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
-            <PoisSection
-              viajeId={viaje.id}
-              canEdit={canEdit}
-              autoOpenCreate={autoOpenKey === 'poi'}
-              onDidOpenCreate={() => setAutoOpenKey(null)}
-            />
+            {/* Solo se monta la sección de un servicio si ya tiene registros o
+                si el usuario acaba de elegirlo. Montarlas todas saturaba la
+                pantalla y era el reclamo #1 del usuario. */}
+            {counts.isLoading && (
+              <p className="text-xs text-dark-3">Revisando servicios…</p>
+            )}
+            {!counts.isLoading && visibles.size === 0 && (
+              <p className="text-xs italic text-dark-3">
+                Sin servicios agregados todavía. Usa “+ Agregar Servicios”.
+              </p>
+            )}
+            {visibles.has('tickets') && <TicketsSection viajeId={viaje.id} canEdit={canEdit} />}
+            {visibles.has('hotel') && <HotelesSection viajeId={viaje.id} canEdit={canEdit} />}
+            {visibles.has('restaurantes') && (
+              <RestaurantesSection viajeId={viaje.id} canEdit={canEdit} />
+            )}
+            {visibles.has('renta') && (
+              <RentasSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'renta'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('tours') && (
+              <ToursSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'tours'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('aeronave') && (
+              <AeronavesSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'aeronave'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('acuatico') && (
+              <AcuaticosSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'acuatico'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('ferry') && (
+              <FerriesSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'ferry'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('terrestre') && (
+              <TerrestresSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'terrestre'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('actividades') && (
+              <ActividadesSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'actividades'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('tiendas') && (
+              <TiendasSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'tiendas'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('reunion') && (
+              <ReunionesSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'reunion'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('ruta') && (
+              <RutasSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'ruta'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
+            {visibles.has('poi') && (
+              <PoisSection
+                viajeId={viaje.id}
+                canEdit={canEdit}
+                autoOpenCreate={autoOpenKey === 'poi'}
+                onDidOpenCreate={() => setAutoOpenKey(null)}
+              />
+            )}
           </div>
         )}
       </div>

@@ -125,6 +125,19 @@ export const SERVICE_KEYS: readonly ServiceKey[] = [
   'tiendas', 'reunion', 'ruta', 'poi',
 ];
 
+/**
+ * Los que se ofrecen en "+ Agregar Servicios". Son 11: el usuario sacó del
+ * menú Tiendas, Ruta en Google Maps y Puntos de Interés (2026-09-22, ver
+ * PLAN-TT-DASHBOARD.md §2).
+ *
+ * Sus tablas y sus Sections siguen ahí a propósito: si un viaje ya tiene uno
+ * guardado se sigue viendo y editando, y volver a ofrecerlos es agregar la
+ * clave de vuelta a esta lista.
+ */
+export const SERVICE_KEYS_MENU: readonly ServiceKey[] = SERVICE_KEYS.filter(
+  (k) => k !== 'tiendas' && k !== 'ruta' && k !== 'poi',
+);
+
 // Colores del badge de estado_pago (paridad con ttEstadoBadgeColors del HTML).
 export type EstadoPago =
   | 'Reservado'

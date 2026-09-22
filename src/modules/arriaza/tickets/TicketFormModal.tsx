@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { TextInput } from '@/components/ui/TextInput';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { AirportPicker } from '../shared/AirportPicker';
+import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { NACIONALIDADES } from '../constants/nationalities';
 import {
   CATEGORIAS,
+  TIPOS_PAX,
   ESTATUS_PAGO,
   FORMAS_PAGO,
   TIPOS_TICKET,
+  subirAdjuntoTicket,
   totalTicket,
   type AttTicketInsert,
+  type TipoAdjunto,
   type EscalaInput,
   type PaxInput,
   type SegmentoInput,
@@ -33,6 +38,13 @@ type Props = {
 
 const META = SERVICE_META.tickets;
 
+const TIPO_PAX_DESC: Record<string, string> = {
+  AD: 'Adulto',
+  CHD: 'Niño',
+  INF: 'Infante',
+  SSA: 'Requiere asistencia especial',
+};
+
 const segmentoVacio = (direccion: string): SegmentoInput => ({
   direccion,
   ruta: '',
@@ -45,12 +57,14 @@ const segmentoVacio = (direccion: string): SegmentoInput => ({
   etd: '',
   eta: '',
   numero_vuelo: '',
+  tiempo_vuelo: '',
   pnrs: [],
   escalas: [],
 });
 
 const paxVacio = (): PaxInput => ({
   nombre: '',
+  tipos: ['AD'],
   nacionalidades: [],
   pasaporte_num: '',
   libreta_num: '',
@@ -99,6 +113,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
   const [formasPago, setFormasPago] = useState<string[]>([]);
   const [penalidadDesc, setPenalidadDesc] = useState('');
   const [penalidadMonto, setPenalidadMonto] = useState('');
+  const [pagadoCon, setPagadoCon] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +137,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
     setFormasPago(t?.formas_pago ?? []);
     setPenalidadDesc(t?.penalidad_desc ?? '');
     setPenalidadMonto(t?.penalidad_monto != null ? String(t.penalidad_monto) : '');
+    setPagadoCon(t?.pagado_con ?? '');
     setMoneda((t?.moneda as Currency) ?? 'USD');
     setPnrDraft('');
     setError(null);
@@ -174,6 +190,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
       formas_pago: formasPago.length ? formasPago : null,
       penalidad_desc: penalidadDesc.trim() || null,
       penalidad_monto: penalidadMonto.trim() === '' ? null : Number(penalidadMonto),
+      pagado_con: pagadoCon.trim() || null,
       moneda,
       // Espejo en el encabezado para que la fila del flyer y el itinerario no
       // tengan que abrir los segmentos.
@@ -407,6 +424,11 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
               onChange={(e) => setPenalidadDesc(e.target.value)}
               placeholder="Condiciones del cambio"
             />
+            <PaymentMethodSelect
+              label="Pagado con"
+              value={pagadoCon}
+              onChange={setPagadoCon}
+            />
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">
                 Forma de pago
@@ -433,6 +455,21 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
                 })}
               </div>
             </div>
+          </Bloque>
+
+          {/* ── Adjuntos ────────────────────────────────────────────── */}
+          <Bloque titulo="Documentos del ticket">
+            {ticketId ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <AdjuntoBoton ticketId={ticketId} tipo="boleto" label="PDF del boleto" actual={cargado.data?.ticket?.pdf_boleto_path} />
+                <AdjuntoBoton ticketId={ticketId} tipo="boarding" label="PDF del boarding pass" actual={cargado.data?.ticket?.pdf_boarding_path} />
+                <AdjuntoBoton ticketId={ticketId} tipo="sat" label="PDF del SAT" actual={cargado.data?.ticket?.pdf_sat_path} />
+              </div>
+            ) : (
+              <p className="text-xs italic text-dark-3">
+                Guarda el ticket primero — los archivos se guardan bajo su número.
+              </p>
+            )}
           </Bloque>
 
           {error && (
@@ -614,6 +651,13 @@ function SegmentoCard({
         <TextInput label="ETA" type="time" value={seg.eta} onChange={(e) => onChange({ eta: e.target.value })} />
       </div>
 
+      <TextInput
+        label="Tiempo de vuelo"
+        value={seg.tiempo_vuelo}
+        onChange={(e) => onChange({ tiempo_vuelo: e.target.value })}
+        placeholder="Ej: 2h 45m"
+      />
+
       <ListaChips
         label="PNR del segmento (opcional)"
         placeholder="Código"
@@ -718,8 +762,35 @@ function PaxCard({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <TextInput label="Nombre *" value={pax.nombre} onChange={(e) => onChange({ nombre: e.target.value })} />
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">Tipo</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {TIPOS_PAX.map((t) => {
+              const activo = pax.tipos.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  title={TIPO_PAX_DESC[t]}
+                  onClick={() =>
+                    onChange({
+                      tipos: activo ? pax.tipos.filter((x) => x !== t) : [...pax.tipos, t],
+                    })
+                  }
+                  className={`rounded-md border px-2 py-1 text-[11px] font-extrabold transition-colors ${
+                    activo
+                      ? 'border-teal bg-teal text-white'
+                      : 'border-sand bg-white text-dark-2 hover:border-teal/40'
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-dark-2">
             Nacionalidad(es)
@@ -779,6 +850,62 @@ function PaxCard({
       <div className="rounded-md bg-teal-l px-3 py-2 text-right text-xs font-extrabold text-teal-d">
         Total por pax: {moneda} {totalPax.toFixed(2)}
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * Sube uno de los tres PDF del ticket. Los archivos van al bucket exclusivo de
+ * T&T, nunca al de Finanzas.
+ */
+function AdjuntoBoton({
+  ticketId, tipo, label, actual,
+}: {
+  ticketId: string;
+  tipo: TipoAdjunto;
+  label: string;
+  actual?: string | null;
+}) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const ref = useRef<HTMLInputElement>(null);
+  const [subiendo, setSubiendo] = useState(false);
+
+  async function handleFile(file: File | null) {
+    if (!file) return;
+    setSubiendo(true);
+    try {
+      await subirAdjuntoTicket(ticketId, tipo, file);
+      await qc.invalidateQueries({ queryKey: ['att_ticket_full', ticketId] });
+      toast.success(`${label} cargado.`);
+    } catch (err) {
+      toast.error(describeError(err));
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  return (
+    <div>
+      <input
+        ref={ref}
+        type="file"
+        accept="application/pdf,image/*"
+        className="hidden"
+        onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
+      />
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        disabled={subiendo}
+        className="w-full rounded-md border border-dashed border-teal/50 bg-teal-l/40 px-3 py-3 text-xs font-semibold text-teal-d hover:bg-teal-l disabled:opacity-60"
+      >
+        {subiendo ? 'Subiendo…' : `📎 ${label}`}
+        <span className="mt-0.5 block text-[10px] font-normal text-dark-3">
+          {actual ? 'Cargado — subir otro lo reemplaza' : 'Sin archivo'}
+        </span>
+      </button>
     </div>
   );
 }

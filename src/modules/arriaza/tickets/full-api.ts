@@ -20,6 +20,13 @@ export const TIPOS_TICKET = ['OW', 'RT'] as const;
 export const FORMAS_PAGO = ['DINERO', 'MILLAS', 'PUNTOS', 'CREDITOS DE VIAJE'] as const;
 
 /**
+ * Tipos de pasajero. Selección múltiple a propósito: un adulto puede además
+ * requerir asistencia especial, así que AD y SSA conviven.
+ *   AD  adulto · CHD  niño · INF  infante · SSA  asistencia especial
+ */
+export const TIPOS_PAX = ['AD', 'CHD', 'INF', 'SSA'] as const;
+
+/**
  * Lista unificada de estatus de pago para todos los servicios del módulo.
  * Las cinco primeras vienen del documento del ticket; la última se conserva
  * porque es un estado real de los hoteles que ese documento no cubre.
@@ -54,6 +61,7 @@ export type SegmentoInput = {
   etd: string;
   eta: string;
   numero_vuelo: string;
+  tiempo_vuelo: string;
   pnrs: string[];
   escalas: EscalaInput[];
 };
@@ -61,6 +69,7 @@ export type SegmentoInput = {
 export type PaxInput = {
   id?: string;
   nombre: string;
+  tipos: string[];
   nacionalidades: string[];
   pasaporte_num: string;
   libreta_num: string;
@@ -95,6 +104,35 @@ export function totalTicket(pax: PaxInput[]): number {
 function num(v: string): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+export type TipoAdjunto = 'boleto' | 'boarding' | 'sat';
+
+/**
+ * Los PDF del ticket van al bucket `tt-documentos`, que es exclusivo de T&T
+ * — el usuario pidió expresamente que no se mezclen con los comprobantes de
+ * Finanzas, y la política del bucket lo impone.
+ */
+export async function subirAdjuntoTicket(
+  ticketId: string,
+  tipo: TipoAdjunto,
+  file: File,
+): Promise<string> {
+  const ext = file.name.split('.').pop() ?? 'pdf';
+  const path = `tickets/${ticketId}/${tipo}.${Date.now()}.${ext}`;
+  const up = await supabase.storage.from('tt-documentos').upload(path, file, { upsert: true });
+  if (up.error) throw up.error;
+  // La columna se elige con un switch y no con una clave calculada: así el
+  // tipo de la columna sobrevive y TypeScript sigue validando el update.
+  const patch =
+    tipo === 'boleto'
+      ? { pdf_boleto_path: path }
+      : tipo === 'boarding'
+        ? { pdf_boarding_path: path }
+        : { pdf_sat_path: path };
+  const { error } = await supabase.from('att_tickets').update(patch).eq('id', ticketId);
+  if (error) throw error;
+  return path;
 }
 
 export const ticketFullApi = {
@@ -139,6 +177,7 @@ export const ticketFullApi = {
         etd: s.etd ?? '',
         eta: s.eta ?? '',
         numero_vuelo: s.numero_vuelo ?? '',
+        tiempo_vuelo: s.tiempo_vuelo ?? '',
         pnrs: (pnrQ.data ?? []).filter((p) => p.segmento_id === s.id).map((p) => p.codigo),
         escalas: (escalasQ.data ?? [])
           .filter((e) => e.segmento_id === s.id)
@@ -147,6 +186,7 @@ export const ticketFullApi = {
       pax: (paxQ.data ?? []).map((p) => ({
         id: p.id,
         nombre: p.nombre ?? '',
+        tipos: p.tipos ?? [],
         nacionalidades: p.nacionalidades ?? [],
         pasaporte_num: p.pasaporte_num ?? '',
         libreta_num: p.libreta_num ?? '',
@@ -222,6 +262,7 @@ async function savePax(ticketId: string, pax: PaxInput[]) {
     const p = pax[i];
     const valores = {
       nombre: p.nombre.trim(),
+      tipos: p.tipos.length ? p.tipos : null,
       nacionalidades: p.nacionalidades.length ? p.nacionalidades : null,
       pasaporte_num: p.pasaporte_num.trim() || null,
       libreta_num: p.libreta_num.trim() || null,
@@ -268,6 +309,7 @@ async function saveSegmentos(ticketId: string, segmentos: SegmentoInput[]) {
       etd: s.etd || null,
       eta: s.eta || null,
       numero_vuelo: s.numero_vuelo.trim() || null,
+      tiempo_vuelo: s.tiempo_vuelo.trim() || null,
       orden: i,
     };
     let segId = s.id;

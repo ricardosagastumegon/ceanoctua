@@ -878,7 +878,7 @@ export type Database = {
           formas_pago: string[] | null;
           penalidad_desc: string | null;
           penalidad_monto: number | null;
-          pagado_con_tc_id: string | null;
+          pagado_con: string | null;
           pdf_boleto_path: string | null;
           pdf_boarding_path: string | null;
           pdf_sat_path: string | null;
@@ -915,7 +915,7 @@ export type Database = {
           formas_pago?: string[] | null;
           penalidad_desc?: string | null;
           penalidad_monto?: number | null;
-          pagado_con_tc_id?: string | null;
+          pagado_con?: string | null;
           pdf_boleto_path?: string | null;
           pdf_boarding_path?: string | null;
           pdf_sat_path?: string | null;
@@ -949,7 +949,7 @@ export type Database = {
           formas_pago?: string[] | null;
           penalidad_desc?: string | null;
           penalidad_monto?: number | null;
-          pagado_con_tc_id?: string | null;
+          pagado_con?: string | null;
           pdf_boleto_path?: string | null;
           pdf_boarding_path?: string | null;
           pdf_sat_path?: string | null;
@@ -1120,6 +1120,7 @@ export type Database = {
           libreta_num: string | null; visa_pais: string | null;
           visa_num: string | null; visa_exp: string | null;
           ffn: string | null; programa: string | null;
+          tipos: string[] | null;
           nacionalidades: string[] | null;
           numero_ticket: string | null;
           asiento: string | null;
@@ -1140,6 +1141,7 @@ export type Database = {
           libreta_num?: string | null; visa_pais?: string | null;
           visa_num?: string | null; visa_exp?: string | null;
           ffn?: string | null; programa?: string | null; orden?: number | null;
+          tipos?: string[] | null;
           nacionalidades?: string[] | null;
           numero_ticket?: string | null;
           asiento?: string | null;
@@ -1158,6 +1160,7 @@ export type Database = {
           libreta_num?: string | null; visa_pais?: string | null;
           visa_num?: string | null; visa_exp?: string | null;
           ffn?: string | null; programa?: string | null; orden?: number | null;
+          tipos?: string[] | null;
           nacionalidades?: string[] | null;
           numero_ticket?: string | null;
           asiento?: string | null;
@@ -1184,6 +1187,7 @@ export type Database = {
           fecha: string | null; checkin: string | null; etd: string | null; eta: string | null;
           numero_vuelo: string | null; orden: number | null;
           ruta: string | null;
+          tiempo_vuelo: string | null;
           fecha_llegada: string | null;
           deleted_at: string | null;
         };
@@ -1195,6 +1199,7 @@ export type Database = {
           fecha?: string | null; checkin?: string | null; etd?: string | null; eta?: string | null;
           numero_vuelo?: string | null; orden?: number | null;
           ruta?: string | null;
+          tiempo_vuelo?: string | null;
           fecha_llegada?: string | null;
           deleted_at?: string | null;
         };
@@ -1205,6 +1210,7 @@ export type Database = {
           fecha?: string | null; checkin?: string | null; etd?: string | null; eta?: string | null;
           numero_vuelo?: string | null; orden?: number | null;
           ruta?: string | null;
+          tiempo_vuelo?: string | null;
           fecha_llegada?: string | null;
           deleted_at?: string | null;
         };

@@ -102,9 +102,12 @@ export const SERVICE_META: Record<ServiceKey, ServiceMeta> = {
     hasCost: false, table: 'att_tiendas', arrayKey: 'tiendas',
   },
   reunion: {
+    // Azul marino y gris muy claro, pedido en el documento: el PDF de la
+    // reunion se comparte con los participantes, asi que va institucional y
+    // no con los colores vivos del resto de los servicios.
     label: 'Reunión', icon: '🤝', css: 'svc-reunion',
-    grad: 'linear-gradient(135deg,#2c1a54,#7c3aed,#a685f5)',
-    solid: '#7c3aed', dark: '#5b21b6', light: '#efe6fc',
+    grad: 'linear-gradient(135deg,#0d1526,#1e2a4a,#33456e)',
+    solid: '#1e2a4a', dark: '#131c31', light: '#eef1f6',
     hasCost: false, table: 'att_reuniones', arrayKey: 'reuniones',
   },
   ruta: {

@@ -53,7 +53,7 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         supabase.from('att_ferries').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_terrestres').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_actividades').select('evento, ciudad, fecha, inicio, fin').eq('viaje_id', id).is('deleted_at', null),
-        supabase.from('att_reuniones').select('cita, asunto, ciudad, fecha, hora').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_reuniones').select('titulo, cita, tipo, lugar, ciudad, fecha, hora, hora_fin').eq('viaje_id', id).is('deleted_at', null),
       ]);
 
       for (const r of [tickets, hoteles, restaurantes, rentas, tours, aeronaves, acuaticos, ferries, terrestres, actividades, reuniones]) {
@@ -125,7 +125,12 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         });
       }
       for (const r of reuniones.data ?? []) {
-        if (r.fecha) ev.push({ servicio: 'reunion', fecha: r.fecha, hora: hhmm(r.hora), titulo: r.cita ?? r.asunto ?? 'Reunión', detalle: limpio(r.asunto !== r.cita ? r.asunto : null, r.ciudad) });
+        if (!r.fecha) continue;
+        ev.push({
+          servicio: 'reunion', fecha: r.fecha, hora: hhmm(r.hora),
+          titulo: r.titulo || r.cita || 'Reunión',
+          detalle: limpio(r.tipo, r.lugar ?? r.ciudad, r.hora_fin ? `hasta ${hhmm(r.hora_fin)}` : null),
+        });
       }
 
       // Sin hora van primero: son cosas del día, no de un momento.

@@ -39,6 +39,12 @@ type Props = {
    * cuando lo importante de la hoja está más abajo y estos son de referencia.
    */
   rowsLayout?: 'normal' | 'compacto';
+  /**
+   * Texto del pie. Casi todas las hojas son de uso interno, pero la de la
+   * reunión se comparte con los participantes y decirles "uso interno" seria
+   * contradecirse.
+   */
+  pie?: string;
 };
 
 /**
@@ -56,6 +62,7 @@ export function ServicePrintable({
   open, onClose, serviceKey, title, subtitle, tripNo, total, moneda,
   estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras, band,
   headerRight, titleSize = 'normal', rowsLayout = 'normal',
+  pie = 'Arriaza Tour & Travel · Documento de uso interno',
 }: Props) {
   const meta = SERVICE_META[serviceKey];
   return (
@@ -180,8 +187,11 @@ export function ServicePrintable({
           </section>
         )}
 
-        <div className="bg-dark px-8 py-2 text-center text-[10px] font-extrabold uppercase tracking-widest text-white/40">
-          Arriaza Tour &amp; Travel · Documento de uso interno
+        <div
+          className="px-8 py-2 text-center text-[10px] font-extrabold uppercase tracking-widest text-white/40"
+          style={{ backgroundColor: meta.dark }}
+        >
+          {pie}
         </div>
       </article>
     </PrintableModal>

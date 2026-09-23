@@ -1,8 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { AttViaje } from './viajes/api';
 
+/** Lo minimo que el calendario necesita de una reunion. */
+export type ReunionEnCalendario = { fecha: string | null; titulo: string };
+
 type Props = {
   viajes: AttViaje[];
+  /**
+   * Las reuniones agendadas, que el documento pide marcar aqui ademas del
+   * itinerario. Se pintan como un punto en el dia, sin pelearse con el color
+   * del viaje que ya lleva la celda.
+   */
+  reuniones?: ReunionEnCalendario[];
   onDayClick?: (dateStr: string, viajesEseDia: AttViaje[]) => void;
 };
 
@@ -15,7 +24,7 @@ const DIAS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 // Calendar lateral · paridad con el calendario del HTML standalone.
 // Marca los días con viajes: trip-start (día de inicio), trip-mid (durante),
 // trip-end (día de fin). Click en día muestra los viajes de ese día.
-export function CalendarPanel({ viajes, onDayClick }: Props) {
+export function CalendarPanel({ viajes, reuniones = [], onDayClick }: Props) {
   const [current, setCurrent] = useState(() => {
     // Auto-pick: mes del viaje activo/próximo más cercano; sino mes actual.
     const today = new Date().toISOString().slice(0, 10);
@@ -34,7 +43,10 @@ export function CalendarPanel({ viajes, onDayClick }: Props) {
     return { y: now.getFullYear(), m: now.getMonth() };
   });
 
-  const cells = useMemo(() => generateGrid(current.y, current.m, viajes), [current, viajes]);
+  const cells = useMemo(
+    () => generateGrid(current.y, current.m, viajes, reuniones),
+    [current, viajes, reuniones],
+  );
   const todayStr = new Date().toISOString().slice(0, 10);
 
   function nav(delta: number) {
@@ -81,9 +93,9 @@ export function CalendarPanel({ viajes, onDayClick }: Props) {
               type="button"
               onClick={() => handleDayClick(c)}
               disabled={c.otherMonth}
-              title={c.viajes.length > 0 ? c.viajes.map((v) => v.titulo).join(', ') : undefined}
+              title={[...c.viajes.map((v) => v.titulo), ...c.reuniones].join(', ') || undefined}
               className={[
-                'aspect-square min-h-[26px] text-[10px] font-semibold transition-colors',
+                'relative aspect-square min-h-[26px] text-[10px] font-semibold transition-colors',
                 c.otherMonth ? 'bg-sand-l text-dark-3/40' : 'bg-white text-dark-2 hover:bg-teal-l',
                 c.status === 'start' ? 'bg-gradient-to-br from-teal to-aqua font-extrabold text-white' : '',
                 c.status === 'end' ? 'bg-gradient-to-br from-rust to-coral font-extrabold text-white' : '',
@@ -92,6 +104,14 @@ export function CalendarPanel({ viajes, onDayClick }: Props) {
               ].join(' ')}
             >
               {c.day}
+              {/* El punto de la reunion va encima del color del viaje. */}
+              {c.reuniones.length > 0 && !c.otherMonth && (
+                <span
+                  aria-hidden
+                  className="absolute bottom-[3px] left-1/2 h-[4px] w-[4px] -translate-x-1/2 rounded-full ring-1 ring-white/70"
+                  style={{ backgroundColor: '#1e2a4a' }}
+                />
+              )}
             </button>
           );
         })}
@@ -100,6 +120,7 @@ export function CalendarPanel({ viajes, onDayClick }: Props) {
         <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-gradient-to-br from-teal to-aqua" />Inicio</span>
         <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-teal/20" />En viaje</span>
         <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-gradient-to-br from-rust to-coral" />Fin</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: '#1e2a4a' }} />Reunión</span>
         <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm ring-2 ring-aqua" />Hoy</span>
       </footer>
     </div>
@@ -115,9 +136,23 @@ type DayCell = {
   otherMonth: boolean;
   status: 'start' | 'mid' | 'end' | null;
   viajes: AttViaje[];
+  /** Titulos de las reuniones de ese dia. */
+  reuniones: string[];
 };
 
-function generateGrid(y: number, m: number, viajes: AttViaje[]): DayCell[] {
+function generateGrid(
+  y: number,
+  m: number,
+  viajes: AttViaje[],
+  reuniones: ReunionEnCalendario[],
+): DayCell[] {
+  const porDia = new Map<string, string[]>();
+  for (const r of reuniones) {
+    if (!r.fecha) continue;
+    const lista = porDia.get(r.fecha) ?? [];
+    lista.push(r.titulo);
+    porDia.set(r.fecha, lista);
+  }
   const firstDay = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const daysInPrev = new Date(y, m, 0).getDate();
@@ -131,6 +166,7 @@ function generateGrid(y: number, m: number, viajes: AttViaje[]): DayCell[] {
       otherMonth: true,
       status: null,
       viajes: [],
+      reuniones: [],
     });
   }
   // Días del mes actual.
@@ -144,12 +180,15 @@ function generateGrid(y: number, m: number, viajes: AttViaje[]): DayCell[] {
       else if (dateStr === v.fecha_fin) { status = status === 'start' ? 'start' : 'end'; viajesDia.push(v); }
       else if (dateStr > v.fecha_ini && dateStr < v.fecha_fin) { status = status ?? 'mid'; viajesDia.push(v); }
     }
-    cells.push({ day: d, dateStr, otherMonth: false, status, viajes: viajesDia });
+    cells.push({
+      day: d, dateStr, otherMonth: false, status, viajes: viajesDia,
+      reuniones: porDia.get(dateStr) ?? [],
+    });
   }
   // Relleno trailing hasta múltiplo de 7.
   const trailing = (7 - (cells.length % 7)) % 7;
   for (let i = 1; i <= trailing; i++) {
-    cells.push({ day: i, dateStr: '', otherMonth: true, status: null, viajes: [] });
+    cells.push({ day: i, dateStr: '', otherMonth: true, status: null, viajes: [], reuniones: [] });
   }
   return cells;
 }

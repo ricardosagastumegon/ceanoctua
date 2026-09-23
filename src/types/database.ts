@@ -2084,21 +2084,36 @@ export type Database = {
       };
       att_reuniones: {
         Row: AuditCols & {
-          id: string; viaje_id: string; cita: string;
+          id: string; viaje_id: string; cita: string | null;
           asunto: string | null; fecha: string; hora: string;
           participantes: string | null; ciudad: string | null; direccion: string | null;
+          titulo: string | null;
+          tipo: 'Presencial' | 'Virtual' | 'Presencial & Virtual' | null;
+          hora_fin: string | null;
+          lugar: string | null;
+          descripcion: string | null;
           confirm_file_name: string | null; deleted_at: string | null;
         };
         Insert: AuditInsert & {
-          id?: string; viaje_id: string; cita: string;
+          id?: string; viaje_id: string; cita?: string | null;
           asunto?: string | null; fecha: string; hora: string;
           participantes?: string | null; ciudad?: string | null; direccion?: string | null;
+          titulo?: string | null;
+          tipo?: 'Presencial' | 'Virtual' | 'Presencial & Virtual' | null;
+          hora_fin?: string | null;
+          lugar?: string | null;
+          descripcion?: string | null;
           confirm_file_name?: string | null; deleted_at?: string | null;
         };
         Update: AuditUpdate & {
-          cita?: string;
+          cita?: string | null;
           asunto?: string | null; fecha?: string; hora?: string;
           participantes?: string | null; ciudad?: string | null; direccion?: string | null;
+          titulo?: string | null;
+          tipo?: 'Presencial' | 'Virtual' | 'Presencial & Virtual' | null;
+          hora_fin?: string | null;
+          lugar?: string | null;
+          descripcion?: string | null;
           confirm_file_name?: string | null; deleted_at?: string | null;
         };
         Relationships: [
@@ -2106,6 +2121,28 @@ export type Database = {
         ];
       };
 
+      att_reunion_participantes: {
+        Row: AuditCols & {
+          id: string; reunion_id: string;
+          nombre: string | null; referencia: string | null; telefono: string | null;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; reunion_id: string;
+          nombre?: string | null; referencia?: string | null; telefono?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string | null; referencia?: string | null; telefono?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_reunion_participantes_reunion_id_fkey'; columns: ['reunion_id']; referencedRelation: 'att_reuniones'; referencedColumns: ['id'] },
+        ];
+      };
       att_rutas: {
         Row: AuditCols & {
           id: string; viaje_id: string; nombre: string;

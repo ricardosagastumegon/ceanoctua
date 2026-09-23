@@ -10,6 +10,7 @@ import { TripCard } from './TripCard';
 import { BackupModal } from './BackupModal';
 import { FinishedFolder } from './FinishedFolder';
 import { CalendarPanel } from './CalendarPanel';
+import { useAttReuniones } from './reuniones/hooks';
 import {
   useAttViajes,
   useCreateAttViaje,
@@ -47,6 +48,12 @@ export function AttPage() {
   const [backupOpen, setBackupOpen] = useState(false);
 
   const viajes = query.data ?? [];
+  // Las reuniones de todos los viajes, para marcarlas en el calendario.
+  const reunionesQuery = useAttReuniones();
+  const reunionesCalendario = (reunionesQuery.data ?? []).map((r) => ({
+    fecha: r.fecha,
+    titulo: r.titulo || r.cita || 'Reunión',
+  }));
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -214,7 +221,7 @@ export function AttPage() {
 
         <aside className="hidden lg:block">
           <div className="sticky top-4 space-y-3">
-            <CalendarPanel viajes={viajes} />
+            <CalendarPanel viajes={viajes} reuniones={reunionesCalendario} />
             <ArriazaMap viajes={viajes} onMarkerClick={() => {}} />
           </div>
         </aside>

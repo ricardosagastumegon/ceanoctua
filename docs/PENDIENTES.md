@@ -40,6 +40,20 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
+### DT-5 · Tablas de actividades deprecadas por la fase 22
+
+- **Origen:** [`PLAN-TT-TERRESTRE-ACTIVIDADES.md`](../PLAN-TT-TERRESTRE-ACTIVIDADES.md) · migración `20260923000007`
+- **Impacto:** Ninguno funcional. `att_actividad_tickets` y `att_actividad_subtickets` quedaron sin uso: el documento del servicio pone el precio a nivel del evento, no por bloque de participante, y la lista de entradas ahora cuelga de `att_actividad_entradas`.
+- **Estimado:** 10 min · migración con `drop table if exists`. Ambas están **vacías**, así que no se pierde nada.
+- **Estado:** Deprecadas con comentario en la tabla. Dropear cuando el usuario confirme que el modelo nuevo le funciona en producción.
+
+### DT-6 · Dos componentes de chips conviviendo
+
+- **Origen:** fase 22 · `shared/ChipsInput.tsx`
+- **Impacto:** Cosmético. `TicketFormModal` conserva su `ListaChips` local, casi idéntico al `ChipsInput` compartido que usa Actividades. Se dejó así para no tocar un formulario que el usuario ya está usando sin problemas.
+- **Estimado:** 10 min · cambiar los dos call sites del ticket a `ChipsInput` con `mono` y borrar el local.
+- **Estado:** Pendiente. Hacer cuando se toque el formulario de ticket por otra razón.
+
 ### DT-4 · Actualizar `usuarios.nombre` de todos los usuarios con NULL
 
 - **Origen:** [`docs/AUDIT-2026-07-12.md`](AUDIT-2026-07-12.md) finding M-3

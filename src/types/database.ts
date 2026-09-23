@@ -1889,8 +1889,12 @@ export type Database = {
           tarifa: number | null; extras: string | null; monto_extras: number | null;
           cancelacion: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          ruta: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1910,8 +1914,12 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          ruta?: string | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1931,8 +1939,12 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          ruta?: string | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1975,8 +1987,21 @@ export type Database = {
           fecha: string | null; inicio: string | null; fin: string | null;
           reservado: string | null; cancelacion: string | null; comentarios: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          participantes: string | null;
+          confirmacion: string | null;
+          reserva_nombre: string | null;
+          lugares: string | null;
+          personas: number | null;
+          tiene_tickets: boolean;
+          inclusiones: string | null;
+          tarifa: number | null;
+          extras: string | null;
+          monto_extras: number | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1986,8 +2011,21 @@ export type Database = {
           fecha?: string | null; inicio?: string | null; fin?: string | null;
           reservado?: string | null; cancelacion?: string | null; comentarios?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          participantes?: string | null;
+          confirmacion?: string | null;
+          reserva_nombre?: string | null;
+          lugares?: string | null;
+          personas?: number | null;
+          tiene_tickets?: boolean | null;
+          inclusiones?: string | null;
+          tarifa?: number | null;
+          extras?: string | null;
+          monto_extras?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1997,8 +2035,21 @@ export type Database = {
           fecha?: string | null; inicio?: string | null; fin?: string | null;
           reservado?: string | null; cancelacion?: string | null; comentarios?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          participantes?: string | null;
+          confirmacion?: string | null;
+          reserva_nombre?: string | null;
+          lugares?: string | null;
+          personas?: number | null;
+          tiene_tickets?: boolean | null;
+          inclusiones?: string | null;
+          tarifa?: number | null;
+          extras?: string | null;
+          monto_extras?: number | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -2006,6 +2057,28 @@ export type Database = {
         ];
       };
 
+      att_actividad_entradas: {
+        Row: AuditCols & {
+          id: string; actividad_id: string;
+          nombre: string | null; ticket: string | null; lugar: string | null;
+          orden: number;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string; actividad_id: string;
+          nombre?: string | null; ticket?: string | null; lugar?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          nombre?: string | null; ticket?: string | null; lugar?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'att_actividad_entradas_actividad_id_fkey'; columns: ['actividad_id']; referencedRelation: 'att_actividades'; referencedColumns: ['id'] },
+        ];
+      };
       att_actividad_tickets: {
         Row: AuditCols & {
           id: string; actividad_id: string;

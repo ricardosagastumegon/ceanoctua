@@ -306,6 +306,7 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
               <RentasSection
                 viajeId={viaje.id}
                 canEdit={canEdit}
+                tripNo={viaje.trip_no}
                 autoOpenCreate={autoOpenKey === 'renta'}
                 onDidOpenCreate={() => setAutoOpenKey(null)}
               />

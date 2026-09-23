@@ -1513,8 +1513,17 @@ export type Database = {
           extras: Json;
           cancelacion: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          moneda: Database['public']['Enums']['currency'] | null;
+          marca: string | null;
+          modelo: string | null;
+          tamano: string | null;
+          capacidad: string | null;
+          puertas: number | null;
+          transmision: string | null;
+          combustible: string | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1527,8 +1536,17 @@ export type Database = {
           dias?: number | null; tarifa?: number | null; deposito?: number | null;
           extras?: Json; cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          marca?: string | null;
+          modelo?: string | null;
+          tamano?: string | null;
+          capacidad?: string | null;
+          puertas?: number | null;
+          transmision?: string | null;
+          combustible?: string | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1541,8 +1559,17 @@ export type Database = {
           dias?: number | null; tarifa?: number | null; deposito?: number | null;
           extras?: Json; cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'] | null;
+          marca?: string | null;
+          modelo?: string | null;
+          tamano?: string | null;
+          capacidad?: string | null;
+          puertas?: number | null;
+          transmision?: string | null;
+          combustible?: string | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [

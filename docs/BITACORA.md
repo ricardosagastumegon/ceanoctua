@@ -45,7 +45,37 @@ El hotel ya traía habitaciones múltiples y servicios extras desde la Fase 19. 
 
 **Trampa de UI que costó un dato real:** los campos de chips (PNR, ciudades, participantes) perdían en silencio lo escrito si el usuario guardaba sin presionar "Agregar". El PNR del primer ticket real se perdió así. Ahora los chips también se agregan al salir del campo.
 
-**Pendiente:** los nueve servicios restantes, la pantalla propia del viaje con botón Regresar (el cambio de fondo del documento del dashboard, aún sin hacer) y unificar el estado de pago en esos nueve.
+### Restaurante (`6aba8b1`)
+
+Las tres sub-tablas que pide el documento — comensales, servicios adicionales y registros de pago — ya existían desde la Fase 13. Se agregaron once columnas y las dos condicionantes: Michelin con estrellas, y cancelación gratuita con fecha límite y aviso de cercanía (amarillo a cinco días, rojo el día que vence).
+
+**Decisión:** el número de comensales sale de la lista de nombres, no de un campo aparte. El documento pedía ambos, pero dos fuentes llevan a "4 personas" con tres nombres cargados.
+
+De paso, `att_restaurant_diners` estrenó `updated_at`: era la única sub-tabla del módulo sin marca de modificación.
+
+### Renta de Vehículo (`05c1bd4`, `599c801`)
+
+La reserva ya estaba completa desde la Fase 19. Lo que faltaba era el desglose del vehículo — marca, modelo, tamaño, capacidad, puertas, transmisión y combustible —, que sin columnas propias habría vivido dentro del texto libre `tipo_veh`.
+
+Los días se calculan de recepción a entrega pero quedan editables: unas rentadoras cobran por día calendario y otras por 24 horas, así que manda el número del contrato.
+
+**Incidente · dos restricciones a la vez.** Al unificar el estado de pago pregunté si existía `att_rentas_estado_pago_chk`. No existía, así que la creé — pero la de la Fase 19 se llama `..._check`, con la lista vieja. Quedaron ambas activas y ninguna fila podía cumplirlas: el usuario no pudo guardar. Corregido en `20260922000011`.
+
+> **Para los servicios que faltan:** `att_tours`, `att_aeronaves`, `att_acuaticos`, `att_ferries`, `att_terrestres` y `att_actividades` todavía tienen su `*_estado_pago_check` viejo. Al unificar cada uno hay que **buscar la restricción por su definición, no adivinar el nombre**, y borrar la vieja en la misma migración.
+
+### El diseño de los imprimibles (`0c88397`, `4f2939d`)
+
+Tres rondas de correcciones del usuario hasta dar con un patrón que funciona, y que queda como referencia para los siete servicios restantes:
+
+1. **Rótulos como chip** con fondo del color del servicio. El texto gris sobre blanco se perdía, y el chip vuelve innecesarios los subrayados que saturaban.
+2. **Panel con cabecera de color** para el bloque que describe el objeto del servicio: el vehículo, las habitaciones, los pasajeros, los comensales.
+3. **Dos tarjetas lado a lado para los dos momentos** del servicio: recepción y entrega, check-in y check-out, reserva y límite de cancelación. Esos datos salen de la rejilla superior para no repetirlos.
+
+El usuario lo resumió así sobre la hoja de renta: *"me gusta como separaste la información del vehículo, y abajo las fechas están fenomenal"*.
+
+**Trampa de tipos que costó una reparación.** Al editar `src/types/database.ts` delimité el bloque de `att_hoteles` usando `att_hotel_habitaciones` como final, suponiendo que iba a continuación. Está 800 líneas más abajo, así que la edición abarcó once tablas y les inyectó columnas de hotel. `tsc` no se queja: campos opcionales de más no rompen nada hasta que alguien los usa. Se reparó calculando el límite real de cada bloque — del marcador de la tabla al siguiente marcador — y auditando **cada** columna agregada ese día.
+
+**Pendiente:** siete servicios (Tours, Aeronave, Acuático, Ferry, Terrestre, Actividades, Reuniones), la pantalla propia del viaje con botón Regresar — el cambio de fondo del documento del dashboard, aún sin hacer — y unificar el estado de pago en esos siete.
 
 ---
 

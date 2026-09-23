@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import type { AppRol, UserProfile } from '@/types';
+import type { AppRol, Modulo, Permiso, UserProfile } from '@/types';
 
 type AuthContextValue = {
   session: Session | null;
@@ -40,6 +40,17 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
     miembroCodigo = m?.codigo ?? null;
   }
 
+  // Los módulos que tiene asignados. La política de la base es la que manda;
+  // esto es solo para decidir qué pestañas dibujar.
+  const { data: mods } = await supabase
+    .from('usuario_modulos')
+    .select('modulo, permiso')
+    .eq('usuario_id', userId);
+  const modulos: Partial<Record<Modulo, Permiso>> = {};
+  for (const m of mods ?? []) {
+    modulos[m.modulo as Modulo] = m.permiso as Permiso;
+  }
+
   return {
     id: data.id as string,
     nombre: data.nombre as string | null,
@@ -47,7 +58,22 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
     miembro_id: data.miembro_id as string | null,
     activo: data.activo as boolean,
     miembro_codigo: miembroCodigo,
+    modulos,
   };
+}
+
+/** Si el perfil alcanza ese nivel en ese módulo. Los admin siempre. */
+export function puede(
+  profile: UserProfile | null,
+  modulo: Modulo,
+  minimo: Permiso = 'observador',
+): boolean {
+  if (!profile) return false;
+  if (profile.rol === 'admin') return true;
+  const tiene = profile.modulos[modulo];
+  if (!tiene) return false;
+  const rango = { observador: 1, editor: 2, super: 3 } as const;
+  return rango[tiene] >= rango[minimo];
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

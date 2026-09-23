@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth';
+import { puede, useAuth } from '@/lib/auth';
 import { isOverdue } from '@/lib/dates';
-import type { AppRol, UserProfile } from '@/types';
+import type { AppRol, Modulo, UserProfile } from '@/types';
 
 type Tab = {
   to: string;
@@ -19,28 +19,39 @@ type Tab = {
    * título de la página, que lo lee de `miembros_board.nombre`.
    */
   hint?: string;
+  /**
+   * El módulo al que pertenece. Es lo que se consulta contra los permisos del
+   * usuario; `roles` se queda para los casos que aún no migran a módulos.
+   */
+  modulo?: Modulo;
 };
 
 const tabs: Tab[] = [
   { to: '/', label: 'Dashboard', end: true, roles: ['admin', 'asistente', 'board_member', 'solo_lectura'] },
-  { to: '/maa', label: 'MAA', hint: 'Presidencia', roles: ['admin', 'asistente', 'board_member'], memberCode: 'MAA' },
-  { to: '/ja',  label: 'JA',  hint: 'Gerencia Agrícola',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JA' },
-  { to: '/la',  label: 'LA',  hint: 'Gerencia Administrativa',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'LA' },
-  { to: '/jm',  label: 'JM',  hint: 'Gerencia LUM',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JM' },
-  { to: '/aa',  label: 'AA',  hint: 'Board',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'AA' },
-  { to: '/eg',  label: 'EG',  hint: 'Gerente General',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'EG' },
-  { to: '/pe',  label: 'PE',  hint: 'Board',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'PE' },
+  { to: '/maa', label: 'MAA', hint: 'Presidencia', roles: ['admin', 'asistente', 'board_member'], memberCode: 'MAA', modulo: 'maa' },
+  { to: '/ja',  label: 'JA',  hint: 'Gerencia Agrícola',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JA', modulo: 'ja' },
+  { to: '/la',  label: 'LA',  hint: 'Gerencia Administrativa',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'LA', modulo: 'la' },
+  { to: '/jm',  label: 'JM',  hint: 'Gerencia LUM',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'JM', modulo: 'jm' },
+  { to: '/aa',  label: 'AA',  hint: 'Board',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'AA', modulo: 'aa' },
+  { to: '/eg',  label: 'EG',  hint: 'Gerente General',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'EG', modulo: 'eg' },
+  { to: '/pe',  label: 'PE',  hint: 'Board',  roles: ['admin', 'asistente', 'board_member'], memberCode: 'PE', modulo: 'pe' },
   // CC Board pestaña eliminada en Fase 16 · F-0. Vales y Liquidaciones viven ahora dentro de Finanzas.
-  { to: '/arriaza',  label: 'Arriaza T&T', roles: ['admin', 'asistente'] },
-  { to: '/cea',      label: 'CEA',         roles: ['admin', 'asistente'] },
-  { to: '/finanzas', label: '💰 Finanzas', roles: ['admin', 'asistente'] },
-  { to: '/caja-chica', label: '💵 Caja Chica', roles: ['admin', 'asistente'] },
+  { to: '/arriaza',  label: 'Arriaza T&T', roles: ['admin', 'asistente'], modulo: 'tt' },
+  { to: '/cea',      label: 'CEA',         roles: ['admin', 'asistente'], modulo: 'cea' },
+  { to: '/finanzas', label: '💰 Finanzas', roles: ['admin', 'asistente'], modulo: 'finanzas' },
+  { to: '/caja-chica', label: '💵 Caja Chica', roles: ['admin', 'asistente'], modulo: 'caja_chica' },
   { to: '/admin',    label: '⚙ Admin',     roles: ['admin'] },
-  { to: '/miel-sj',  label: '🍯 Miel SJ',  roles: ['admin', 'asistente'] },
+  { to: '/miel-sj',  label: '🍯 Miel SJ',  roles: ['admin', 'asistente'], modulo: 'miel_sj' },
 ];
 
 function canSeeTab(tab: Tab, profile: UserProfile | null): boolean {
   if (!profile) return false;
+
+  // Un permiso de módulo asignado a mano abre la pestaña aunque el rol no la
+  // contemple: así se le puede dar T&T a un miembro del board sin volverlo
+  // asistente. La base decide igual qué datos ve; esto solo dibuja el menú.
+  if (tab.modulo && puede(profile, tab.modulo)) return true;
+
   if (!tab.roles.includes(profile.rol)) return false;
   if (tab.memberCode && profile.rol === 'board_member') {
     return profile.miembro_codigo === tab.memberCode;

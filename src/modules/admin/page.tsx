@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { CatalogPage } from './components/CatalogPage';
+import { UsuariosCatalog } from './UsuariosCatalog';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { VehiculosSection } from './vehiculos/VehiculosSection';
@@ -60,7 +61,8 @@ type CatalogKey =
   | 'proveedores'
   | 'tarjetas'
   | 'vehiculos'
-  | 'status_sp';
+  | 'status_sp'
+  | 'usuarios';
 
 const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'entidades', label: 'Entidades' },
@@ -71,6 +73,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
   { key: 'vehiculos', label: 'Vehículos' },
   { key: 'status_sp', label: 'Status Solicitud de Pago' },
+  { key: 'usuarios', label: 'Usuarios y accesos' },
 ];
 
 export default function AdminPage() {
@@ -108,6 +111,7 @@ export default function AdminPage() {
         </nav>
       </div>
 
+      {tab === 'usuarios' && <UsuariosCatalog canEdit={isAdmin} />}
       {tab === 'entidades' && <EntidadesCatalog canEdit={isAdmin} />}
       {tab === 'personas' && <PersonasCatalog canEdit={isAdmin} />}
       {tab === 'empleados' && <EmpleadosCatalog canEdit={isAdmin} />}

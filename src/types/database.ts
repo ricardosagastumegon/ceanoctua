@@ -149,6 +149,21 @@ export type Database = {
         ];
       };
 
+      usuario_modulos: {
+        Row: {
+          id: string; usuario_id: string; modulo: string; permiso: string;
+          created_at: string; updated_at: string;
+          created_by: string | null; updated_by: string | null;
+        };
+        Insert: {
+          id?: string; usuario_id: string; modulo: string; permiso: string;
+        };
+        Update: { modulo?: string; permiso?: string };
+        Relationships: [
+          { foreignKeyName: 'usuario_modulos_usuario_id_fkey'; columns: ['usuario_id']; referencedRelation: 'usuarios'; referencedColumns: ['id'] },
+        ];
+      };
+
       // ====================================================
       // Board members (Fase 6)
       // ====================================================

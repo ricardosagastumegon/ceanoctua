@@ -184,11 +184,13 @@ export function TrayectosOwRt({
 
 /** Desglose del total: tarifa + extras. */
 export function Montos({
-  serviceKey, moneda, tarifa, etiquetaExtras, montoExtras,
+  serviceKey, moneda, tarifa, etiquetaTarifa, etiquetaExtras, montoExtras,
 }: {
   serviceKey: ServiceKey;
   moneda: string;
   tarifa: number;
+  /** Terrestre y actividades cobran por persona, así que nombran su renglón. */
+  etiquetaTarifa?: string;
   etiquetaExtras: string;
   montoExtras: number;
 }) {
@@ -198,7 +200,7 @@ export function Montos({
       <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wider" style={{ color: meta.dark }}>
         Montos
       </div>
-      {[['Tarifa de servicio', tarifa], [etiquetaExtras, montoExtras]].map(([label, monto], i) => (
+      {[[etiquetaTarifa ?? 'Tarifa de servicio', tarifa], [etiquetaExtras, montoExtras]].map(([label, monto], i) => (
         <div key={i} className="flex justify-between border-b border-sand py-1 text-[12px]">
           <span className="text-dark">{String(label)}</span>
           <span className="font-extrabold" style={{ color: meta.dark }}>

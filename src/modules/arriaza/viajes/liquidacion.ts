@@ -25,7 +25,12 @@ export type RenglonLiquidacion = {
   estadoPago: string | null;
   canceladoEn: string | null;
   pagadoCon: string | null;
-  /** Solo el identificador de la tarjeta, para que quepa en la tabla. */
+  /**
+   * El identificador de la tarjeta tal como estaba el día que se capturó, no
+   * el de hoy. Una liquidación impresa hace meses tiene que decir lo mismo si
+   * se reimprime: si no, editar una tarjeta en Admin reescribiría en silencio
+   * todos los reportes pasados.
+   */
   pagadoConCorto: string | null;
   pagadoConId: string | null;
 };
@@ -147,6 +152,18 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
       // columna de la tabla sin partirse en cinco lineas.
       const cortoTarjeta = new Map((tarjetas.data ?? []).map((t) => [t.id, t.tc_id ?? '']));
 
+      /**
+       * El nombre corto tal como se guardo ese dia. El texto capturado es
+       * `tc_id · red · banco · titular`, asi que el primer tramo es el
+       * identificador de entonces. Solo se cae al catalogo actual cuando no
+       * hay texto guardado.
+       */
+      const cortoHistorico = (texto: string | null, id: string | null): string | null => {
+        const primero = texto?.split(' · ')[0]?.trim();
+        if (primero) return primero;
+        return id ? cortoTarjeta.get(id) || null : null;
+      };
+
       const renglones: RenglonLiquidacion[] = [];
       for (const { clave, m, filas } of resultados) {
         for (const r of filas) {
@@ -164,9 +181,7 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
             estadoPago: fch(r.estado_pago),
             canceladoEn: fch(r.cancelado_en),
             pagadoCon: fch(r.pagado_con),
-            pagadoConCorto: fch(r.pagado_con_id)
-              ? cortoTarjeta.get(fch(r.pagado_con_id) as string) || fch(r.pagado_con)
-              : fch(r.pagado_con),
+            pagadoConCorto: cortoHistorico(fch(r.pagado_con), fch(r.pagado_con_id)),
             pagadoConId: fch(r.pagado_con_id),
           });
         }
@@ -187,9 +202,10 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
         const llave = r.pagadoConId ?? `texto:${r.pagadoCon ?? ''}`;
         const previo = porTarjeta.get(llave) ?? {
           tarjetaId: r.pagadoConId,
-          etiqueta: r.pagadoConId
-            ? nombreTarjeta.get(r.pagadoConId) ?? 'Tarjeta desconocida'
-            : r.pagadoCon || 'Sin forma de pago',
+          // Se agrupa por la llave, pero se rotula con lo que se capturo: el
+          // reporte tiene que decir lo mismo dentro de un ano.
+          etiqueta: r.pagadoCon
+            || (r.pagadoConId ? nombreTarjeta.get(r.pagadoConId) ?? 'Tarjeta desconocida' : 'Sin forma de pago'),
           identificada: !!r.pagadoConId,
           cargos: 0, reintegros: 0, neto: 0, servicios: 0,
         };

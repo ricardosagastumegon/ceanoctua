@@ -72,6 +72,7 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
   const [estatusNota, setEstatusNota] = useState('');
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
+  const [pagadoConId, setPagadoConId] = useState<string | null>(null);
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -103,6 +104,7 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
     setEstatusNota(a?.estatus_pago ?? '');
     setEstadoPago(a?.estado_pago ?? 'HOLD');
     setPagadoCon(a?.pagado_con ?? '');
+    setPagadoConId(a?.pagado_con_id ?? null);
     setMoneda((a?.moneda as Currency) ?? 'USD');
     setError(null);
   }, [open, cargado.data]);
@@ -140,6 +142,7 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
+      pagado_con_id: pagadoConId,
       moneda,
     };
 
@@ -236,7 +239,15 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
                 {ESTATUS_PAGO.map((s) => <option key={s} value={s}>{s}</option>)}
               </Select>
             </div>
-            <PaymentMethodSelect label="Pagado con" value={pagadoCon} onChange={setPagadoCon} />
+            <PaymentMethodSelect
+              label="Pagado con"
+              value={pagadoCon}
+              valueId={pagadoConId}
+              onChange={(texto, tarjetaId) => {
+                setPagadoCon(texto);
+                setPagadoConId(tarjetaId);
+              }}
+            />
           </Bloque>
 
           <Bloque titulo="Confirmación">

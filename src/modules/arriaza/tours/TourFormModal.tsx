@@ -78,6 +78,7 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
   const [estatusNota, setEstatusNota] = useState('');
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
+  const [pagadoConId, setPagadoConId] = useState<string | null>(null);
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +111,7 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
     setEstatusNota(t?.estatus_pago ?? '');
     setEstadoPago(t?.estado_pago ?? 'HOLD');
     setPagadoCon(t?.pagado_con ?? '');
+    setPagadoConId(t?.pagado_con_id ?? null);
     setMoneda((t?.moneda as Currency) ?? 'USD');
     setError(null);
   }, [open, cargado.data]);
@@ -152,6 +154,7 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
+      pagado_con_id: pagadoConId,
       moneda,
     };
 
@@ -269,7 +272,15 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
                 {ESTATUS_PAGO.map((s) => <option key={s} value={s}>{s}</option>)}
               </Select>
             </div>
-            <PaymentMethodSelect label="Pagado con" value={pagadoCon} onChange={setPagadoCon} />
+            <PaymentMethodSelect
+              label="Pagado con"
+              value={pagadoCon}
+              valueId={pagadoConId}
+              onChange={(texto, tarjetaId) => {
+                setPagadoCon(texto);
+                setPagadoConId(tarjetaId);
+              }}
+            />
           </Bloque>
 
           <Bloque titulo="Confirmación">

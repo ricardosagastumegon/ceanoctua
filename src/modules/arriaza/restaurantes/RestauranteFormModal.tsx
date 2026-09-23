@@ -85,6 +85,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
   const [estatusNota, setEstatusNota] = useState('');
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
+  const [pagadoConId, setPagadoConId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // El número de comensales sale de la lista: si se escribieron nombres, esos
@@ -129,6 +130,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
     setEstatusNota(r?.estatus_pago ?? '');
     setEstadoPago(r?.estado_pago ?? 'HOLD');
     setPagadoCon(r?.pagado_con ?? '');
+    setPagadoConId(r?.pagado_con_id ?? null);
     setComensalDraft('');
     setError(null);
   }, [open, cargado.data]);
@@ -176,6 +178,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
+      pagado_con_id: pagadoConId,
     };
 
     try {
@@ -434,7 +437,15 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
                 ))}
               </Select>
             </div>
-            <PaymentMethodSelect label="Pagado con" value={pagadoCon} onChange={setPagadoCon} />
+            <PaymentMethodSelect
+              label="Pagado con"
+              value={pagadoCon}
+              valueId={pagadoConId}
+              onChange={(texto, tarjetaId) => {
+                setPagadoCon(texto);
+                setPagadoConId(tarjetaId);
+              }}
+            />
 
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">

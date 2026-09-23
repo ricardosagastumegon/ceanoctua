@@ -880,6 +880,7 @@ export type Database = {
           penalidad_desc: string | null;
           penalidad_monto: number | null;
           pagado_con: string | null;
+          pagado_con_id: string | null;
           pdf_boleto_path: string | null;
           pdf_boarding_path: string | null;
           pdf_sat_path: string | null;
@@ -918,6 +919,7 @@ export type Database = {
           penalidad_desc?: string | null;
           penalidad_monto?: number | null;
           pagado_con?: string | null;
+          pagado_con_id?: string | null;
           pdf_boleto_path?: string | null;
           pdf_boarding_path?: string | null;
           pdf_sat_path?: string | null;
@@ -953,6 +955,7 @@ export type Database = {
           penalidad_desc?: string | null;
           penalidad_monto?: number | null;
           pagado_con?: string | null;
+          pagado_con_id?: string | null;
           pdf_boleto_path?: string | null;
           pdf_boarding_path?: string | null;
           pdf_sat_path?: string | null;
@@ -989,6 +992,7 @@ export type Database = {
           telefono: string | null;
           reservado_por: string | null;
           pagado_con: string | null;
+          pagado_con_id: string | null;
           early_checkin: string | null;
           estatus_pago: string | null;
           estado_pago: string | null;
@@ -1022,6 +1026,7 @@ export type Database = {
           telefono?: string | null;
           reservado_por?: string | null;
           pagado_con?: string | null;
+          pagado_con_id?: string | null;
           early_checkin?: string | null;
           estatus_pago?: string | null;
           estado_pago?: string | null;
@@ -1052,6 +1057,7 @@ export type Database = {
           telefono?: string | null;
           reservado_por?: string | null;
           pagado_con?: string | null;
+          pagado_con_id?: string | null;
           early_checkin?: string | null;
           estatus_pago?: string | null;
           estado_pago?: string | null;
@@ -1096,6 +1102,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string | null;
           pagado_con: string | null;
+          pagado_con_id: string | null;
           confirmacion_path: string | null;
           deleted_at: string | null;
         };
@@ -1131,6 +1138,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string | null;
           pagado_con?: string | null;
+          pagado_con_id?: string | null;
           confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
@@ -1163,6 +1171,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string | null;
           pagado_con?: string | null;
+          pagado_con_id?: string | null;
           confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
@@ -1515,6 +1524,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           moneda: Database['public']['Enums']['currency'] | null;
           monto: number | null;
           marca: string | null;
@@ -1539,6 +1549,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'] | null;
           monto?: number | null;
           marca?: string | null;
@@ -1563,6 +1574,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'] | null;
           monto?: number | null;
           marca?: string | null;
@@ -1593,6 +1605,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           nombre: string | null;
           hora_fin: string | null;
           incluye_alimentacion: boolean | null;
@@ -1614,6 +1627,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           nombre?: string | null;
           hora_fin?: string | null;
           incluye_alimentacion?: boolean | null;
@@ -1635,6 +1649,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           nombre?: string | null;
           hora_fin?: string | null;
           incluye_alimentacion?: boolean | null;
@@ -1664,6 +1679,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           moneda: Database['public']['Enums']['currency'];
           monto: number | null;
           confirmacion_path: string | null;
@@ -1683,6 +1699,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'];
           monto?: number | null;
           confirmacion_path?: string | null;
@@ -1702,6 +1719,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'];
           monto?: number | null;
           confirmacion_path?: string | null;
@@ -1732,6 +1750,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           moneda: Database['public']['Enums']['currency'];
           monto: number | null;
           confirmacion_path: string | null;
@@ -1756,6 +1775,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'];
           monto?: number | null;
           confirmacion_path?: string | null;
@@ -1780,6 +1800,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'];
           monto?: number | null;
           confirmacion_path?: string | null;
@@ -1811,6 +1832,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           moneda: Database['public']['Enums']['currency'];
           monto: number | null;
           confirmacion_path: string | null;
@@ -1836,6 +1858,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'];
           monto?: number | null;
           confirmacion_path?: string | null;
@@ -1861,6 +1884,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           moneda?: Database['public']['Enums']['currency'];
           monto?: number | null;
           confirmacion_path?: string | null;
@@ -1891,6 +1915,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           ruta: string | null;
           moneda: Database['public']['Enums']['currency'];
           monto: number | null;
@@ -1916,6 +1941,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           ruta?: string | null;
           moneda?: Database['public']['Enums']['currency'] | null;
           monto?: number | null;
@@ -1941,6 +1967,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           ruta?: string | null;
           moneda?: Database['public']['Enums']['currency'] | null;
           monto?: number | null;
@@ -1989,6 +2016,7 @@ export type Database = {
           estatus_pago: string | null;
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          pagado_con_id: string | null;
           participantes: string | null;
           confirmacion: string | null;
           reserva_nombre: string | null;
@@ -2013,6 +2041,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           participantes?: string | null;
           confirmacion?: string | null;
           reserva_nombre?: string | null;
@@ -2037,6 +2066,7 @@ export type Database = {
           estatus_pago?: string | null;
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          pagado_con_id?: string | null;
           participantes?: string | null;
           confirmacion?: string | null;
           reserva_nombre?: string | null;

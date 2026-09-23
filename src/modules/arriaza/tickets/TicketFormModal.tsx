@@ -115,6 +115,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
   const [penalidadDesc, setPenalidadDesc] = useState('');
   const [penalidadMonto, setPenalidadMonto] = useState('');
   const [pagadoCon, setPagadoCon] = useState('');
+  const [pagadoConId, setPagadoConId] = useState<string | null>(null);
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -140,6 +141,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
     setPenalidadDesc(t?.penalidad_desc ?? '');
     setPenalidadMonto(t?.penalidad_monto != null ? String(t.penalidad_monto) : '');
     setPagadoCon(t?.pagado_con ?? '');
+    setPagadoConId(t?.pagado_con_id ?? null);
     setMoneda((t?.moneda as Currency) ?? 'USD');
     setPnrDraft('');
     setError(null);
@@ -194,6 +196,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
       penalidad_desc: penalidadDesc.trim() || null,
       penalidad_monto: penalidadMonto.trim() === '' ? null : Number(penalidadMonto),
       pagado_con: pagadoCon.trim() || null,
+      pagado_con_id: pagadoConId,
       moneda,
       // Espejo en el encabezado para que la fila del flyer y el itinerario no
       // tengan que abrir los segmentos.
@@ -436,7 +439,11 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
             <PaymentMethodSelect
               label="Pagado con"
               value={pagadoCon}
-              onChange={setPagadoCon}
+              valueId={pagadoConId}
+              onChange={(texto, tarjetaId) => {
+                setPagadoCon(texto);
+                setPagadoConId(tarjetaId);
+              }}
             />
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">

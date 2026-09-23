@@ -82,6 +82,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
   const [estatusNota, setEstatusNota] = useState('');
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
+  const [pagadoConId, setPagadoConId] = useState<string | null>(null);
   const [comentarios, setComentarios] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +110,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
     setEstatusNota(h?.estatus_pago ?? '');
     setEstadoPago(h?.estado_pago ?? 'HOLD');
     setPagadoCon(h?.pagado_con ?? h?.pay ?? '');
+    setPagadoConId(h?.pagado_con_id ?? null);
     setComentarios(h?.comentarios ?? h?.notas ?? '');
     setMoneda((h?.moneda as Currency) ?? 'USD');
     setError(null);
@@ -142,6 +144,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
+      pagado_con_id: pagadoConId,
       comentarios: comentarios.trim() || null,
       moneda,
     };
@@ -328,7 +331,15 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
                 <option value="GBP">GBP</option>
               </Select>
             </div>
-            <PaymentMethodSelect label="Pagado con" value={pagadoCon} onChange={setPagadoCon} />
+            <PaymentMethodSelect
+              label="Pagado con"
+              value={pagadoCon}
+              valueId={pagadoConId}
+              onChange={(texto, tarjetaId) => {
+                setPagadoCon(texto);
+                setPagadoConId(tarjetaId);
+              }}
+            />
             <TextArea label="Comentarios" value={comentarios} onChange={(e) => setComentarios(e.target.value)} rows={3} placeholder="Comentarios adicionales…" />
           </Bloque>
 

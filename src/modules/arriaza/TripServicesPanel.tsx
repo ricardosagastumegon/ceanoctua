@@ -145,27 +145,13 @@ export function TripServicesPanel({ viaje, canEdit }: Props) {
         {visibles.has('hotel') && <HotelesSection {...comunes} autoOpenCreate={autoOpenKey === 'hotel'} />}
         {visibles.has('restaurantes') && <RestaurantesSection {...comunes} autoOpenCreate={autoOpenKey === 'restaurantes'} />}
         {visibles.has('renta') && <RentasSection {...comunes} autoOpenCreate={autoOpenKey === 'renta'} />}
-        {visibles.has('tours') && (
-          <ToursSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'tours'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
-        {visibles.has('aeronave') && (
-          <AeronavesSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'aeronave'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
-        {visibles.has('acuatico') && (
-          <AcuaticosSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'acuatico'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
-        {visibles.has('ferry') && (
-          <FerriesSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'ferry'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
-        {visibles.has('terrestre') && (
-          <TerrestresSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'terrestre'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
-        {visibles.has('actividades') && (
-          <ActividadesSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'actividades'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
-        {visibles.has('reunion') && (
-          <ReunionesSection viajeId={viaje.id} canEdit={canEdit} autoOpenCreate={autoOpenKey === 'reunion'} onDidOpenCreate={comunes.onDidOpenCreate} />
-        )}
+        {visibles.has('tours') && <ToursSection {...comunes} autoOpenCreate={autoOpenKey === 'tours'} />}
+        {visibles.has('aeronave') && <AeronavesSection {...comunes} autoOpenCreate={autoOpenKey === 'aeronave'} />}
+        {visibles.has('acuatico') && <AcuaticosSection {...comunes} autoOpenCreate={autoOpenKey === 'acuatico'} />}
+        {visibles.has('ferry') && <FerriesSection {...comunes} autoOpenCreate={autoOpenKey === 'ferry'} />}
+        {visibles.has('terrestre') && <TerrestresSection {...comunes} autoOpenCreate={autoOpenKey === 'terrestre'} />}
+        {visibles.has('actividades') && <ActividadesSection {...comunes} autoOpenCreate={autoOpenKey === 'actividades'} />}
+        {visibles.has('reunion') && <ReunionesSection {...comunes} autoOpenCreate={autoOpenKey === 'reunion'} />}
         {/* Tiendas, Ruta y Puntos de Interés salieron del menú, pero si un
             viaje ya tiene alguno se sigue viendo y editando. */}
         {visibles.has('tiendas') && (

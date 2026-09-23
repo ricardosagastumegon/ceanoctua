@@ -49,7 +49,7 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         supabase.from('att_acuaticos').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
         supabase.from('att_ferries').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
         supabase.from('att_terrestres').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_actividades').select('evento, ciudad, fecha, inicio').match({ viaje_id: id, ...vivo }),
+        supabase.from('att_actividades').select('evento, ciudad, fecha, inicio, fin').match({ viaje_id: id, ...vivo }),
         supabase.from('att_reuniones').select('cita, asunto, ciudad, fecha, hora').match({ viaje_id: id, ...vivo }),
       ]);
 
@@ -115,7 +115,11 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         }
       }
       for (const a of actividades.data ?? []) {
-        if (a.fecha) ev.push({ servicio: 'actividades', fecha: a.fecha, hora: hhmm(a.inicio), titulo: a.evento ?? 'Actividad', detalle: limpio(a.ciudad) });
+        if (a.fecha) ev.push({
+          servicio: 'actividades', fecha: a.fecha, hora: hhmm(a.inicio),
+          titulo: a.evento ?? 'Actividad',
+          detalle: limpio(a.ciudad, a.fin ? `hasta ${hhmm(a.fin)}` : null),
+        });
       }
       for (const r of reuniones.data ?? []) {
         if (r.fecha) ev.push({ servicio: 'reunion', fecha: r.fecha, hora: hhmm(r.hora), titulo: r.cita ?? r.asunto ?? 'Reunión', detalle: limpio(r.asunto !== r.cita ? r.asunto : null, r.ciudad) });

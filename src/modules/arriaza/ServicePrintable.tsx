@@ -87,6 +87,10 @@ export function ServicePrintable({
               </div>
             )}
           </div>
+          {/* El bloque del texto reserva el ancho del logo y del dato de la
+              derecha. Sin esto, un titulo largo -- el nombre de un evento, por
+              ejemplo -- se metia debajo del logo. */}
+          <div style={{ paddingRight: '215px' }}>
           <div
             style={{
               fontSize: '.6rem', fontWeight: 800, letterSpacing: '.2em',
@@ -120,6 +124,7 @@ export function ServicePrintable({
               {tripNo}
             </div>
           )}
+          </div>
         </header>
 
         <section

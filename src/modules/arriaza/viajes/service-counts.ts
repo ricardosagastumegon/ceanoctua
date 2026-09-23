@@ -33,11 +33,12 @@ const TABLA_POR_SERVICIO = {
  * columna — se les agrega cuando les toque su documento — y mientras tanto
  * aportan cero al total del viaje.
  *
- * Faltan terrestre, actividades y reuniones.
+ * Falta reunion, que en el HTML viejo no manejaba costo.
  */
 const CON_MONTO = [
   'tickets', 'hotel', 'restaurantes', 'renta',
   'tours', 'aeronave', 'acuatico', 'ferry',
+  'terrestre', 'actividades',
 ] as const;
 
 export type ServiceSummary = {

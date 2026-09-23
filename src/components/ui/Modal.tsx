@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 type ModalProps = {
   open: boolean;
@@ -79,9 +80,11 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
   if (!open) return null;
 
-  return (
+  // Portal a <body>: ademas de evitar lios de apilamiento, es lo que permite
+  // imprimir lo que hay dentro del modal sin arrastrar la pagina de atras.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dark/60 px-4 py-8"
+      className="print-root fixed inset-0 z-50 flex items-center justify-center bg-dark/60 px-4 py-8"
       onClick={tryClose}
       role="presentation"
     >
@@ -92,7 +95,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-sand px-6 py-4">
+        <div className="no-print flex shrink-0 items-center justify-between border-b border-sand px-6 py-4">
           {title ? (
             <h2 id="modal-title" className="font-heading text-lg font-semibold text-dark">
               {title}
@@ -113,6 +116,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 type Props = {
   open: boolean;
@@ -29,9 +30,11 @@ export function PrintableModal({ open, onClose, title, children }: Props) {
 
   if (!open) return null;
 
-  return (
+  // Sale por un portal para quedar como hijo directo de <body>: es lo que le
+  // permite al CSS de impresion esconder el resto de la pagina.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dark/60 px-4 py-8"
+      className="print-root fixed inset-0 z-50 flex items-center justify-center bg-dark/60 px-4 py-8"
       onClick={onClose}
       role="presentation"
     >
@@ -64,6 +67,7 @@ export function PrintableModal({ open, onClose, title, children }: Props) {
           <div className="printable mx-auto max-w-3xl rounded-md bg-white shadow-sm">{children}</div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

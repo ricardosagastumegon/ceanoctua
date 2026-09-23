@@ -190,7 +190,7 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                   <th className="px-2 py-1.5 font-extrabold" title="Artículo personal · carry on · documentado">
                     Equipaje
                   </th>
-                  <th className="px-4 py-1.5 text-right font-extrabold">Total</th>
+                  <th className="whitespace-nowrap px-4 py-1.5 text-right font-extrabold">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,8 +207,11 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                     <td className="px-2 py-1.5 text-dark-2">
                       <Equipaje personal={p.eq_personal} carryon={p.eq_carryon} documentado={p.eq_documentado} />
                     </td>
-                    <td className="px-4 py-1.5 text-right font-extrabold" style={{ color: META.dark }}>
-                      {moneda} {((Number(p.tarifa) || 0) + (Number(p.extras) || 0)).toFixed(2)}
+                    <td className="whitespace-nowrap px-4 py-1.5 text-right" style={{ color: META.dark }}>
+                      <span className="text-[9px] font-semibold opacity-70">{moneda}</span>{' '}
+                      <span className="font-extrabold">
+                        {((Number(p.tarifa) || 0) + (Number(p.extras) || 0)).toFixed(2)}
+                      </span>
                     </td>
                   </tr>
                 ))}

@@ -30,24 +30,47 @@
   body {
     background: #ffffff !important;
   }
-  body * {
-    visibility: hidden !important;
+
+  /* Solo se imprime el modal abierto.
+     Va con `display: none` y no con `visibility: hidden`: lo invisible sigue
+     ocupando su lugar, y eso empujaba el documento hacia abajo hasta sacar
+     hojas de mas -- un ticket salia en tres paginas, la primera y la segunda
+     en blanco. Los modales se portan a <body> justo para que esta regla los
+     pueda distinguir del resto de la pagina. */
+  body > *:not(.print-root) {
+    display: none !important;
   }
-  .printable,
-  .printable * {
-    visibility: visible !important;
+
+  .print-root {
+    position: static !important;
+    display: block !important;
+    background: none !important;
+    padding: 0 !important;
   }
+  /* El modal recorta con scroll en pantalla; en papel tiene que fluir. */
+  .print-root * {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .print-root > * {
+    max-width: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: none !important;
+  }
+
   .printable {
-    /* `static` lets the browser paginate naturally across pages. `absolute`
-       traps the content into a single viewport-sized page and clips overflow. */
     position: static !important;
     width: 100% !important;
+    max-width: none !important;
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
+    border-radius: 0 !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }
+
   .no-print {
     display: none !important;
   }

@@ -6,9 +6,53 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
-## Fase 22 · 2026-09-22 → en curso · T&T Servicios, uno por documento
+## Fase 23 · 2026-09-23 · Liquidación de viajes y consumo por tarjeta
 
-**Objetivo:** reconstruir los 11 servicios del viaje según los documentos Word que el usuario escribe para cada uno. Van dos: Ticket Aéreo y Hotel. Plan del primero en [`PLAN-TT-TICKET-AEREO.md`](../PLAN-TT-TICKET-AEREO.md).
+**Objetivo:** que cada viaje pueda liquidarse para reporte financiero, con el detalle por servicio y —lo que de verdad pedía el usuario— cuánto consumió cada tarjeta. Plan en [`PLAN-TT-LIQUIDACION.md`](../PLAN-TT-LIQUIDACION.md).
+
+### El hallazgo que definió el diseño (`5371982`)
+
+Antes de escribir el reporte, la pregunta obvia: ¿se puede sumar por tarjeta? **No se podía.** `pagado_con` guardaba el **texto** que el desplegable armaba en el momento (`tc_id · red · banco · titular`), no una referencia a la tarjeta. En la base había tres valores para dos tarjetas:
+
+```
+Amex GT Term. 2345                                 (huérfano)
+Mastercard  Term. 5907 · BAC · Miguel A. Arriaza   (con banco y titular)
+TC MAA                                             (nunca estuvo en Admin)
+```
+
+El primero quedó huérfano **ese mismo día**: el catálogo decía `Amex GT Term. 2345` por la mañana y `Amex GT Term. 864` por la tarde, porque el usuario editó esa tarjeta mientras trabajábamos. Los servicios se quedaron apuntando a un nombre que ya no existía. La falla que se estaba describiendo en abstracto ocurrió en vivo.
+
+`20260923000011` agregó `pagado_con_id` a los diez servicios con costo y enlazó los cinco registros existentes; los dos huérfanos los resolvió el usuario (ambos son la Amex de Guatemala). El desplegable ahora muestra Presidencia primero y guarda las dos cosas: el texto que se ve y la llave que suma.
+
+### Cancelación con reintegro (`c242e05`)
+
+El usuario lo planteó al preguntarle qué pasa con un servicio cancelado: *"cada servicio debería de tener un botón que al cancelar pregunte si se tiene un reintegro total, o parcial"*.
+
+**`monto` no se toca.** Es lo que se le cargó a la tarjeta y así queda. Lo que volvió va aparte en `reintegro`, y el que suma al viaje es el neto. Guardar las dos cifras y no solo la resta es lo que permite cuadrar contra el estado de cuenta, que muestra un cargo y, por separado, un abono.
+
+Cancelar tampoco borra: un servicio con reintegro parcial costó la diferencia y tiene que verse en el reporte.
+
+`fecha_cargo` se agregó en la misma migración, aparte: cuándo se cobró la tarjeta, que puede ser meses antes del viaje. La liquidación del viaje **no** filtra por fechas —lleva todo lo del viaje, se haya comprado cuando se haya comprado—, pero el reporte por período que viene sí la va a necesitar.
+
+### La hoja (`cb617c1`, `8f36d03`, `7c6ced3`, `791732c`)
+
+Un renglón por servicio sin detalle —no van pasajeros, ni habitaciones, ni números de ticket— y debajo el consumo de cada tarjeta. Tres columnas de dinero y no una: cargo, reintegro y neto.
+
+**Lo que no se puede identificar se agrupa aparte,** marcado «sin identificar», en vez de repartirse mal y ensuciar el total de otra tarjeta.
+
+**El riesgo que descubrió una pregunta del usuario:** *"si en algún momento se hace modificación de algún número de TC o nombre, ¿el cambio se verá a partir de ese cambio?"*. Como la hoja resolvía el nombre contra el catálogo al imprimir, editar una tarjeta **reescribía todas las liquidaciones pasadas**. Una impresa en agosto decía una cosa y reimpresa hoy diría otra. Ahora usa el nombre tal como se guardó ese día —el texto siempre estuvo ahí, solo no se usaba— y sigue agrupando por la llave. Además, editar el identificador de una tarjeta con consumos avisa que conviene crearla aparte: una renovación son dos plásticos y los cargos viejos salieron en el estado de cuenta del anterior.
+
+El documento único (`791732c`) junta liquidación e itinerario en un PDF armado con `pdf-lib`, porque `window.print()` imprime una sola cosa. El contenido del itinerario salió de su modal a `ItinerarioHojas` para poder montarlo fuera de pantalla y capturarlo. Ambas librerías se cargan solo al generar: el bundle inicial no se movió.
+
+**Incidente propio (`321ca00`).** Al agregar las confirmaciones al documento puse `confirmacion_path` en las columnas comunes de las diez consultas. `att_tickets` no tiene esa columna —guarda sus archivos en `pdf_boleto_path`, `pdf_boarding_path` y `pdf_sat_path`—, así que la consulta falló y con ella toda la liquidación. Peor: el fallo **no se veía**, la hoja se quedaba en «Armando la liquidación…» indefinidamente. Ahora el error se muestra con botón de reintentar y la consulta no reintenta en silencio. El usuario después pidió sacar sus archivos del documento, lo que eliminó la causa de raíz.
+
+**Pendiente:** las hojas que genera el sistema para cada servicio dentro del documento único (requiere montarlas y capturarlas en secuencia), y la liquidación por período cruzando viajes por tarjeta.
+
+---
+
+## Fase 22 · 2026-09-22 → 2026-09-23 · T&T Servicios, uno por documento
+
+**Objetivo:** reconstruir los 11 servicios del viaje según los documentos Word que el usuario escribe para cada uno. **Cerrada: los 11 quedaron hechos.** Planes en [`PLAN-TT-TICKET-AEREO.md`](../PLAN-TT-TICKET-AEREO.md), [`PLAN-TT-TOURS-AERONAVE-ACUATICO-FERRY.md`](../PLAN-TT-TOURS-AERONAVE-ACUATICO-FERRY.md) y [`PLAN-TT-TERRESTRE-ACTIVIDADES.md`](../PLAN-TT-TERRESTRE-ACTIVIDADES.md).
 
 **Ritmo acordado:** un documento por servicio → comparar contra el esquema real de la base → listar huecos y decisiones → migración → código → revisar en pantalla → commit → el usuario autoriza el push y lo revisa en producción.
 
@@ -75,11 +119,47 @@ El usuario lo resumió así sobre la hoja de renta: *"me gusta como separaste la
 
 **Trampa de tipos que costó una reparación.** Al editar `src/types/database.ts` delimité el bloque de `att_hoteles` usando `att_hotel_habitaciones` como final, suponiendo que iba a continuación. Está 800 líneas más abajo, así que la edición abarcó once tablas y les inyectó columnas de hotel. `tsc` no se queja: campos opcionales de más no rompen nada hasta que alguien los usa. Se reparó calculando el límite real de cada bloque — del marcador de la tabla al siguiente marcador — y auditando **cada** columna agregada ese día.
 
-**Pendiente:** siete servicios (Tours, Aeronave, Acuático, Ferry, Terrestre, Actividades, Reuniones), la pantalla propia del viaje con botón Regresar — el cambio de fondo del documento del dashboard, aún sin hacer — y unificar el estado de pago en esos siete.
+### Tours, Aeronave, Acuático y Ferry (`4385d58`, `f7915b4`, `9e9ae09`, `e0950c3`, `ec34b10`)
+
+Cuatro servicios en un documento. Las cuatro tablas venían del port de la Fase 19 **vacías**, así que cambiar restricciones no tenía riesgo.
+
+Les faltaba lo mismo a las cuatro: `monto` —sin ella el servicio aporta cero al total—, `moneda` y `confirmacion_path`. Y las cuatro arrastraban el `*_estado_pago_check` viejo, que esta vez **sí** se buscó por definición y se borró en la misma migración, como quedó anotado tras el incidente de la renta.
+
+**Dos cosas que el documento pedía y el esquema no tenía:** el nombre del tour (`att_tours.nombre`, distinto del prestador que lo opera) y, en el ferry, la tercera opción de «Servicio para». La restricción solo aceptaba `Personas` y `Vehículos`; el documento pide también `Persona & Vehículo`, así que un ferry mixto no se habría podido guardar.
+
+Acuático y ferry son el mismo servicio con otro casco: comparten los bloques del PDF y el selector OW/RT, que pasó a pintarse con el color de quien lo monta.
+
+### Traslado Terrestre y Actividades (`6c2e726`, `6f2a810`, `8966851`)
+
+El terrestre en **terracota**, pedido explícitamente en el documento; antes era un gris azulado que no lo distinguía de nada. Su total multiplica por personas y suma extras, distinto de acuático y ferry.
+
+**Decisión de modelo en Actividades.** Existían `att_actividad_tickets` y `att_actividad_subtickets` del port viejo, ambas vacías, que ponen tarifa y extras **por bloque de participante**. El documento ponía el precio a nivel del evento, así que se creó `att_actividad_entradas` colgando directo de la actividad y las dos viejas quedaron deprecadas —y se borraron al día siguiente en `20260923000009`, con autorización del usuario.
+
+**Giro a mitad de camino.** Después de construirlo el usuario pidió *"tarifa por participante, me funciona mejor"* y luego lo afinó a **por persona**: la tarifa del evento es la estándar que paga cada uno, y quien pague distinto lleva la suya en su fila. Vacío no es cero —una fila sin tarifa usa la estándar, un `0` escrito a mano es una cortesía—. Consecuencia en la UI: los participantes dejaron de ser chips sueltos y pasaron a ser la lista con tarifa, porque tener las dos cosas obligaba a escribir los nombres dos veces.
+
+### Reuniones (`0edf09f`) · cierra los 11
+
+El único sin costo: no tiene tarifa, ni forma de pago, ni aporta al total. Su PDF va en **azul marino y gris muy claro**, no en los colores vivos del resto, porque *"generalmente se utiliza para compartir con los participantes"*. Por lo mismo el pie dejó de decir «documento de uso interno» —sería contradecirse con alguien a quien se lo mandas— y el pie de todos los servicios pasó a tomar el color de su propio servicio.
+
+`cita` era `NOT NULL` y el documento no la pide: una reunión nueva no se habría podido guardar. Se liberó.
+
+La reunión entra al itinerario **y** marca su día en el calendario del dashboard, las dos cosas que pedía el documento.
+
+### Tres fallas viejas que salieron a la luz
+
+**El itinerario general nunca mostró un solo servicio (`d7f8bc1`).** Las once consultas filtraban el borrado suave con `.match({ viaje_id: id, deleted_at: null })`. PostgREST arma un `eq` por cada llave, así que eso sale como `deleted_at=eq.null`, y en SQL `= NULL` nunca es verdadero: las once devolvían cero filas **siempre**. Comprobado contra la base: `where deleted_at is null` da 3 tickets, `where deleted_at = null` da 0. La regla queda anotada en el archivo.
+
+**Los PDF salían en varias hojas (`c676d8f`).** El CSS de impresión escondía el resto de la página con `visibility: hidden`, que oculta pero **deja el hueco**: el documento caía después de toda la pantalla del viaje. Medido con Chrome en modo impresión y una pantalla de fondo, un ticket salía en **tres** páginas con las dos primeras casi en blanco. Ahora los modales salen por un portal a `<body>` y la impresión saca del flujo todo lo que no es el modal. El mismo cambio arregló el Itinerario Final, que se imprimía **en blanco** porque su contenido no llevaba la clase que el CSS usaba para decidir qué imprimir.
+
+**El encabezado del viaje se quedaba en números viejos (`11fb293`).** Un viaje con dos tickets decía «1 vuelo»: nadie invalidaba `att_trip_stats`. Cada formulario invalidaba a mano las queries que conocía, y las que vinieron después no entraban en esa lista. Ahora hay una sola función, `invalidarViaje`, que refresca todo lo que la pantalla deriva de los servicios; la usan los once formularios y los diez borrados. De paso salió que **borrar** un servicio tampoco refrescaba el total.
+
+### El título del PDF bajo el logo (`c5a2e95`)
+
+El bloque de texto del encabezado no reservaba el ancho del logo, así que un título largo —el nombre de un evento— se le montaba encima. Afectaba a los diez servicios; se arregló en la plantilla compartida. De paso, los seis servicios reconstruidos se montaban a mano en el panel y se quedaban sin `tripNo`: su PDF salía sin el correlativo del viaje.
 
 ---
 
-## Fase 21 · 2026-09-22 → en curso · T&T Dashboard inicial
+## Fase 21 · 2026-09-22 → 2026-09-23 · T&T Dashboard inicial
 
 **Objetivo:** dejar Arriaza T&T como lo describe `TT_Dashboard_inicial.docx`. Plan completo en [`PLAN-TT-DASHBOARD.md`](../PLAN-TT-DASHBOARD.md).
 
@@ -108,6 +188,28 @@ Migración `20260922000004`: `att_viaje_paises`, `att_viaje_ciudades`, `att_viaj
 `viajes/destinos-api.ts` expone `sync()`: recibe la lista completa y reconcilia contra la base (inserta, actualiza, marca `deleted_at` lo quitado). Se eligió así porque el formulario edita colecciones, no filas sueltas.
 
 **Banderas descartadas:** Windows no dibuja banderas emoji. Se queda el chip de dos letras; el ISO igual se guarda por si algún día se quieren.
+
+### F21-3 · El viaje se arma en su propia pantalla (`82839e7`)
+
+El cambio de fondo que pedía el documento del dashboard. Antes la tarjeta del viaje desplegaba ahí mismo las once secciones de servicios, lo que mezclaba *ver la lista de viajes* con *construir uno* y saturaba la pantalla. Ahora la tarjeta es un resumen y una puerta: ruta `/arriaza/viaje/:id` con su botón Regresar.
+
+### Los cuatro ajustes del usuario (`3e4a00d`, `f8cd49c`, `ab96969`)
+
+- **Compartir viaje mostraba cero.** El total estaba literalmente escrito como `0` con un texto de relleno; nunca se conectó a los servicios.
+- **El itinerario se escribe día a día.** Cada día es una banda con su fecha y una tarjeta debajo, y dentro conviven los servicios reservados y las actividades escritas a mano **en una sola línea de tiempo ordenada por hora**. Al verlo en pantalla salió que el restaurante de las 20:00 aparecía arriba de las actividades de las 10:00: eran dos listas separadas.
+- **Resumen en números y ruta lateral.** Días, noches de hotel, ciudades y vuelos. Los vuelos cuentan **segmentos**, no tickets: un ida y vuelta con escala son varios vuelos en un boleto.
+
+### La ruta del riel, dos veces (`adb801c`, `41c7504`)
+
+El usuario lo reportó así: *"en teoría llego primero a MIA y luego a NY, pero como de donde te pedí que extrajeras la información NO tiene fechas de llegada, el timeline no está alimentándose bien"*. Tenía razón: `att_viaje_ciudades` dice a qué ciudades va el viaje, no cuándo se llega, así que el riel las mostraba en el orden en que se capturaron.
+
+Primera versión: ordenar por lo que sí tiene fecha, con los vuelos como fuente principal. **El usuario corrigió el criterio, y el suyo es mejor:** no se ordena por qué dato es más confiable sino por **qué ciudad merece aparecer** —
+
+> *"La fecha de las ciudades primero la ponen los Hoteles, si no hay hotel el Tour, y luego los vuelos. Porque la mayoría de las ciudades que merece la pena mencionar es donde se aloja (…) y por último, como el del viaje a NY, es la del vuelo como MIA, ya que hago escala allí."*
+
+Así quedó: **hotel → tour → parada → vuelo**. Cada ciudad toma la fecha de su fuente más importante, y agregarle un hotel a una escala la reordena sola. La misma jerarquía resuelve los choques de día, que es lo que evita que el hotel «Brooklyn NY» y el vuelo a «Nueva York» del mismo día salgan como dos escalas.
+
+**Las ciudades sin fecha no cuelgan del riel.** No tienen lugar en una línea de tiempo, y ponerlas al final duplicaba la misma escala cuando está escrita distinto que en el servicio —«New York» a mano contra «Nueva York» del aeropuerto JFK. Se siguen viendo en «Datos del viaje», donde la lista no promete ningún orden.
 
 ---
 

@@ -14,6 +14,8 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 
 ## 🟡 Deuda técnica (agenda dentro de las próximas 2 fases)
 
+> **Nota de numeración:** la sección «Deferred a polish futuro» del final usa su propia serie DT-5 a DT-8, de la Fase 19 y ya cerrada. Los items vivos de aquí siguen desde DT-10 para no chocar con ella.
+
 ### DT-1 · Setup de vitest + primeros tests unitarios
 
 - **Origen:** [`docs/AUDIT-2026-07-12.md`](AUDIT-2026-07-12.md) finding M-2
@@ -40,7 +42,30 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
-### DT-6 · Dos componentes de chips conviviendo
+### DT-10 · Las hojas por servicio en el documento único de la liquidación
+
+- **Origen:** [`PLAN-TT-LIQUIDACION.md`](../PLAN-TT-LIQUIDACION.md) · pedido del usuario 2026-09-23
+- **Impacto:** El botón «Descargar completa» junta la liquidación y el itinerario. Faltan las hojas que el sistema genera para cada servicio (ticket, hotel, etc.), que el usuario pidió incluir. No es bloqueante: las hojas se pueden imprimir una por una desde su 👁.
+- **Por qué no se hizo aún:** cada hoja vive dentro de su propio modal, así que hay que montarlas y capturarlas en secuencia. Es un mecanismo aparte del que ya funciona y se prefirió no meter algo frágil al documento que el usuario archiva.
+- **Estimado:** 2-3 h.
+- **Estado:** Pendiente.
+
+### DT-11 · Liquidación por período, cruzando viajes
+
+- **Origen:** conversación 2026-09-23. El usuario: *"me parece fantástico por período porque puedo sacar información por TC para pagos"*.
+- **Impacto:** Hoy la liquidación es por viaje. Falta el reporte que cruza todos los viajes y agrupa por tarjeta en un rango de fechas.
+- **La base ya está:** cada servicio guarda `pagado_con_id` y `fecha_cargo`. El reporte debe usar `fecha_cargo` y caer a la fecha del servicio si está vacía.
+- **Estimado:** 3-4 h.
+- **Estado:** Pendiente.
+
+### DT-12 · `att_reuniones.cita` y `.asunto` deprecadas
+
+- **Origen:** migración `20260923000010`
+- **Impacto:** Ninguno. Son del port de la Fase 19; el documento de Reuniones pide `titulo` y `descripcion`. `cita` dejó de ser `NOT NULL` para que se pueda guardar una reunión nueva.
+- **Estimado:** 10 min · `drop column` cuando se confirme que el modelo nuevo funciona en producción.
+- **Estado:** Deprecadas con comentario en la tabla.
+
+### DT-13 · Dos componentes de chips conviviendo
 
 - **Origen:** fase 22 · `shared/ChipsInput.tsx`
 - **Impacto:** Cosmético. `TicketFormModal` conserva su `ListaChips` local, casi idéntico al `ChipsInput` compartido que usa Actividades. Se dejó así para no tocar un formulario que el usuario ya está usando sin problemas.
@@ -88,13 +113,13 @@ Ya no depende de GitHub App de Vercel ni de OAuth tokens múltiple-cuenta. Redun
 
 ## Fase actual en curso
 
-**F19 · CERRADA** el 2026-08-09. Los 14 servicios T&T ya operan en producción con:
-- Schema 17 tablas nuevas + Regla 0 completa
-- CRUD end-to-end (14 forms + sections)
-- ItineraryModal + BackupModal + FinishedFolder
-- Skill `import-tt-backup` para cargar JSON del standalone HTML
+**Fases 21, 22 y 23 · CERRADAS** el 2026-09-23.
 
-Ver [`docs/BITACORA.md`](BITACORA.md) fase 19 completa.
+- **21 · Dashboard T&T** — el viaje se arma en su propia pantalla, con resumen en números y el riel de la ruta ordenado por hotel → tour → parada → vuelo.
+- **22 · Servicios** — los **11 servicios** reconstruidos uno por documento, cada uno con su formulario, su PDF, su color y su aporte al total del viaje.
+- **23 · Liquidación** — cada servicio apunta a su tarjeta, se puede cancelar con reintegro total o parcial, y el viaje se liquida con el consumo por TC.
+
+Lo que sigue: DT-10 y DT-11 de arriba. Ver [`docs/BITACORA.md`](BITACORA.md).
 
 ## Deferred a polish futuro (no bloquean uso)
 
@@ -132,6 +157,10 @@ Ver [`docs/BITACORA.md`](BITACORA.md) fase 19 completa.
 
 | Fecha | ID | Cerrado en commit |
 |---|---|---|
+| 2026-09-23 | **Fase 22 completa** · los 11 servicios de T&T, uno por documento | commits `4385d58..0edf09f` · 10 migraciones |
+| 2026-09-23 | **Fase 23** · liquidación de viaje y consumo por tarjeta | commits `5371982..321ca00` · migraciones `...011` y `...012` |
+| 2026-09-23 | **Itinerario general vacío** · `.match({deleted_at:null})` nunca devolvía filas | `d7f8bc1` |
+| 2026-09-23 | **PDF en varias hojas** · `visibility:hidden` dejaba el hueco de la página | `c676d8f` |
 | 2026-09-23 | **DT-5** · drop de `att_actividad_tickets` y `att_actividad_subtickets` (vacias) + limpieza del codigo | migración `20260923000009_drop_actividad_tickets.sql` |
 | 2026-08-09 | **F19 completa** · T&T con 14 servicios + backup + itinerary + docs | commits `b347470..683abd3` (~7500 LOC, 40+ archivos) |
 | 2026-08-09 | **INCIDENTE RLS 34 tablas** · re-enable + ADR D-021 | migración `20260813000002_fix_rls_reenable.sql` |

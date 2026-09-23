@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { fmtDate } from './utils';
+import { Link } from 'react-router-dom';
 import { findCountry } from './constants/countries';
 import { useUpdateAttViaje } from './viajes/hooks';
 import type { AttViaje } from './viajes/api';
@@ -51,8 +52,16 @@ export function FinishedFolder({ viajes, canEdit }: { viajes: AttViaje[]; canEdi
                 <div className="mt-1 font-heading text-sm font-extrabold text-white">{flag} {v.titulo}</div>
                 <div className="mt-0.5 text-[11px] text-white/70">📍 {v.destino ?? '—'}</div>
                 <div className="mt-0.5 text-[11px] text-white/60">📅 {fmtDate(v.fecha_ini)} — {fmtDate(v.fecha_fin)}</div>
-                {canEdit && (
-                  <div className="mt-2 flex gap-1">
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {/* Un viaje realizado se sigue consultando: se abre igual que
+                      los activos, en su propia pantalla. */}
+                  <Link
+                    to={`/arriaza/viaje/${v.id}`}
+                    className="rounded-md border border-white/30 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-white/20"
+                  >
+                    👁 Abrir
+                  </Link>
+                  {canEdit && (
                     <button
                       type="button"
                       onClick={() => void reactivate(v)}
@@ -60,8 +69,8 @@ export function FinishedFolder({ viajes, canEdit }: { viajes: AttViaje[]; canEdi
                     >
                       ↩ Reactivar
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}

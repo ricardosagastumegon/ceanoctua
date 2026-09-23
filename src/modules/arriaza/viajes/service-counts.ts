@@ -1,12 +1,11 @@
-// Cuántos registros tiene cada servicio de un viaje.
+// Cuántos registros y cuánto dinero tiene cada servicio de un viaje.
 //
-// Para qué: la tarjeta no puede apilar los 11 servicios — satura la pantalla.
-// Solo muestra los que ya tienen algo guardado, más el que el usuario abra a
-// mano. Para saber cuáles tienen algo hace falta este conteo.
+// Para qué: la pantalla del viaje solo muestra los servicios que ya tienen algo
+// guardado — apilar los once satura —, y el encabezado necesita el costo total,
+// que es la suma de lo que cuesta cada servicio.
 //
-// Se pide `head: true`, así que la base devuelve solo el número y ningún dato.
-// La consulta corre únicamente cuando el usuario despliega los servicios de un
-// viaje (`enabled`), no al cargar el dashboard entero.
+// Se pide `head: true` para los conteos, así que la base devuelve solo el
+// número. Los montos sí traen filas, pero únicamente la columna `monto`.
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -29,28 +28,82 @@ const TABLA_POR_SERVICIO = {
   poi: 'att_pois',
 } as const satisfies Record<ServiceKey, string>;
 
-export type ServiceCounts = Partial<Record<ServiceKey, number>>;
+/**
+ * Servicios que ya guardan su total en `monto`. Los demás todavía no tienen la
+ * columna — se les agrega cuando les toque su documento — y mientras tanto
+ * aportan cero al total del viaje.
+ */
+const CON_MONTO = ['tickets', 'hotel', 'restaurantes', 'renta'] as const;
 
-export function useServiceCounts(viajeId: string | undefined, enabled: boolean) {
+export type ServiceSummary = {
+  /** Cuántos registros tiene cada servicio. Solo los que tienen alguno. */
+  counts: Partial<Record<ServiceKey, number>>;
+  /** Cuánto suma cada servicio. */
+  montos: Partial<Record<ServiceKey, number>>;
+  /** Suma de todos los servicios que ya guardan su total. */
+  total: number;
+  /**
+   * Monedas distintas encontradas. Si hay más de una, sumar es mentir: el
+   * total se muestra como referencia y la pantalla lo advierte.
+   */
+  monedas: string[];
+  /** Si hay servicios con registros cuyo monto todavía no se puede sumar. */
+  totalParcial: boolean;
+};
+
+export function useServiceSummary(viajeId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['att_service_counts', viajeId],
     enabled: !!viajeId && enabled,
-    queryFn: async (): Promise<ServiceCounts> => {
+    queryFn: async (): Promise<ServiceSummary> => {
       const entries = Object.entries(TABLA_POR_SERVICIO) as [ServiceKey, string][];
-      const results = await Promise.all(
+      const conMonto = new Set<string>(CON_MONTO);
+
+      const resultados = await Promise.all(
         entries.map(async ([key, tabla]) => {
+          if (conMonto.has(key)) {
+            const { data, error } = await supabase
+              .from(tabla as 'att_tickets')
+              .select('monto, moneda')
+              .eq('viaje_id', viajeId as string)
+              .is('deleted_at', null);
+            if (error) throw error;
+            const filas = data ?? [];
+            return {
+              key,
+              count: filas.length,
+              monto: filas.reduce((s, f) => s + (Number(f.monto) || 0), 0),
+              monedas: filas.map((f) => f.moneda).filter(Boolean) as string[],
+              sumable: true,
+            };
+          }
           const { count, error } = await supabase
             .from(tabla)
             .select('id', { count: 'exact', head: true })
             .eq('viaje_id', viajeId as string)
             .is('deleted_at', null);
           if (error) throw error;
-          return [key, count ?? 0] as const;
+          return { key, count: count ?? 0, monto: 0, monedas: [] as string[], sumable: false };
         }),
       );
-      const out: ServiceCounts = {};
-      for (const [key, n] of results) if (n > 0) out[key] = n;
-      return out;
+
+      const counts: Partial<Record<ServiceKey, number>> = {};
+      const montos: Partial<Record<ServiceKey, number>> = {};
+      let total = 0;
+      let totalParcial = false;
+      const monedas = new Set<string>();
+      for (const r of resultados) {
+        if (r.count === 0) continue;
+        counts[r.key] = r.count;
+        if (r.sumable) {
+          montos[r.key] = r.monto;
+          total += r.monto;
+          for (const m of r.monedas) monedas.add(m);
+        } else {
+          totalParcial = true;
+        }
+      }
+      return { counts, montos, total, monedas: [...monedas], totalParcial };
     },
   });
 }

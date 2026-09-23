@@ -15,6 +15,7 @@ const EgPage = lazy(() => import('@/modules/eg/page'));
 const PePage = lazy(() => import('@/modules/pe/page'));
 // CcBoardPage eliminada en Fase 16 · F-0 (mergeada con Finanzas).
 const ArriazaPage = lazy(() => import('@/modules/arriaza/page'));
+const ArriazaTripPage = lazy(() => import('@/modules/arriaza/detail-page'));
 const CeaPage = lazy(() => import('@/modules/cea/page'));
 const AdminPage = lazy(() => import('@/modules/admin/page'));
 const MielSjPage = lazy(() => import('@/modules/miel-sj/page'));
@@ -54,6 +55,9 @@ export const router = createBrowserRouter([
       { path: 'cc-board', element: <Navigate to="/finanzas#vales" replace /> },
       { path: 'cc-board/*', element: <Navigate to="/finanzas#vales" replace /> },
       { path: 'arriaza', element: withSuspense(<ArriazaPage />) },
+      // El viaje se construye en su propia pantalla (fase 21-3). Lleva el uuid
+      // y no el correlativo, que puede venir nulo en viajes viejos.
+      { path: 'arriaza/viaje/:id', element: withSuspense(<ArriazaTripPage />) },
       { path: 'cea', element: withSuspense(<CeaPage />) },
       { path: 'admin', element: withSuspense(<AdminPage />) },
       { path: 'miel-sj', element: withSuspense(<MielSjPage />) },

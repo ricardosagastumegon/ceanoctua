@@ -1516,6 +1516,7 @@ export type Database = {
           estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
           moneda: Database['public']['Enums']['currency'] | null;
+          monto: number | null;
           marca: string | null;
           modelo: string | null;
           tamano: string | null;
@@ -1539,6 +1540,7 @@ export type Database = {
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
           moneda?: Database['public']['Enums']['currency'] | null;
+          monto?: number | null;
           marca?: string | null;
           modelo?: string | null;
           tamano?: string | null;
@@ -1562,6 +1564,7 @@ export type Database = {
           estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
           moneda?: Database['public']['Enums']['currency'] | null;
+          monto?: number | null;
           marca?: string | null;
           modelo?: string | null;
           tamano?: string | null;

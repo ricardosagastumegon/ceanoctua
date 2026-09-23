@@ -182,6 +182,9 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
       extras: extras
         .filter((e) => e.label.trim() || e.amount.trim())
         .map((e) => ({ label: e.label.trim(), amount: Number(e.amount) || 0 })),
+      // El total se guarda para que el viaje pueda sumar sus servicios
+      // sin recalcular la fórmula de cada uno.
+      monto: total,
       cancelacion: cancelacion.trim() || null,
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,

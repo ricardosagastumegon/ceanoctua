@@ -14,6 +14,7 @@ import { useAttViaje, useDeleteAttViaje, useUpdateAttViaje } from './viajes/hook
 import { useSyncViajeDestinos, useViajeDestinos } from './viajes/destinos-hooks';
 import { useServiceSummary } from './viajes/service-counts';
 import { useTripStats } from './viajes/trip-stats';
+import { useTripRoute } from './viajes/trip-route';
 import type { AttViajeInsert } from './viajes/api';
 import { SERVICE_META, type ManualStatus, type ServiceKey } from './constants/serviceMeta';
 
@@ -193,12 +194,7 @@ export function TripDetailPage() {
 
       {/* Riel de ciudades a la izquierda + el resto a la derecha. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr]">
-        <RielCiudades
-          ciudades={ciudades.map((c) => c.nombre)}
-          paradas={paradas.map((p) => ({ nombre: p.nombre, ini: p.fecha_ini, fin: p.fecha_fin }))}
-          inicio={viaje.fecha_ini}
-          fin={viaje.fecha_fin}
-        />
+        <RielCiudades viajeId={viaje.id} inicio={viaje.fecha_ini} fin={viaje.fecha_fin} />
 
         <div className="space-y-4">
       {/* Datos del viaje */}
@@ -331,52 +327,42 @@ function Kpi({ valor, label }: { valor: number; label: string }) {
  * en el Itinerario Final.
  */
 function RielCiudades({
-  ciudades, paradas, inicio, fin,
+  viajeId, inicio, fin,
 }: {
-  ciudades: string[];
-  paradas: { nombre: string; ini: string | null; fin: string | null }[];
+  viajeId: string;
   inicio: string | null;
   fin: string | null;
 }) {
-  // Las ciudades son el esqueleto de la ruta; las paradas la enriquecen. Si una
-  // parada es una de esas ciudades le presta sus fechas en vez de duplicarla.
-  const clave = (s: string) => s.trim().toLowerCase();
-  const tramos = ciudades.map((c) => ({
-    nombre: c,
-    ini: null as string | null,
-    fin: null as string | null,
-  }));
-  for (const p of paradas) {
-    const ya = tramos.find((t) => clave(t.nombre) === clave(p.nombre));
-    if (ya) {
-      ya.ini = p.ini;
-      ya.fin = p.fin;
-    } else {
-      tramos.push({ nombre: p.nombre, ini: p.ini, fin: p.fin });
-    }
-  }
-  // Lo fechado manda el orden; lo que no tiene fecha conserva el suyo al frente.
-  tramos.sort((a, b) => {
-    if (!a.ini && !b.ini) return 0;
-    if (!a.ini) return -1;
-    if (!b.ini) return 1;
-    return a.ini.localeCompare(b.ini);
-  });
+  // El orden sale de los servicios con fecha -- los vuelos sobre todo -- y no
+  // de la lista de ciudades del viaje, que no sabe cuando se llega a cada una.
+  const ruta = useTripRoute(viajeId);
+  const pasos = ruta.data?.pasos ?? [];
+  const salida = ruta.data?.salida;
 
   return (
     <aside className="rounded-card border border-sand bg-white p-4 shadow-sm">
       <div className="text-[10px] font-extrabold uppercase tracking-wider text-dark-3">Tu ruta</div>
-      {tramos.length === 0 ? (
-        <p className="mt-2 text-xs italic text-dark-3">Sin ciudades ni paradas.</p>
+      {ruta.isLoading ? (
+        <p className="mt-2 text-xs text-dark-3">Cargando…</p>
+      ) : pasos.length === 0 ? (
+        <p className="mt-2 text-xs italic text-dark-3">
+          Todavía no hay nada con fecha que arme la ruta. Agrega un ticket aéreo,
+          un hotel o una parada y el recorrido se ordena solo.
+        </p>
       ) : (
         <ol className="mt-3 space-y-0">
-          <Hito fecha={inicio} nombre="Salida" tenue />
-          {tramos.map((t, i) => (
+          <Hito
+            fecha={salida?.fecha ?? inicio}
+            nombre={salida?.ciudad ?? 'Salida'}
+            etiqueta={salida?.ciudad ? 'Salida' : undefined}
+            tenue
+          />
+          {pasos.map((paso, i) => (
             <Hito
-              key={`${t.nombre}-${i}`}
-              nombre={t.nombre}
-              fecha={t.ini}
-              hasta={t.fin}
+              key={`${paso.ciudad}-${i}`}
+              nombre={paso.ciudad}
+              fecha={paso.fecha}
+              hasta={paso.hasta}
             />
           ))}
           <Hito fecha={fin} nombre="Regreso" tenue ultimo />
@@ -387,11 +373,13 @@ function RielCiudades({
 }
 
 function Hito({
-  nombre, fecha, hasta, tenue, ultimo,
+  nombre, fecha, hasta, etiqueta, tenue, ultimo,
 }: {
   nombre: string;
   fecha: string | null;
   hasta?: string | null;
+  /** Aclaracion corta bajo el nombre: "Salida", "sin fecha". */
+  etiqueta?: string;
   tenue?: boolean;
   ultimo?: boolean;
 }) {
@@ -414,6 +402,11 @@ function Hito({
         <div className={`truncate text-sm font-extrabold ${tenue ? 'text-dark-3' : 'text-dark'}`}>
           {nombre}
         </div>
+        {etiqueta && (
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-dark-3">
+            {etiqueta}
+          </div>
+        )}
       </div>
     </li>
   );

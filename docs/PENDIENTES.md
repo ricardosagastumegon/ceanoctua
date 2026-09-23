@@ -40,13 +40,6 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
-### DT-5 · Tablas de actividades deprecadas por la fase 22
-
-- **Origen:** [`PLAN-TT-TERRESTRE-ACTIVIDADES.md`](../PLAN-TT-TERRESTRE-ACTIVIDADES.md) · migración `20260923000007`
-- **Impacto:** Ninguno funcional. `att_actividad_tickets` y `att_actividad_subtickets` quedaron sin uso: el documento del servicio pone el precio a nivel del evento, no por bloque de participante, y la lista de entradas ahora cuelga de `att_actividad_entradas`.
-- **Estimado:** 10 min · migración con `drop table if exists`. Ambas están **vacías**, así que no se pierde nada.
-- **Estado:** Deprecadas con comentario en la tabla. Dropear cuando el usuario confirme que el modelo nuevo le funciona en producción.
-
 ### DT-6 · Dos componentes de chips conviviendo
 
 - **Origen:** fase 22 · `shared/ChipsInput.tsx`
@@ -139,6 +132,7 @@ Ver [`docs/BITACORA.md`](BITACORA.md) fase 19 completa.
 
 | Fecha | ID | Cerrado en commit |
 |---|---|---|
+| 2026-09-23 | **DT-5** · drop de `att_actividad_tickets` y `att_actividad_subtickets` (vacias) + limpieza del codigo | migración `20260923000009_drop_actividad_tickets.sql` |
 | 2026-08-09 | **F19 completa** · T&T con 14 servicios + backup + itinerary + docs | commits `b347470..683abd3` (~7500 LOC, 40+ archivos) |
 | 2026-08-09 | **INCIDENTE RLS 34 tablas** · re-enable + ADR D-021 | migración `20260813000002_fix_rls_reenable.sql` |
 | 2026-08-09 | **C-1 v4** · auth con timeout + auto-nuke storage | `2bf31cd` fix(auth) · ADR D-020 |

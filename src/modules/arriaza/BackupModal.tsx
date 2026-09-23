@@ -36,8 +36,8 @@ async function buildExport(): Promise<{ generated_at: string; source: string; tr
   const tables = [
     'att_tickets', 'att_hoteles', 'att_hotel_habitaciones', 'att_restaurantes',
     'att_rentas', 'att_tours', 'att_aeronaves', 'att_acuaticos', 'att_ferries',
-    'att_terrestres', 'att_tiendas', 'att_actividades', 'att_actividad_tickets',
-    'att_actividad_subtickets', 'att_reuniones', 'att_rutas', 'att_pois',
+    'att_terrestres', 'att_tiendas', 'att_actividades', 'att_actividad_entradas',
+    'att_reuniones', 'att_rutas', 'att_pois',
     'att_day_plans', 'att_day_plan_rows', 'att_day_notes',
   ] as const;
   const allChildren: Record<string, Record<string, unknown>[]> = {};
@@ -53,13 +53,11 @@ async function buildExport(): Promise<{ generated_at: string; source: string; tr
         tables.map((t) => {
           const parentKey = t === 'att_hotel_habitaciones'
             ? 'hotel_id'
-            : t === 'att_actividad_tickets'
+            : t === 'att_actividad_entradas'
               ? 'actividad_id'
-              : t === 'att_actividad_subtickets'
-                ? 'ticket_id'
-                : t === 'att_day_plan_rows'
-                  ? 'day_plan_id'
-                  : 'viaje_id';
+              : t === 'att_day_plan_rows'
+                ? 'day_plan_id'
+                : 'viaje_id';
           if (parentKey === 'viaje_id') {
             return [t, allChildren[t].filter((r) => r.viaje_id === tid)];
           }
@@ -71,18 +69,9 @@ async function buildExport(): Promise<{ generated_at: string; source: string; tr
             const hotelIds = new Set(allChildren['att_hoteles'].filter((h) => h.viaje_id === tid).map((h) => h.id));
             return [t, allChildren[t].filter((r) => hotelIds.has(r.hotel_id as string))];
           }
-          if (t === 'att_actividad_tickets') {
+          if (t === 'att_actividad_entradas') {
             const actIds = new Set(allChildren['att_actividades'].filter((a) => a.viaje_id === tid).map((a) => a.id));
             return [t, allChildren[t].filter((r) => actIds.has(r.actividad_id as string))];
-          }
-          if (t === 'att_actividad_subtickets') {
-            const actIds = new Set(allChildren['att_actividades'].filter((a) => a.viaje_id === tid).map((a) => a.id));
-            const ticketIds = new Set(
-              allChildren['att_actividad_tickets']
-                .filter((tk) => actIds.has(tk.actividad_id as string))
-                .map((tk) => tk.id),
-            );
-            return [t, allChildren[t].filter((r) => ticketIds.has(r.ticket_id as string))];
           }
           if (t === 'att_day_plan_rows') {
             const dpIds = new Set(allChildren['att_day_plans'].filter((d) => d.viaje_id === tid).map((d) => d.id));

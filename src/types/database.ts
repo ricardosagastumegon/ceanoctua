@@ -2082,55 +2082,6 @@ export type Database = {
           { foreignKeyName: 'att_actividad_entradas_actividad_id_fkey'; columns: ['actividad_id']; referencedRelation: 'att_actividades'; referencedColumns: ['id'] },
         ];
       };
-      att_actividad_tickets: {
-        Row: AuditCols & {
-          id: string; actividad_id: string;
-          nombres: string | null; personas: number | null; confirmacion: string | null;
-          lugares: string | null; tarifa: number | null;
-          extras: string | null; monto_extras: number | null;
-          tiene_subtickets: boolean; orden: number | null;
-          deleted_at: string | null;
-        };
-        Insert: AuditInsert & {
-          id?: string; actividad_id: string;
-          nombres?: string | null; personas?: number | null; confirmacion?: string | null;
-          lugares?: string | null; tarifa?: number | null;
-          extras?: string | null; monto_extras?: number | null;
-          tiene_subtickets?: boolean; orden?: number | null;
-          deleted_at?: string | null;
-        };
-        Update: AuditUpdate & {
-          nombres?: string | null; personas?: number | null; confirmacion?: string | null;
-          lugares?: string | null; tarifa?: number | null;
-          extras?: string | null; monto_extras?: number | null;
-          tiene_subtickets?: boolean; orden?: number | null;
-          deleted_at?: string | null;
-        };
-        Relationships: [
-          { foreignKeyName: 'att_actividad_tickets_actividad_id_fkey'; columns: ['actividad_id']; referencedRelation: 'att_actividades'; referencedColumns: ['id'] },
-        ];
-      };
-
-      att_actividad_subtickets: {
-        Row: AuditCols & {
-          id: string; ticket_id: string;
-          nombre: string | null; ticket: string | null; lugar: string | null;
-          orden: number | null; deleted_at: string | null;
-        };
-        Insert: AuditInsert & {
-          id?: string; ticket_id: string;
-          nombre?: string | null; ticket?: string | null; lugar?: string | null;
-          orden?: number | null; deleted_at?: string | null;
-        };
-        Update: AuditUpdate & {
-          nombre?: string | null; ticket?: string | null; lugar?: string | null;
-          orden?: number | null; deleted_at?: string | null;
-        };
-        Relationships: [
-          { foreignKeyName: 'att_actividad_subtickets_ticket_id_fkey'; columns: ['ticket_id']; referencedRelation: 'att_actividad_tickets'; referencedColumns: ['id'] },
-        ];
-      };
-
       att_reuniones: {
         Row: AuditCols & {
           id: string; viaje_id: string; cita: string;

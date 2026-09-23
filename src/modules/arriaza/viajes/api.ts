@@ -22,11 +22,8 @@ export type AttViajeUpdate = Database['public']['Tables']['att_viajes']['Update'
 //               att_hotel_services, att_hotel_pay_records,
 //               att_restaurant_diners, att_restaurant_services, att_restaurant_pay_records
 //   NUEVOS F19-1: att_hotel_habitaciones (bajo hoteles),
-//                 att_actividad_tickets (bajo actividades),
 //                 att_day_plan_rows (bajo day_plans)
-//
-// Nivel 3 (bisnietos):
-//   NUEVOS F19-1: att_actividad_subtickets (bajo actividad_tickets)
+//   NUEVO F22:    att_actividad_entradas (bajo actividades)
 async function cascadeSoftDeleteViaje(viajeId: string, deletedAt: string): Promise<void> {
   // ==========================================================
   // Fetch de IDs de padres directos (para alcanzar los hijos).
@@ -52,30 +49,6 @@ async function cascadeSoftDeleteViaje(viajeId: string, deletedAt: string): Promi
   const restauranteIds = (restaurantesQ.data ?? []).map((r) => r.id);
   const actividadIds = (actividadesQ.data ?? []).map((r) => r.id);
   const dayPlanIds = (dayPlansQ.data ?? []).map((r) => r.id);
-
-  // ==========================================================
-  // Nivel 3 (bisnietos): subtickets de tickets de actividad.
-  // Se hace primero porque necesita IDs de nivel 2.
-  // ==========================================================
-  let actividadTicketIds: string[] = [];
-  if (actividadIds.length > 0) {
-    const tkQ = await supabase
-      .from('att_actividad_tickets')
-      .select('id')
-      .in('actividad_id', actividadIds)
-      .is('deleted_at', null);
-    if (tkQ.error) throw tkQ.error;
-    actividadTicketIds = (tkQ.data ?? []).map((r) => r.id);
-
-    if (actividadTicketIds.length > 0) {
-      const rSub = await supabase
-        .from('att_actividad_subtickets')
-        .update({ deleted_at: deletedAt })
-        .in('ticket_id', actividadTicketIds)
-        .is('deleted_at', null);
-      if (rSub.error) throw rSub.error;
-    }
-  }
 
   // ==========================================================
   // Nivel 2 (nietos): hijos de tickets/hoteles/restaurantes/actividades/day_plans.
@@ -115,10 +88,10 @@ async function cascadeSoftDeleteViaje(viajeId: string, deletedAt: string): Promi
     if (rRpay.error) throw rRpay.error;
   }
   if (actividadIds.length > 0) {
-    // F19-1 · tickets de actividad (padres de los subtickets ya borrados arriba).
-    const rActTk = await supabase.from('att_actividad_tickets')
+    // F22 · participantes del evento, con su tarifa y su entrada.
+    const rEnt = await supabase.from('att_actividad_entradas')
       .update({ deleted_at: deletedAt }).in('actividad_id', actividadIds).is('deleted_at', null);
-    if (rActTk.error) throw rActTk.error;
+    if (rEnt.error) throw rEnt.error;
   }
   if (dayPlanIds.length > 0) {
     // F19-1 · rows del day_plan.

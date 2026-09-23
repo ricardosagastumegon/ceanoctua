@@ -3,11 +3,9 @@ import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { ItinerarioHojas } from './ItineraryModal';
-import { SERVICE_META as META_SERVICIOS } from './constants/serviceMeta';
 import {
   armarLiquidacionCompleta,
   descargar,
-  type Anexo,
   type ProgresoExport,
 } from './viajes/liquidacion-pdf';
 import { SERVICE_META } from './constants/serviceMeta';
@@ -49,30 +47,15 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
   const itinRef = useRef<HTMLDivElement>(null);
   const [progreso, setProgreso] = useState<ProgresoExport | null>(null);
 
-  /**
-   * El documento único: la hoja de liquidación, el itinerario y las
-   * confirmaciones que se subieron, todo en un PDF para archivar.
-   */
+  /** El documento único: la hoja de liquidación y el itinerario, para archivar. */
   async function exportar() {
     if (!viaje || !d) return;
-    const anexos: Anexo[] = d.renglones
-      .filter((r) => r.confirmacionPath)
-      .map((r) => ({
-        path: r.confirmacionPath as string,
-        titulo: `${META_SERVICIOS[r.servicio].label} · ${r.nombre}`,
-      }));
     setProgreso({ paso: 'Preparando…', hechos: 0, total: 0 });
     try {
       const nodos = [hojaRef.current, itinRef.current].filter(Boolean) as HTMLElement[];
-      const { blob, fallidos } = await armarLiquidacionCompleta(nodos, anexos, setProgreso);
+      const { blob } = await armarLiquidacionCompleta(nodos, setProgreso);
       descargar(blob, `Liquidacion ${viaje.trip_no ?? viaje.titulo}.pdf`);
-      if (fallidos.length > 0) {
-        toast.error(
-          `El documento se descargó, pero no se pudieron anexar ${fallidos.length} confirmación${fallidos.length === 1 ? '' : 'es'}: ${fallidos.join(', ')}.`,
-        );
-      } else {
-        toast.success('Liquidación completa descargada.');
-      }
+      toast.success('Liquidación descargada.');
     } catch (err) {
       toast.error(describeError(err));
     } finally {
@@ -135,6 +118,20 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
         </header>
 
         {q.isLoading && <p className="px-8 py-6 text-sm text-dark-3">Armando la liquidación…</p>}
+
+        {q.isError && (
+          <div className="mx-8 my-6 rounded-md border border-rust bg-rust-l px-4 py-3 text-sm text-rust">
+            <b>No se pudo armar la liquidación.</b>
+            <div className="mt-1 text-xs">{describeError(q.error)}</div>
+            <button
+              type="button"
+              onClick={() => void q.refetch()}
+              className="mt-2 rounded-md border border-rust px-3 py-1 text-xs font-semibold"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {d && d.renglones.length === 0 && (
           <p className="px-8 py-6 text-sm italic text-dark-3">

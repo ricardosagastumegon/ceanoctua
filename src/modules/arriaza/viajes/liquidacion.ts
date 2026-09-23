@@ -33,8 +33,6 @@ export type RenglonLiquidacion = {
    */
   pagadoConCorto: string | null;
   pagadoConId: string | null;
-  /** Ruta de la confirmación subida, para anexarla al documento completo. */
-  confirmacionPath: string | null;
 };
 
 export type ConsumoTarjeta = {
@@ -118,12 +116,13 @@ const MAPEO: Record<string, Mapeo> = {
 };
 
 const COMUNES =
-  'monto, reintegro, moneda, estado_pago, cancelado_en, pagado_con, pagado_con_id, fecha_cargo, confirmacion_path';
+  'monto, reintegro, moneda, estado_pago, cancelado_en, pagado_con, pagado_con_id, fecha_cargo';
 
 export function useLiquidacion(viajeId: string | undefined, enabled = true) {
   return useQuery({
     queryKey: ['att_liquidacion', viajeId],
     enabled: !!viajeId && enabled,
+    retry: false,
     queryFn: async (): Promise<Liquidacion> => {
       const id = viajeId as string;
       const claves = Object.keys(MAPEO) as ServiceKey[];
@@ -186,7 +185,6 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
             pagadoCon: fch(r.pagado_con),
             pagadoConCorto: cortoHistorico(fch(r.pagado_con), fch(r.pagado_con_id)),
             pagadoConId: fch(r.pagado_con_id),
-            confirmacionPath: fch(r.confirmacion_path),
           });
         }
       }

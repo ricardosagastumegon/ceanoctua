@@ -1,30 +1,20 @@
-// La liquidación completa en un solo PDF.
+// La liquidación en un solo PDF: la hoja de liquidación y el itinerario.
 //
-// El usuario guarda la liquidación entera como respaldo, así que el documento
-// junta en un archivo: la hoja de liquidación, el itinerario general y las
-// confirmaciones que se subieron de cada servicio.
+// El usuario guarda la liquidación como respaldo y quiere las dos hojas en un
+// archivo. Los documentos que él sube -- confirmaciones, boletos -- NO van
+// aquí: los pidió fuera explícitamente.
 //
-// Por qué no basta con `window.print()`: el navegador imprime lo que está en
-// pantalla y no sabe pegarle archivos. Aquí el PDF se arma por programa --
-// cada hoja de la app se captura como imagen y se le anexan los archivos
-// guardados en Storage, tal cual, sin reprocesarlos.
+// Por qué no basta con `window.print()`: el navegador imprime una sola cosa,
+// la que está en pantalla. Aquí el PDF se arma por programa, capturando cada
+// hoja y poniéndolas en páginas del mismo documento.
 //
 // Tanto `pdf-lib` como `html2canvas` se cargan solo cuando se genera el
 // documento: no engordan el bundle del día a día.
-
-import { supabase } from '@/lib/supabase';
 
 /** Carta en puntos, que es la unidad de pdf-lib. */
 const ANCHO = 612;
 const ALTO = 792;
 const MARGEN = 24;
-
-export type Anexo = {
-  /** Ruta en el bucket `tt-documentos`. */
-  path: string;
-  /** Para el aviso cuando un archivo no se pudo leer. */
-  titulo: string;
-};
 
 export type ProgresoExport = {
   paso: string;
@@ -54,37 +44,22 @@ async function capturarNodo(nodo: HTMLElement): Promise<Uint8Array> {
   return bytes;
 }
 
-async function descargarAnexo(path: string): Promise<{ bytes: Uint8Array; tipo: string } | null> {
-  const { data, error } = await supabase.storage.from('tt-documentos').download(path);
-  if (error || !data) return null;
-  const bytes = new Uint8Array(await data.arrayBuffer());
-  return { bytes, tipo: data.type || '' };
-}
-
 /**
  * Arma el documento y lo devuelve como Blob.
  *
- * `nodos` son las hojas de la app en el orden en que van; `anexos` los
- * archivos que se subieron. Un anexo que no se pueda leer no tumba el
- * documento: se reporta y se sigue.
+ * `nodos` son las hojas de la app, en el orden en que van al papel.
  */
 export async function armarLiquidacionCompleta(
   nodos: HTMLElement[],
-  anexos: Anexo[],
   onProgreso?: (p: ProgresoExport) => void,
-): Promise<{ blob: Blob; fallidos: string[] }> {
+): Promise<{ blob: Blob }> {
   const { PDFDocument } = await import('pdf-lib');
   const doc = await PDFDocument.create();
-  const total = nodos.length + anexos.length;
+  const total = nodos.length;
   let hechos = 0;
 
-  const avisar = (paso: string) => {
-    onProgreso?.({ paso, hechos, total });
-  };
-
-  // 1 · Las hojas de la app, como imagen a página completa.
   for (const nodo of nodos) {
-    avisar('Armando las hojas del viaje…');
+    onProgreso?.({ paso: 'Armando las hojas del viaje…', hechos, total });
     const png = await capturarNodo(nodo);
     const img = await doc.embedPng(png);
     const util = { w: ANCHO - MARGEN * 2, h: ALTO - MARGEN * 2 };
@@ -97,52 +72,9 @@ export async function armarLiquidacionCompleta(
     hechos += 1;
   }
 
-  // 2 · Las confirmaciones, tal como se subieron.
-  const fallidos: string[] = [];
-  for (const anexo of anexos) {
-    avisar(`Anexando ${anexo.titulo}…`);
-    try {
-      const archivo = await descargarAnexo(anexo.path);
-      if (!archivo) {
-        fallidos.push(anexo.titulo);
-        hechos += 1;
-        continue;
-      }
-      const esPdf =
-        archivo.tipo.includes('pdf') || anexo.path.toLowerCase().endsWith('.pdf');
-      if (esPdf) {
-        const origen = await PDFDocument.load(archivo.bytes);
-        const paginas = await doc.copyPages(origen, origen.getPageIndices());
-        for (const p of paginas) doc.addPage(p);
-      } else {
-        const esPng =
-          archivo.tipo.includes('png') || anexo.path.toLowerCase().endsWith('.png');
-        const img = esPng
-          ? await doc.embedPng(archivo.bytes)
-          : await doc.embedJpg(archivo.bytes);
-        const util = { w: ANCHO - MARGEN * 2, h: ALTO - MARGEN * 2 };
-        const escala = Math.min(util.w / img.width, util.h / img.height, 1);
-        const w = img.width * escala;
-        const h = img.height * escala;
-        const pagina = doc.addPage([ANCHO, ALTO]);
-        pagina.drawImage(img, {
-          x: (ANCHO - w) / 2, y: (ALTO - h) / 2, width: w, height: h,
-        });
-      }
-    } catch {
-      // Un adjunto roto o en un formato que pdf-lib no entiende no puede
-      // tumbar toda la liquidación.
-      fallidos.push(anexo.titulo);
-    }
-    hechos += 1;
-  }
-
-  avisar('Cerrando el documento…');
+  onProgreso?.({ paso: 'Cerrando el documento…', hechos, total });
   const bytes = await doc.save();
-  return {
-    blob: new Blob([bytes as BlobPart], { type: 'application/pdf' }),
-    fallidos,
-  };
+  return { blob: new Blob([bytes as BlobPart], { type: 'application/pdf' }) };
 }
 
 export function descargar(blob: Blob, nombre: string): void {

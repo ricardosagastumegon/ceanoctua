@@ -9,6 +9,7 @@ import { TripServicesPanel } from './TripServicesPanel';
 import { TripFormModal, type TripDestinos } from './TripFormModal';
 import { ItineraryModal } from './ItineraryModal';
 import { ShareModal } from './ShareModal';
+import { LiquidacionModal } from './LiquidacionModal';
 import { autoTripStatus, autoStatusLabel, fmtDate, tripDateRange } from './utils';
 import { useAttViaje, useDeleteAttViaje, useUpdateAttViaje } from './viajes/hooks';
 import { useSyncViajeDestinos, useViajeDestinos } from './viajes/destinos-hooks';
@@ -54,6 +55,7 @@ export function TripDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [itinOpen, setItinOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [liqOpen, setLiqOpen] = useState(false);
 
   const viaje = viajeQuery.data;
 
@@ -173,6 +175,7 @@ export function TripDetailPage() {
             <div className="flex flex-wrap gap-1">
               <BotonHeader onClick={() => setItinOpen(true)} title="Itinerario final">📋</BotonHeader>
               <BotonHeader onClick={() => setShareOpen(true)} title="Compartir por WhatsApp">📲</BotonHeader>
+              <BotonHeader onClick={() => setLiqOpen(true)} title="Liquidación del viaje">🧾</BotonHeader>
               {canEdit && (
                 <>
                   <BotonHeader onClick={() => setEditOpen(true)} title="Editar viaje">✏️</BotonHeader>
@@ -306,6 +309,7 @@ export function TripDetailPage() {
       />
       <ItineraryModal open={itinOpen} onClose={() => setItinOpen(false)} viaje={viaje} canEdit={canEdit} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} viaje={viaje} />
+      <LiquidacionModal open={liqOpen} onClose={() => setLiqOpen(false)} viaje={viaje} />
     </section>
   );
 }

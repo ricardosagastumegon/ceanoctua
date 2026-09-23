@@ -19,6 +19,7 @@ export function invalidarViaje(qc: QueryClient, viajeId: string): void {
     'att_trip_stats',
     'att_trip_route',
     'att_itinerary_events',
+    'att_liquidacion',
   ]) {
     void qc.invalidateQueries({ queryKey: [key, viajeId] });
   }

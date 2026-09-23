@@ -12,22 +12,34 @@ export type OwRtValues = {
 
 type Props = OwRtValues & {
   onChange: (patch: Partial<OwRtValues>) => void;
+  /**
+   * Colores del servicio. Cada uno tiene el suyo, así que el selector OW/RT
+   * se pinta con el del servicio que lo monta en vez del teal por defecto.
+   */
+  color?: { solid: string; dark: string; light: string };
 };
 
 // Bloque de ruta con selector OW/RT · reutilizado por Acuaticos, Ferries y
 // Terrestres. Cuando tipo=RT muestra los campos de retorno.
-export function OwRtFields({ tipo, fecha, origen, destino, etd, eta, retFecha, retOrigen, retDestino, retEtd, retEta, onChange }: Props) {
+export function OwRtFields({ tipo, fecha, origen, destino, etd, eta, retFecha, retOrigen, retDestino, retEtd, retEta, onChange, color }: Props) {
+  const activo = color
+    ? { borderColor: color.solid, backgroundColor: color.light, color: color.dark }
+    : undefined;
+  const claseActiva = color
+    ? 'flex-1 rounded-md border-2 px-3 py-2 text-sm font-extrabold'
+    : 'flex-1 rounded-md border-2 border-teal bg-teal-l px-3 py-2 text-sm font-extrabold text-teal-d';
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-2">Tipo de servicio</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-2">Servicio contratado</label>
         <div className="mt-1 flex gap-2">
           <button
             type="button"
             onClick={() => onChange({ tipo: 'OW' })}
+            style={tipo === 'OW' ? activo : undefined}
             className={
               tipo === 'OW'
-                ? 'flex-1 rounded-md border-2 border-teal bg-teal-l px-3 py-2 text-sm font-extrabold text-teal-d'
+                ? claseActiva
                 : 'flex-1 rounded-md border border-sand bg-white px-3 py-2 text-sm font-semibold text-dark-3 hover:border-teal/50'
             }
           >
@@ -36,9 +48,10 @@ export function OwRtFields({ tipo, fecha, origen, destino, etd, eta, retFecha, r
           <button
             type="button"
             onClick={() => onChange({ tipo: 'RT' })}
+            style={tipo === 'RT' ? activo : undefined}
             className={
               tipo === 'RT'
-                ? 'flex-1 rounded-md border-2 border-teal bg-teal-l px-3 py-2 text-sm font-extrabold text-teal-d'
+                ? claseActiva
                 : 'flex-1 rounded-md border border-sand bg-white px-3 py-2 text-sm font-semibold text-dark-3 hover:border-teal/50'
             }
           >

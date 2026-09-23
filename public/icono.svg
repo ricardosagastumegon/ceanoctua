@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CEA Board Assistant">
+  <rect width="512" height="512" rx="96" fill="#055a5f"/>
+  <rect x="96" y="128" width="320" height="256" rx="24" fill="#d0eced"/>
+  <rect x="140" y="180" width="232" height="26" rx="13" fill="#077e84"/>
+  <rect x="140" y="238" width="170" height="26" rx="13" fill="#077e84" opacity=".75"/>
+  <rect x="140" y="296" width="206" height="26" rx="13" fill="#077e84" opacity=".5"/>
+</svg>

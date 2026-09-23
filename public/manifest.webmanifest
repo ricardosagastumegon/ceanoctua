@@ -1,0 +1,15 @@
+{
+  "name": "CEA Board Assistant",
+  "short_name": "CEA",
+  "description": "Coordinación de la junta directiva: viajes, finanzas y tareas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f2e8",
+  "theme_color": "#055a5f",
+  "icons": [
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

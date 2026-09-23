@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { puede, useAuth } from '@/lib/auth';
@@ -99,10 +99,59 @@ export function TabsNav() {
   const { profile } = useAuth();
   const urgencias = useUrgenciasPorMiembro();
   const visible = useMemo(() => tabs.filter((t) => canSeeTab(t, profile)), [profile]);
+  const { pathname } = useLocation();
+  const [abierto, setAbierto] = useState(false);
+
+  const actual = useMemo(() => {
+    // La pestaña más específica que coincide con la ruta: `/arriaza/viaje/x`
+    // tiene que marcar «Arriaza T&T» y no «Dashboard».
+    const candidatos = visible.filter(
+      (t) => (t.end ? pathname === t.to : pathname.startsWith(t.to)),
+    );
+    return candidatos.sort((a, b) => b.to.length - a.to.length)[0] ?? null;
+  }, [visible, pathname]);
 
   return (
     <nav className="sticky top-14 z-30 border-b border-sand bg-white">
-      <div className="mx-auto max-w-shell px-6">
+      {/* En el teléfono la barra de 14 pestañas no cabe en una fila, así que
+          se presenta como el módulo actual y un desplegable. */}
+      <div className="mx-auto max-w-shell px-4 md:hidden">
+        <button
+          type="button"
+          onClick={() => setAbierto((v) => !v)}
+          className="flex h-12 w-full items-center justify-between text-sm font-extrabold uppercase tracking-wider text-teal-d"
+          aria-expanded={abierto}
+        >
+          <span>{actual?.label ?? 'Menú'}</span>
+          <span className={`transition-transform ${abierto ? 'rotate-180' : ''}`}>▾</span>
+        </button>
+        {abierto && (
+          <ul className="pb-2">
+            {visible.map((tab) => (
+              <li key={tab.to}>
+                <NavLink
+                  to={tab.to}
+                  end={tab.end}
+                  onClick={() => setAbierto(false)}
+                  className={({ isActive }) =>
+                    [
+                      'block rounded-md px-3 py-2.5 text-sm font-semibold',
+                      isActive ? 'bg-teal-l text-teal-d' : 'text-dark-2 hover:bg-sand-l',
+                    ].join(' ')
+                  }
+                >
+                  {tab.label}
+                  {tab.hint && (
+                    <span className="ml-2 text-[11px] font-normal text-dark-3">{tab.hint}</span>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mx-auto hidden max-w-shell px-6 md:block">
         <ul className="flex flex-wrap gap-x-6 gap-y-1">
           {visible.map((tab) => {
             const count = tab.memberCode ? urgencias.data?.get(tab.memberCode) ?? 0 : 0;

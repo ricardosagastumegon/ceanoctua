@@ -106,15 +106,15 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
                   {d.renglones.map((r, i) => {
                     const meta = SERVICE_META[r.servicio];
                     const cancelado = r.estadoPago === 'CANCELADO';
+
                     return (
                       <tr
                         key={`${r.servicio}-${i}`}
                         className="border-b"
                         style={{ borderColor: GRIS, opacity: cancelado && r.neto === 0 ? 0.55 : 1 }}
                       >
-                        <td className="px-2 py-1.5" style={{ color: meta.dark }}>
-                          {meta.icon} {meta.label}
-                        </td>
+                        {/* Sin icono: es un documento financiero, va limpio. */}
+                        <td className="px-2 py-1.5 text-dark-2">{meta.label}</td>
                         <td className="px-2 py-1.5 text-dark">
                           {r.nombre}
                           {cancelado && (

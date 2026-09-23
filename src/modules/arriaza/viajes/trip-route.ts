@@ -2,41 +2,55 @@
 //
 // El problema que resuelve: el riel lateral se armaba con `att_viaje_ciudades`,
 // que es una lista sin fechas -- ahí solo se sabe *a qué ciudades* va el viaje,
-// no *cuándo* se llega a cada una. Con Miami y Nueva York capturadas en ese
+// no *cuándo* se llega a cada una. Con Miami y Nueva York capturadas en un
 // orden o en el contrario, el riel las mostraba como viniera, y un viaje que
 // pasa primero por Miami se veía al revés.
 //
-// La solución es no preguntarle a la lista de ciudades sino a los servicios,
-// que sí tienen fecha:
+// Quién le pone la fecha a cada ciudad, en orden de importancia (criterio del
+// usuario, 2026-09-23):
 //
-//   1. Los SEGMENTOS de los tickets son la mejor fuente: cada uno dice a qué
-//      ciudad se llega y qué día. Un GUA→MIA el 24 y un MIA→JFK el 25 ordenan
-//      el viaje solos.
-//   2. Los HOTELES aportan la ciudad donde se duerme, con su check-in.
-//   3. Las PARADAS del viaje traen su propia ventana de fechas.
+//   1. EL HOTEL. La ciudad que merece mencionarse es donde uno se aloja, así
+//      que si hay hotel, su check-in manda.
+//   2. EL TOUR. Si no se duerme ahí pero se hace algo, esa es la fecha.
+//   3. LA PARADA capturada a mano en el viaje, que además trae hasta cuándo.
+//   4. EL VUELO, al final. Sirve para las escalas: en el viaje a Nueva York,
+//      Miami aparece solo porque se pasa por ahí antes del vuelo del día
+//      siguiente. Pero basta con agregarle un hotel para que la fecha de la
+//      ciudad pase a ser la del check-in.
+//
+// Dos reglas de limpieza, las dos con la misma jerarquía:
+//
+//   · Una ciudad aparece una sola vez, con la fecha de su fuente más
+//     importante.
+//   · Un día trae una sola ciudad, la de la fuente más importante. Es lo que
+//     evita que el hotel "Brooklyn NY" y el vuelo a "Nueva York" del mismo día
+//     salgan como dos escalas distintas.
 //
 // Lo que NO alimenta el riel es `att_viaje_ciudades`. Una ciudad sin fecha no
-// tiene lugar en una línea de tiempo, y colgarla al final crea duplicados
-// cuando está escrita distinto que en el vuelo -- "New York" capturada a mano
-// contra "Nueva York" del aeropuerto JFK son la misma escala escrita de dos
-// formas. Esas ciudades se siguen viendo en "Datos del viaje", que es donde
-// corresponde: ahí la lista no promete un orden.
-//
-// Cuando dos fuentes coinciden en el mismo día se queda la más confiable, por
-// la misma razón: el hotel "Brooklyn NY" y el vuelo a "Nueva York" del mismo
-// día son una sola escala.
+// tiene lugar en una línea de tiempo, y colgarla al final duplicaba la misma
+// escala cuando está escrita distinto que en el servicio -- "New York" a mano
+// contra "Nueva York" del aeropuerto JFK. Esas ciudades se siguen viendo en
+// "Datos del viaje", donde la lista no promete ningún orden.
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { findAirport } from '../constants/airports';
 
-export type OrigenRuta = 'vuelo' | 'hotel' | 'parada';
+export type OrigenRuta = 'hotel' | 'tour' | 'parada' | 'vuelo';
+
+/** Menor número, más manda. El orden es el criterio del usuario. */
+const PRIORIDAD: Record<OrigenRuta, number> = {
+  hotel: 1,
+  tour: 2,
+  parada: 3,
+  vuelo: 4,
+};
 
 export type PasoRuta = {
   ciudad: string;
   /** 'YYYY-MM-DD'. Todo paso del riel tiene fecha; de eso se trata. */
   fecha: string;
-  /** Hasta cuándo, cuando la fuente lo sabe (paradas y hoteles). */
+  /** Hasta cuándo, cuando la fuente lo sabe. */
   hasta: string | null;
   origen: OrigenRuta;
 };
@@ -44,6 +58,11 @@ export type PasoRuta = {
 export type RutaViaje = {
   /** De dónde sale el viaje, según el primer vuelo. */
   salida: { ciudad: string | null; fecha: string | null };
+  /**
+   * El vuelo de vuelta a casa, cuando lo hay. Se separa de los pasos para no
+   * mostrar la ciudad de origen otra vez justo encima del hito "Regreso".
+   */
+  regreso: { ciudad: string | null; fecha: string | null } | null;
   pasos: PasoRuta[];
 };
 
@@ -69,7 +88,7 @@ export function useTripRoute(viajeId: string | undefined) {
       if (tickets.error) throw tickets.error;
       const ticketIds = (tickets.data ?? []).map((t) => t.id);
 
-      const [segmentos, hoteles, paradas] = await Promise.all([
+      const [segmentos, hoteles, tours, paradas] = await Promise.all([
         ticketIds.length > 0
           ? supabase
               .from('att_ticket_segments')
@@ -77,72 +96,98 @@ export function useTripRoute(viajeId: string | undefined) {
               .in('ticket_id', ticketIds)
               .is('deleted_at', null)
           : Promise.resolve({ data: [], error: null } as const),
-        supabase.from('att_hoteles').select('ciudad, checkin')
+        supabase.from('att_hoteles').select('ciudad, checkin, checkout')
+          .eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_tours').select('ciudad, fecha')
           .eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_viaje_paradas').select('nombre, fecha_ini, fecha_fin, orden')
           .eq('viaje_id', id).is('deleted_at', null),
       ]);
-      for (const r of [segmentos, hoteles, paradas]) {
+      for (const r of [segmentos, hoteles, tours, paradas]) {
         if (r.error) throw r.error;
       }
 
-      // 1 · Los vuelos mandan. Se ordenan por fecha y, dentro del día, por el
-      //     orden con el que se capturaron los tramos.
+      const candidatos: PasoRuta[] = [];
+
+      // 1 · Los hoteles mandan: la ciudad donde se duerme es la que importa.
+      for (const h of hoteles.data ?? []) {
+        if (!h.ciudad || !h.checkin) continue;
+        candidatos.push({
+          ciudad: h.ciudad.trim(), fecha: h.checkin, hasta: h.checkout, origen: 'hotel',
+        });
+      }
+
+      // 2 · Los tours, para las ciudades donde no se duerme pero se hace algo.
+      for (const t of tours.data ?? []) {
+        if (!t.ciudad || !t.fecha) continue;
+        candidatos.push({ ciudad: t.ciudad.trim(), fecha: t.fecha, hasta: null, origen: 'tour' });
+      }
+
+      // 3 · Las paradas capturadas a mano en el viaje.
+      for (const p of paradas.data ?? []) {
+        if (!p.nombre || !p.fecha_ini) continue;
+        candidatos.push({
+          ciudad: p.nombre.trim(), fecha: p.fecha_ini, hasta: p.fecha_fin, origen: 'parada',
+        });
+      }
+
+      // 4 · Los vuelos al final: cubren las escalas que ningún otro servicio
+      //     menciona. Se ordenan por fecha y, dentro del día, por el orden con
+      //     el que se capturaron los tramos.
       const tramos = [...(segmentos.data ?? [])]
         .filter((s) => s.fecha)
         .sort((a, b) => {
           const f = String(a.fecha).localeCompare(String(b.fecha));
           return f !== 0 ? f : (a.orden ?? 0) - (b.orden ?? 0);
         });
-
-      const pasos: PasoRuta[] = [];
-      const fechasOcupadas = new Set<string>();
-
       for (const t of tramos) {
         const ciudad = ciudadDe(t.destino_ciudad, t.destino_iata);
         const fecha = t.fecha_llegada ?? t.fecha;
         if (!ciudad || !fecha) continue;
-        pasos.push({ ciudad, fecha, hasta: null, origen: 'vuelo' });
-        fechasOcupadas.add(fecha);
+        candidatos.push({ ciudad, fecha, hasta: null, origen: 'vuelo' });
       }
 
-      // 2 · Los hoteles, solo si ese día no lo cubre ya un vuelo: si no, la
-      //     misma escala saldria dos veces con nombres distintos.
-      for (const h of hoteles.data ?? []) {
-        if (!h.ciudad || !h.checkin || fechasOcupadas.has(h.checkin)) continue;
-        pasos.push({ ciudad: h.ciudad.trim(), fecha: h.checkin, hasta: null, origen: 'hotel' });
-        fechasOcupadas.add(h.checkin);
-      }
+      // Se resuelve por jerarquía: primero los hoteles, después los tours, y
+      // así. Dentro de cada nivel, lo más temprano primero.
+      candidatos.sort((a, b) => {
+        const p = PRIORIDAD[a.origen] - PRIORIDAD[b.origen];
+        return p !== 0 ? p : a.fecha.localeCompare(b.fecha);
+      });
 
-      // 3 · Las paradas capturadas a mano, con la misma regla.
-      for (const p of paradas.data ?? []) {
-        if (!p.nombre || !p.fecha_ini || fechasOcupadas.has(p.fecha_ini)) continue;
-        pasos.push({
-          ciudad: p.nombre.trim(), fecha: p.fecha_ini, hasta: p.fecha_fin, origen: 'parada',
-        });
-        fechasOcupadas.add(p.fecha_ini);
+      const ciudadesTomadas = new Set<string>();
+      const fechasTomadas = new Set<string>();
+      const pasos: PasoRuta[] = [];
+      for (const c of candidatos) {
+        if (ciudadesTomadas.has(clave(c.ciudad)) || fechasTomadas.has(c.fecha)) continue;
+        pasos.push(c);
+        ciudadesTomadas.add(clave(c.ciudad));
+        fechasTomadas.add(c.fecha);
       }
 
       pasos.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-      // 4 · Dos tramos seguidos a la misma ciudad son una sola escala.
-      const limpios: PasoRuta[] = [];
-      for (const p of pasos) {
-        const anterior = limpios[limpios.length - 1];
-        if (anterior && clave(anterior.ciudad) === clave(p.ciudad)) {
-          anterior.hasta = p.hasta ?? p.fecha;
-          continue;
-        }
-        limpios.push({ ...p });
+      const primero = tramos[0];
+      const ciudadSalida = primero ? ciudadDe(primero.origen_ciudad, primero.origen_iata) : null;
+
+      // Volver a casa no es una escala más: si el último paso es un vuelo de
+      // regreso a la ciudad de salida, se saca de la lista y pasa a ser el
+      // hito del final. Si no, decir "Ciudad de Guatemala" y debajo "Regreso"
+      // es decir dos veces lo mismo.
+      let regreso: RutaViaje['regreso'] = null;
+      const ultimo = pasos[pasos.length - 1];
+      if (
+        ultimo && ciudadSalida &&
+        ultimo.origen === 'vuelo' &&
+        clave(ultimo.ciudad) === clave(ciudadSalida)
+      ) {
+        regreso = { ciudad: ultimo.ciudad, fecha: ultimo.fecha };
+        pasos.pop();
       }
 
-      const primero = tramos[0];
       return {
-        salida: {
-          ciudad: primero ? ciudadDe(primero.origen_ciudad, primero.origen_iata) : null,
-          fecha: primero?.fecha ?? null,
-        },
-        pasos: limpios,
+        salida: { ciudad: ciudadSalida, fecha: primero?.fecha ?? null },
+        regreso,
+        pasos,
       };
     },
   });

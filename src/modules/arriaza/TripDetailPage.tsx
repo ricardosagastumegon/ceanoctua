@@ -338,6 +338,7 @@ function RielCiudades({
   const ruta = useTripRoute(viajeId);
   const pasos = ruta.data?.pasos ?? [];
   const salida = ruta.data?.salida;
+  const regreso = ruta.data?.regreso;
 
   return (
     <aside className="rounded-card border border-sand bg-white p-4 shadow-sm">
@@ -365,7 +366,13 @@ function RielCiudades({
               hasta={paso.hasta}
             />
           ))}
-          <Hito fecha={fin} nombre="Regreso" tenue ultimo />
+          <Hito
+            fecha={regreso?.fecha ?? fin}
+            nombre={regreso?.ciudad ?? 'Regreso'}
+            etiqueta={regreso?.ciudad ? 'Regreso' : undefined}
+            tenue
+            ultimo
+          />
         </ol>
       )}
     </aside>

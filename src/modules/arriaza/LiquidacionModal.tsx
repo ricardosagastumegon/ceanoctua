@@ -1,4 +1,15 @@
+import { useRef, useState } from 'react';
 import { PrintableModal } from '@/components/ui/PrintableModal';
+import { useToast } from '@/components/ui/Toast';
+import { describeError } from '@/modules/admin/hooks';
+import { ItinerarioHojas } from './ItineraryModal';
+import { SERVICE_META as META_SERVICIOS } from './constants/serviceMeta';
+import {
+  armarLiquidacionCompleta,
+  descargar,
+  type Anexo,
+  type ProgresoExport,
+} from './viajes/liquidacion-pdf';
 import { SERVICE_META } from './constants/serviceMeta';
 import { fmtDate } from './utils';
 import { useLiquidacion } from './viajes/liquidacion';
@@ -33,6 +44,41 @@ const money = (v: number) => v.toFixed(2);
 export function LiquidacionModal({ open, onClose, viaje }: Props) {
   const q = useLiquidacion(viaje?.id, open);
   const d = q.data;
+  const toast = useToast();
+  const hojaRef = useRef<HTMLDivElement>(null);
+  const itinRef = useRef<HTMLDivElement>(null);
+  const [progreso, setProgreso] = useState<ProgresoExport | null>(null);
+
+  /**
+   * El documento único: la hoja de liquidación, el itinerario y las
+   * confirmaciones que se subieron, todo en un PDF para archivar.
+   */
+  async function exportar() {
+    if (!viaje || !d) return;
+    const anexos: Anexo[] = d.renglones
+      .filter((r) => r.confirmacionPath)
+      .map((r) => ({
+        path: r.confirmacionPath as string,
+        titulo: `${META_SERVICIOS[r.servicio].label} · ${r.nombre}`,
+      }));
+    setProgreso({ paso: 'Preparando…', hechos: 0, total: 0 });
+    try {
+      const nodos = [hojaRef.current, itinRef.current].filter(Boolean) as HTMLElement[];
+      const { blob, fallidos } = await armarLiquidacionCompleta(nodos, anexos, setProgreso);
+      descargar(blob, `Liquidacion ${viaje.trip_no ?? viaje.titulo}.pdf`);
+      if (fallidos.length > 0) {
+        toast.error(
+          `El documento se descargó, pero no se pudieron anexar ${fallidos.length} confirmación${fallidos.length === 1 ? '' : 'es'}: ${fallidos.join(', ')}.`,
+        );
+      } else {
+        toast.success('Liquidación completa descargada.');
+      }
+    } catch (err) {
+      toast.error(describeError(err));
+    } finally {
+      setProgreso(null);
+    }
+  }
   const monedaUnica = d && d.monedas.length === 1 ? d.monedas[0] : '';
   const mezcla = !!d && d.monedas.length > 1;
   /** Con una sola moneda va en el encabezado; con varias, en cada renglón. */
@@ -43,7 +89,27 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
 
   return (
     <PrintableModal open={open} onClose={onClose} title={`Liquidación · ${viaje.titulo}`}>
-      <article style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
+      {/* El documento completo se arma aparte del botón de imprimir: este
+          junta las confirmaciones, y eso el navegador no lo sabe hacer. */}
+      <div className="no-print mb-3 flex items-center justify-end gap-3">
+        {progreso && (
+          <span className="text-[11px] font-semibold text-dark-3">
+            {progreso.paso}
+            {progreso.total > 0 ? ` (${progreso.hechos}/${progreso.total})` : ''}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => void exportar()}
+          disabled={!d || !!progreso}
+          className="rounded-md px-3 py-1.5 text-xs font-extrabold text-white disabled:opacity-50"
+          style={{ backgroundColor: NAVY }}
+        >
+          {progreso ? 'Armando…' : '⬇ Descargar completa'}
+        </button>
+      </div>
+
+      <article ref={hojaRef} style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
         <header
           className="flex items-center justify-between px-8 py-5 text-white"
           style={{ background: `linear-gradient(135deg,#0d1526,${NAVY},#33456e)` }}
@@ -216,6 +282,18 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
           Arriaza Tour &amp; Travel · Liquidación para reporte financiero
         </div>
       </article>
+
+      {/* Montado fuera de pantalla: hace falta en el DOM para capturarlo, pero
+          no tiene por qué verse ni imprimirse con la hoja. */}
+      <div
+        aria-hidden
+        className="no-print"
+        style={{ position: 'fixed', left: '-10000px', top: 0, width: '820px' }}
+      >
+        <div ref={itinRef} style={{ background: '#ffffff', padding: '16px' }}>
+          <ItinerarioHojas viaje={viaje} activo={open} />
+        </div>
+      </div>
     </PrintableModal>
   );
 }

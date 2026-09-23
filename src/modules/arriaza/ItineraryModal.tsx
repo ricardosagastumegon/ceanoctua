@@ -35,13 +35,49 @@ type Props = {
  * los bloques se distingan de un vistazo, también impresos.
  */
 export function ItineraryModal({ open, onClose, viaje, canEdit = false }: Props) {
+  if (!viaje) return null;
+  return (
+    <Modal open={open} onClose={onClose} title={`📋 Itinerario · ${viaje.titulo}`} size="xl">
+      <ItinerarioHojas viaje={viaje} canEdit={canEdit} activo={open} />
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l"
+        >
+          Cerrar
+        </button>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-md bg-teal px-4 py-2 text-sm font-extrabold text-white hover:bg-teal-d"
+        >
+          🖨 Imprimir / Guardar PDF
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * El itinerario en sí, sin el modal alrededor.
+ *
+ * Vive aparte para que la liquidación completa lo pueda montar fuera de la
+ * pantalla y capturarlo sin abrirle una ventana encima al usuario.
+ */
+export function ItinerarioHojas({
+  viaje, canEdit = false, activo = true,
+}: {
+  viaje: AttViaje;
+  canEdit?: boolean;
+  activo?: boolean;
+}) {
   const plansQuery = useAttDayPlans();
   const rowsQuery = useAttDayPlanRowsByViaje(viaje?.id);
   const notesQuery = useAttDayNotes();
-  const eventsQuery = useItineraryEvents(viaje?.id, open);
+  const eventsQuery = useItineraryEvents(viaje.id, activo);
 
   const days = useMemo(() => {
-    if (!viaje) return [];
     const dates = tripDateRange(viaje.fecha_ini, viaje.fecha_fin);
     const plans = (plansQuery.data ?? []).filter((p) => p.viaje_id === viaje.id);
     const rows = rowsQuery.data ?? [];
@@ -60,11 +96,8 @@ export function ItineraryModal({ open, onClose, viaje, canEdit = false }: Props)
     });
   }, [viaje, plansQuery.data, rowsQuery.data, notesQuery.data, eventsQuery.data]);
 
-  if (!viaje) return null;
-
   return (
-    <Modal open={open} onClose={onClose} title={`📋 Itinerario · ${viaje.titulo}`} size="xl">
-      <div id="tt-itinerary-print" className="space-y-4">
+    <div id="tt-itinerary-print" className="space-y-4">
         <header className="flex items-center justify-between rounded-lg border-b-4 border-gold bg-sand-l px-5 py-3">
           <img src={logoColor} alt="Arriaza Tour &amp; Travel" className="h-9 w-auto" />
           <div className="text-right">
@@ -97,25 +130,7 @@ export function ItineraryModal({ open, onClose, viaje, canEdit = false }: Props)
             canEdit={canEdit}
           />
         ))}
-      </div>
-
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l"
-        >
-          Cerrar
-        </button>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md bg-teal px-4 py-2 text-sm font-extrabold text-white hover:bg-teal-d"
-        >
-          🖨 Imprimir / Guardar PDF
-        </button>
-      </div>
-    </Modal>
+    </div>
   );
 }
 

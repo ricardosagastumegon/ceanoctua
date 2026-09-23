@@ -2,7 +2,7 @@ import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { fmtDate } from '../utils';
 import { Montos } from '../acuaticos/AcuaticoPrintable';
-import { totalActividad, type AttActividad, type AttEntrada } from './full-api';
+import { tarifaEfectiva, totalActividad, type AttActividad, type AttEntrada } from './full-api';
 
 const META = SERVICE_META.actividades;
 
@@ -130,7 +130,7 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
                         <td className="px-4 py-1.5 text-dark-2">{e.lugar || '\u2014'}</td>
                       )}
                       <td className="px-4 py-1.5 text-right font-extrabold" style={{ color: META.dark }}>
-                        {moneda} {(Number(e.tarifa) || 0).toFixed(2)}
+                        {moneda} {tarifaEfectiva(e, a.tarifa).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -173,14 +173,10 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
             moneda={moneda}
             tarifa={
               entradas.length > 0
-                ? entradas.reduce((sum, e) => sum + (Number(e.tarifa) || 0), 0)
+                ? entradas.reduce((sum, e) => sum + tarifaEfectiva(e, a.tarifa), 0)
                 : (Number(a.tarifa) || 0) * (Number(a.personas) || 0)
             }
-            etiquetaTarifa={
-              entradas.length > 0
-                ? `Tarifas de ${entradas.length} participante${entradas.length === 1 ? '' : 's'}`
-                : `Tarifa por persona × ${a.personas ?? 0}`
-            }
+            etiquetaTarifa={`Tarifa por persona × ${entradas.length || a.personas || 0}`}
             etiquetaExtras={a.extras || 'Extras'}
             montoExtras={Number(a.monto_extras) || 0}
           />

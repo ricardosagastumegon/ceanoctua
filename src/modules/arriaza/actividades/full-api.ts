@@ -30,28 +30,44 @@ const num = (v: string | number | null | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/** Vacío no es cero: quien no tiene tarifa propia paga la tarifa por persona. */
+const vacio = (v: string | number | null | undefined): boolean =>
+  v === null || v === undefined || String(v).trim() === '';
+
 /**
- * Total del evento: la suma de lo que paga cada participante, más los extras.
+ * Lo que paga un participante: su propia tarifa si la tiene, y si no la
+ * tarifa por persona del evento. Un 0 explícito sí cuenta como cero -- una
+ * cortesía es un precio válido.
+ */
+export function tarifaEfectiva(
+  entrada: { tarifa: string | number | null | undefined },
+  tarifaPorPersona: string | number | null | undefined,
+): number {
+  return vacio(entrada.tarifa) ? num(tarifaPorPersona) : num(entrada.tarifa);
+}
+
+/**
+ * Total del evento: lo que paga cada persona, más los extras.
  *
- * La tarifa vive en el participante y no en el evento porque las entradas de
- * una misma función pueden ser de categorías distintas -- un palco y una
- * platea no cuestan lo mismo.
+ * La tarifa es POR PERSONA, nunca del evento completo. La del evento es la
+ * tarifa estándar, que aplica a todos; cada participante puede llevar la suya
+ * cuando paga distinto, porque las entradas de una misma función pueden ser de
+ * categorías distintas -- un palco y una platea no cuestan lo mismo.
  *
- * Si el evento todavía no tiene participantes detallados cae a la tarifa por
- * defecto × la cantidad de personas, para que una carga rápida sin desglosar
- * siga dando un número.
+ * Si todavía no hay participantes cargados, se multiplica la tarifa por
+ * persona por la cantidad de personas, que da el mismo número.
  */
 export function totalActividad(
   entradas: readonly { tarifa: string | number | null | undefined }[],
-  tarifaPorDefecto: string | number | null | undefined,
+  tarifaPorPersona: string | number | null | undefined,
   personas: string | number | null | undefined,
   montoExtras: string | number | null | undefined,
 ): number {
   const extras = num(montoExtras);
   if (entradas.length > 0) {
-    return entradas.reduce((s, e) => s + num(e.tarifa), 0) + extras;
+    return entradas.reduce((s, e) => s + tarifaEfectiva(e, tarifaPorPersona), 0) + extras;
   }
-  return num(tarifaPorDefecto) * num(personas) + extras;
+  return num(tarifaPorPersona) * num(personas) + extras;
 }
 
 export async function subirConfirmacionActividad(id: string, file: File): Promise<string> {

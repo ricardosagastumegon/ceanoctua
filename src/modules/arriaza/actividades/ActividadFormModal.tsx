@@ -238,12 +238,16 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
                 y el lugar solo se piden si el evento los maneja. */}
             <div className="space-y-2">
               <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">
-                Tarifa por participante
+                Quiénes van
               </div>
+              <p className="text-[11px] text-dark-3">
+                Cada uno paga la tarifa por persona. Deja la tarifa en blanco para usarla,
+                o escribe otra si esa persona paga distinto.
+              </p>
               {entradas.length === 0 && (
                 <p className="text-[11px] italic text-dark-3">
-                  Sin participantes detallados. Mientras tanto el total usa la tarifa por
-                  defecto × la cantidad de personas.
+                  Sin participantes cargados. Mientras tanto el total usa la tarifa por
+                  persona × la cantidad de personas.
                 </p>
               )}
               {/* Encabezados: con los campos llenos, el placeholder ya no
@@ -293,7 +297,8 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
                     step="0.01"
                     value={x.tarifa}
                     onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, tarifa: e.target.value } : y)))}
-                    placeholder={`${moneda} 0.00`}
+                    placeholder={tarifa ? Number(tarifa).toFixed(2) : `${moneda} 0.00`}
+                    title="Vacío = paga la tarifa por persona del evento"
                     className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
                   />
                   <button
@@ -308,9 +313,9 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
               ))}
               <button
                 type="button"
-                // La tarifa por defecto propone el monto, que despues se
-                // ajusta por persona si la entrada es de otra categoria.
-                onClick={() => setEntradas((l) => [...l, { nombre: '', ticket: '', lugar: '', tarifa }])}
+                // La fila nace sin tarifa: vacia significa que paga la
+                // tarifa por persona del evento.
+                onClick={() => setEntradas((l) => [...l, { nombre: '', ticket: '', lugar: '', tarifa: '' }])}
                 className="rounded-md border px-3 py-1.5 text-xs font-semibold hover:opacity-80"
                 style={{ borderColor: META.solid, color: META.dark }}
               >
@@ -325,7 +330,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
               <Select label="Moneda" value={moneda} onChange={(e) => setMoneda(e.target.value as Currency)}>
                 {(['USD', 'GTQ', 'EUR', 'GBP'] as const).map((m) => <option key={m} value={m}>{m}</option>)}
               </Select>
-              <TextInput label={`Tarifa por defecto (${moneda})`} type="number" min="0" step="0.01" value={tarifa} onChange={(e) => setTarifa(e.target.value)} hint="Propone el monto de cada participante nuevo." />
+              <TextInput label={`Tarifa por persona (${moneda})`} type="number" min="0" step="0.01" value={tarifa} onChange={(e) => setTarifa(e.target.value)} hint="La paga cada participante. En la lista se puede cambiar a quien pague distinto." />
               <TextInput label={`Monto extras (${moneda})`} type="number" min="0" step="0.01" value={montoExtras} onChange={(e) => setMontoExtras(e.target.value)} />
             </div>
             <TextInput label="Extras" value={extras} onChange={(e) => setExtras(e.target.value)} placeholder="Descripción de extras" />
@@ -342,7 +347,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
               </div>
               <div className="text-[11px] text-white/60">
                 {participantesConNombre.length > 0
-                  ? `Suma de ${participantesConNombre.length} participante${participantesConNombre.length === 1 ? '' : 's'}`
+                  ? `${participantesConNombre.length} persona${participantesConNombre.length === 1 ? '' : 's'}`
                   : `${moneda} ${Number(tarifa || 0).toFixed(2)} × ${personas || 0} persona${personas === '1' ? '' : 's'}`}
                 {Number(montoExtras) > 0 ? ' + extras' : ''}
               </div>

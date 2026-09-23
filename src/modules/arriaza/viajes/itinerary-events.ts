@@ -44,7 +44,7 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         supabase.from('att_hoteles').select('nombre, ciudad, checkin, checkout').match({ viaje_id: id, ...vivo }),
         supabase.from('att_restaurantes').select('nombre, ciudad, fecha, hora').match({ viaje_id: id, ...vivo }),
         supabase.from('att_rentas').select('nombre, ciudad, recepcion_fecha, recepcion_hora, entrega_fecha, entrega_hora').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_tours').select('prestador, ciudad, fecha, hora').match({ viaje_id: id, ...vivo }),
+        supabase.from('att_tours').select('nombre, prestador, ciudad, fecha, hora, hora_fin').match({ viaje_id: id, ...vivo }),
         supabase.from('att_aeronaves').select('prestador, origen, destino, fecha, hora').match({ viaje_id: id, ...vivo }),
         supabase.from('att_acuaticos').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
         supabase.from('att_ferries').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
@@ -94,7 +94,12 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         if (r.entrega_fecha) ev.push({ servicio: 'renta', fecha: r.entrega_fecha, hora: hhmm(r.entrega_hora), titulo: `Entrega · ${r.nombre ?? 'Vehículo'}`, detalle: limpio(r.ciudad) });
       }
       for (const t of tours.data ?? []) {
-        if (t.fecha) ev.push({ servicio: 'tours', fecha: t.fecha, hora: hhmm(t.hora), titulo: t.prestador ?? 'Tour', detalle: limpio(t.ciudad) });
+        // El tour se anuncia por su nombre; el prestador es quien lo opera.
+        if (t.fecha) ev.push({
+          servicio: 'tours', fecha: t.fecha, hora: hhmm(t.hora),
+          titulo: t.nombre || t.prestador || 'Tour',
+          detalle: limpio(t.nombre ? t.prestador : null, t.ciudad, t.hora_fin ? `hasta ${hhmm(t.hora_fin)}` : null),
+        });
       }
       for (const a of aeronaves.data ?? []) {
         if (a.fecha) ev.push({ servicio: 'aeronave', fecha: a.fecha, hora: hhmm(a.hora), titulo: `${a.origen ?? '?'} → ${a.destino ?? '?'}`, detalle: limpio(a.prestador) });

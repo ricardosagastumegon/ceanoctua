@@ -32,8 +32,13 @@ const TABLA_POR_SERVICIO = {
  * Servicios que ya guardan su total en `monto`. Los demás todavía no tienen la
  * columna — se les agrega cuando les toque su documento — y mientras tanto
  * aportan cero al total del viaje.
+ *
+ * Faltan terrestre, actividades y reuniones.
  */
-const CON_MONTO = ['tickets', 'hotel', 'restaurantes', 'renta'] as const;
+const CON_MONTO = [
+  'tickets', 'hotel', 'restaurantes', 'renta',
+  'tours', 'aeronave', 'acuatico', 'ferry',
+] as const;
 
 export type ServiceSummary = {
   /** Cuántos registros tiene cada servicio. Solo los que tienen alguno. */

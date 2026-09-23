@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { Clock } from './Clock';
+import { BotonBloqueo } from './Bloqueo';
 
 const rolLabel: Record<string, string> = {
   admin: 'Admin',
@@ -31,6 +32,7 @@ export function Topbar() {
             </div>
           )}
           <Clock />
+          <BotonBloqueo />
           <button
             type="button"
             onClick={() => void signOut()}

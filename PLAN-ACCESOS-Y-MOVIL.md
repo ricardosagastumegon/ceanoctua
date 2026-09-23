@@ -109,3 +109,39 @@ El usuario confirmó que **se mueve todo, incluida la base de datos**, a una VM 
 Eso cambia la autenticación de raíz: cuando Postgres deje de ser Supabase, `auth.uid()` y las políticas que lo usan necesitan otra fuente de identidad. La respuesta natural en ese escenario es **Entra ID (Azure AD)**: el presidente entra con la cuenta de la empresa, que en un teléfono corporativo suele estar ya iniciada, y es el área de sistemas quien da y quita el acceso.
 
 **Lo que se hace hoy es deliberadamente temporal y reversible.** No se está construyendo un sistema de autenticación propio que después haya que desmontar: es una cuenta para una persona, con sesión guardada. Lo que **sí** sobrevive a la mudanza es el modelo de permisos —`usuario_modulos`, la función `puede()` y las políticas que la consultan—, porque no depende de cómo se autentique la gente sino de quién es. Al migrar solo cambia de dónde sale la identidad.
+
+---
+
+## El teléfono es personal, y es iPhone · 2026-09-23
+
+Dos correcciones a lo escrito arriba, las dos del propio usuario.
+
+**No es un teléfono corporativo, es personal.** Eso invalida el argumento de que con Entra ID «la cuenta suele estar ya iniciada»: en un aparato personal no lo está, y muchas empresas fuerzan re-autenticación periódica en dispositivos que no administran, que es justo lo que rompería el «nunca ve un login». Hay que confirmarlo con sistemas antes de dar ese camino por hecho.
+
+**La aplicación se va a publicar hacia afuera** desde la VM de Azure, así que el teléfono personal sí podrá alcanzarla. Cuando llegue el momento: que se publique solo la aplicación, nunca el Postgres, y con certificado válido.
+
+### El IMEI no se puede leer
+
+El usuario propuso verificar el IMEI de sus aparatos. **Ningún navegador lo expone**, por privacidad, y hasta las apps nativas lo tienen bloqueado desde iOS 7. No hay forma.
+
+Lo que sí cubre la intención: la sesión guardada **ya es** una credencial de ese dispositivo -- existe solo ahí, y nadie más puede crearse una cuenta desde que se cerró el registro. Lo que no puede es *reconocer* el aparato si alguien copiara esa sesión a otro.
+
+### La tranca: Face ID
+
+Se agregó WebAuthn con el autenticador de la plataforma. Al abrir, mira la pantalla y entra; no escribe nada. Se activa por dispositivo desde el candado de la barra superior.
+
+**Lo que es y lo que no es.** Es una tranca local: protege contra quien levanta el teléfono desbloqueado, no contra quien lo conecta a una computadora y lee el almacenamiento del navegador, porque la sesión de Supabase sigue viviendo ahí. La defensa de fondo sigue siendo que ese usuario solo ve T&T en solo lectura y que el acceso se revoca desde Admin.
+
+Si Face ID falla -- teléfono nuevo, sensor roto -- la pantalla ofrece cerrar sesión y entrar con contraseña, que la tiene el administrador. Nadie queda encerrado afuera.
+
+### Instalar en iOS · el orden importa
+
+En iOS, una aplicación agregada a la pantalla de inicio **no comparte el almacenamiento con Safari**. Iniciar sesión en Safari y luego agregar el ícono NO funciona: el ícono abre sin sesión.
+
+El orden correcto es:
+
+1. Abrir `cea.noctuapo.com` en **Safari**.
+2. Compartir → **Agregar a pantalla de inicio**.
+3. Abrir **el ícono nuevo**, no Safari, e iniciar sesión ahí.
+4. Activar el candado de Face ID dentro de la aplicación.
+5. Repetir lo mismo en el iPad: son dos almacenamientos distintos.

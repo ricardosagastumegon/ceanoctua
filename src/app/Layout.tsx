@@ -2,9 +2,11 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Topbar } from './Topbar';
 import { TabsNav } from './TabsNav';
+import { PantallaBloqueo, useBloqueo } from './Bloqueo';
 
 export function Layout() {
   const { session, loading } = useAuth();
+  const bloqueo = useBloqueo();
 
   if (loading) {
     return (
@@ -16,6 +18,12 @@ export function Layout() {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // La tranca va después de la sesión: si no hay sesión, la pantalla que toca
+  // es la de entrar, no la de desbloquear.
+  if (!bloqueo.abierto) {
+    return <PantallaBloqueo onAbrir={bloqueo.abrir} />;
   }
 
   return (

@@ -9,10 +9,11 @@ import { TripServicesPanel } from './TripServicesPanel';
 import { TripFormModal, type TripDestinos } from './TripFormModal';
 import { ItineraryModal } from './ItineraryModal';
 import { ShareModal } from './ShareModal';
-import { autoTripStatus, autoStatusLabel, fmtDate } from './utils';
+import { autoTripStatus, autoStatusLabel, fmtDate, tripDateRange } from './utils';
 import { useAttViaje, useDeleteAttViaje, useUpdateAttViaje } from './viajes/hooks';
 import { useSyncViajeDestinos, useViajeDestinos } from './viajes/destinos-hooks';
 import { useServiceSummary } from './viajes/service-counts';
+import { useTripStats } from './viajes/trip-stats';
 import type { AttViajeInsert } from './viajes/api';
 import { SERVICE_META, type ManualStatus, type ServiceKey } from './constants/serviceMeta';
 
@@ -42,6 +43,7 @@ export function TripDetailPage() {
   const viajeQuery = useAttViaje(id);
   const destinos = useViajeDestinos(id);
   const resumen = useServiceSummary(id, true);
+  const stats = useTripStats(id);
   const update = useUpdateAttViaje();
   const remove = useDeleteAttViaje();
   const syncDestinos = useSyncViajeDestinos();
@@ -181,6 +183,24 @@ export function TripDetailPage() {
         </div>
       </div>
 
+      {/* Los cuatro números del viaje, de un vistazo. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Kpi valor={tripDateRange(viaje.fecha_ini, viaje.fecha_fin).length} label="Días de viaje" />
+        <Kpi valor={stats.data?.noches ?? 0} label="Noches de hotel" />
+        <Kpi valor={ciudades.length} label="Ciudades" />
+        <Kpi valor={stats.data?.vuelos ?? 0} label="Vuelos" />
+      </div>
+
+      {/* Riel de ciudades a la izquierda + el resto a la derecha. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr]">
+        <RielCiudades
+          ciudades={ciudades.map((c) => c.nombre)}
+          paradas={paradas.map((p) => ({ nombre: p.nombre, ini: p.fecha_ini, fin: p.fecha_fin }))}
+          inicio={viaje.fecha_ini}
+          fin={viaje.fecha_fin}
+        />
+
+        <div className="space-y-4">
       {/* Datos del viaje */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-3 rounded-card border border-sand bg-white p-4 shadow-sm lg:col-span-2">
@@ -277,7 +297,9 @@ export function TripDetailPage() {
         </div>
       </div>
 
-      <TripServicesPanel viaje={viaje} canEdit={canEdit} />
+          <TripServicesPanel viaje={viaje} canEdit={canEdit} />
+        </div>
+      </div>
 
       <TripFormModal
         open={editOpen}
@@ -286,9 +308,114 @@ export function TripDetailPage() {
         onClose={() => setEditOpen(false)}
         onSubmit={handleSave}
       />
-      <ItineraryModal open={itinOpen} onClose={() => setItinOpen(false)} viaje={viaje} />
+      <ItineraryModal open={itinOpen} onClose={() => setItinOpen(false)} viaje={viaje} canEdit={canEdit} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} viaje={viaje} />
     </section>
+  );
+}
+
+function Kpi({ valor, label }: { valor: number; label: string }) {
+  return (
+    <div className="rounded-card border border-sand bg-white px-4 py-3 text-center shadow-sm">
+      <div className="font-heading text-2xl font-extrabold text-dark">{valor}</div>
+      <div className="text-[10px] font-extrabold uppercase tracking-wider text-dark-3">{label}</div>
+    </div>
+  );
+}
+
+/**
+ * Ruta del viaje en vertical, al margen izquierdo.
+ *
+ * Usa las paradas si las hay — traen fechas — y si no, las ciudades destino.
+ * Es un mapa mental del recorrido, no un itinerario: el detalle por día vive
+ * en el Itinerario Final.
+ */
+function RielCiudades({
+  ciudades, paradas, inicio, fin,
+}: {
+  ciudades: string[];
+  paradas: { nombre: string; ini: string | null; fin: string | null }[];
+  inicio: string | null;
+  fin: string | null;
+}) {
+  // Las ciudades son el esqueleto de la ruta; las paradas la enriquecen. Si una
+  // parada es una de esas ciudades le presta sus fechas en vez de duplicarla.
+  const clave = (s: string) => s.trim().toLowerCase();
+  const tramos = ciudades.map((c) => ({
+    nombre: c,
+    ini: null as string | null,
+    fin: null as string | null,
+  }));
+  for (const p of paradas) {
+    const ya = tramos.find((t) => clave(t.nombre) === clave(p.nombre));
+    if (ya) {
+      ya.ini = p.ini;
+      ya.fin = p.fin;
+    } else {
+      tramos.push({ nombre: p.nombre, ini: p.ini, fin: p.fin });
+    }
+  }
+  // Lo fechado manda el orden; lo que no tiene fecha conserva el suyo al frente.
+  tramos.sort((a, b) => {
+    if (!a.ini && !b.ini) return 0;
+    if (!a.ini) return -1;
+    if (!b.ini) return 1;
+    return a.ini.localeCompare(b.ini);
+  });
+
+  return (
+    <aside className="rounded-card border border-sand bg-white p-4 shadow-sm">
+      <div className="text-[10px] font-extrabold uppercase tracking-wider text-dark-3">Tu ruta</div>
+      {tramos.length === 0 ? (
+        <p className="mt-2 text-xs italic text-dark-3">Sin ciudades ni paradas.</p>
+      ) : (
+        <ol className="mt-3 space-y-0">
+          <Hito fecha={inicio} nombre="Salida" tenue />
+          {tramos.map((t, i) => (
+            <Hito
+              key={`${t.nombre}-${i}`}
+              nombre={t.nombre}
+              fecha={t.ini}
+              hasta={t.fin}
+            />
+          ))}
+          <Hito fecha={fin} nombre="Regreso" tenue ultimo />
+        </ol>
+      )}
+    </aside>
+  );
+}
+
+function Hito({
+  nombre, fecha, hasta, tenue, ultimo,
+}: {
+  nombre: string;
+  fecha: string | null;
+  hasta?: string | null;
+  tenue?: boolean;
+  ultimo?: boolean;
+}) {
+  return (
+    <li className="relative flex gap-3 pb-4 last:pb-0">
+      {!ultimo && <span className="absolute left-[5px] top-3 h-full w-px bg-gold/40" aria-hidden />}
+      <span
+        className={`relative z-10 mt-1 h-[11px] w-[11px] shrink-0 rounded-full border-2 ${
+          tenue ? 'border-sand bg-white' : 'border-gold bg-white'
+        }`}
+        aria-hidden
+      />
+      <div className="min-w-0">
+        {fecha && (
+          <div className="text-[10px] font-extrabold uppercase tracking-wider text-gold">
+            {fmtDate(fecha)}
+            {hasta ? ` – ${fmtDate(hasta)}` : ''}
+          </div>
+        )}
+        <div className={`truncate text-sm font-extrabold ${tenue ? 'text-dark-3' : 'text-dark'}`}>
+          {nombre}
+        </div>
+      </div>
+    </li>
   );
 }
 

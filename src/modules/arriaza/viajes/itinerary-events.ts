@@ -33,24 +33,27 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
     enabled: !!viajeId && enabled,
     queryFn: async (): Promise<EventoItinerario[]> => {
       const id = viajeId as string;
-      const vivo = { deleted_at: null };
+      // Ojo con el borrado suave: el filtro va con `.is('deleted_at', null)`.
+      // Con `.match({ deleted_at: null })` PostgREST arma un `eq.null`, y en
+      // SQL `= NULL` nunca es verdadero, asi que las consultas devolvian cero
+      // filas y el itinerario salia sin un solo servicio.
       const ev: EventoItinerario[] = [];
 
       const [
         tickets, hoteles, restaurantes, rentas, tours,
         aeronaves, acuaticos, ferries, terrestres, actividades, reuniones,
       ] = await Promise.all([
-        supabase.from('att_tickets').select('id, aerolinea, titulo').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_hoteles').select('nombre, ciudad, checkin, checkout').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_restaurantes').select('nombre, ciudad, fecha, hora').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_rentas').select('nombre, ciudad, recepcion_fecha, recepcion_hora, entrega_fecha, entrega_hora').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_tours').select('nombre, prestador, ciudad, fecha, hora, hora_fin').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_aeronaves').select('prestador, origen, destino, fecha, hora').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_acuaticos').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_ferries').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_terrestres').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_actividades').select('evento, ciudad, fecha, inicio, fin').match({ viaje_id: id, ...vivo }),
-        supabase.from('att_reuniones').select('cita, asunto, ciudad, fecha, hora').match({ viaje_id: id, ...vivo }),
+        supabase.from('att_tickets').select('id, aerolinea, titulo').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_hoteles').select('nombre, ciudad, checkin, checkout').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_restaurantes').select('nombre, ciudad, fecha, hora').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_rentas').select('nombre, ciudad, recepcion_fecha, recepcion_hora, entrega_fecha, entrega_hora').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_tours').select('nombre, prestador, ciudad, fecha, hora, hora_fin').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_aeronaves').select('prestador, origen, destino, fecha, hora').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_acuaticos').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_ferries').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_terrestres').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_actividades').select('evento, ciudad, fecha, inicio, fin').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_reuniones').select('cita, asunto, ciudad, fecha, hora').eq('viaje_id', id).is('deleted_at', null),
       ]);
 
       for (const r of [tickets, hoteles, restaurantes, rentas, tours, aeronaves, acuaticos, ferries, terrestres, actividades, reuniones]) {

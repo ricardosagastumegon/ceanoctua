@@ -6,6 +6,7 @@ import {
   type AttActividadInsert,
   type AttActividadUpdate,
 } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 // Padre: att_actividades (CRUD estándar).
 export const {
@@ -40,8 +41,7 @@ export function useDeleteAttActividadDelViaje() {
     onSuccess: (_v, { viajeId }) => {
       void qc.invalidateQueries({ queryKey: attActividadesKey });
       void qc.invalidateQueries({ queryKey: attActividadesByViajeKey(viajeId) });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 }

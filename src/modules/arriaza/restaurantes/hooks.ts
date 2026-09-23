@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { restaurantesApi, type AttRestauranteInsert, type AttRestauranteUpdate } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 const keys = { list: (viajeId: string | undefined) => ['att_restaurantes', viajeId] as const };
 
@@ -30,6 +31,10 @@ export function useDeleteRestaurante(viajeId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => restaurantesApi.remove(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.list(viajeId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.list(viajeId) });
+      // Borrar tambien cambia el total, los numeros y la ruta del viaje.
+      if (viajeId) invalidarViaje(qc, viajeId);
+    },
   });
 }

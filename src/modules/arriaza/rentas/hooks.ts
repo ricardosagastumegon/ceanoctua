@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { attRentasApi, type AttRenta, type AttRentaInsert, type AttRentaUpdate } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 export const attRentasKey: QueryKey = ['att_rentas'];
 export function attRentasByViajeKey(viajeId: string): QueryKey {
@@ -47,6 +48,8 @@ export function useDeleteAttRenta() {
     onSuccess: (_v, { viajeId }) => {
       void qc.invalidateQueries({ queryKey: attRentasKey });
       void qc.invalidateQueries({ queryKey: attRentasByViajeKey(viajeId) });
+      // Borrar tambien cambia el total, los numeros y la ruta del viaje.
+      invalidarViaje(qc, viajeId);
     },
   });
 }

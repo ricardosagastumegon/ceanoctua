@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { attTerrestresApi, type AttTerrestre, type AttTerrestreInsert, type AttTerrestreUpdate } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 export const attTerrestresKey: QueryKey = ['att_terrestres'];
 export function attTerrestresByViajeKey(viajeId: string): QueryKey { return ['att_terrestres', 'by_viaje', viajeId]; }
@@ -26,6 +27,11 @@ export function useDeleteAttTerrestre() {
   const qc = useQueryClient();
   return useMutation<void, Error, { id: string; viajeId: string }>({
     mutationFn: ({ id }) => attTerrestresApi.remove(id),
-    onSuccess: (_v, { viajeId }) => { void qc.invalidateQueries({ queryKey: attTerrestresKey }); void qc.invalidateQueries({ queryKey: attTerrestresByViajeKey(viajeId) }); },
+    onSuccess: (_v, { viajeId }) => {
+      void qc.invalidateQueries({ queryKey: attTerrestresKey });
+      void qc.invalidateQueries({ queryKey: attTerrestresByViajeKey(viajeId) });
+      // Borrar tambien cambia el total, los numeros y la ruta del viaje.
+      invalidarViaje(qc, viajeId);
+    },
   });
 }

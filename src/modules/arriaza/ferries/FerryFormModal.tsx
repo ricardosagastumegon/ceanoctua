@@ -18,6 +18,7 @@ import {
   type AttFerryInsert,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -53,8 +54,7 @@ export function FerryFormModal({ open, viajeId, ferryId, onClose }: Props) {
       void qc.invalidateQueries({ queryKey: attFerriesKey });
       void qc.invalidateQueries({ queryKey: attFerriesByViajeKey(viajeId) });
       void qc.invalidateQueries({ queryKey: ['att_ferry_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

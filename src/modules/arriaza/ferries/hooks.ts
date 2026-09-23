@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { attFerriesApi, type AttFerry, type AttFerryInsert, type AttFerryUpdate } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 export const attFerriesKey: QueryKey = ['att_ferries'];
 export function attFerriesByViajeKey(viajeId: string): QueryKey { return ['att_ferries', 'by_viaje', viajeId]; }
@@ -26,6 +27,11 @@ export function useDeleteAttFerry() {
   const qc = useQueryClient();
   return useMutation<void, Error, { id: string; viajeId: string }>({
     mutationFn: ({ id }) => attFerriesApi.remove(id),
-    onSuccess: (_v, { viajeId }) => { void qc.invalidateQueries({ queryKey: attFerriesKey }); void qc.invalidateQueries({ queryKey: attFerriesByViajeKey(viajeId) }); },
+    onSuccess: (_v, { viajeId }) => {
+      void qc.invalidateQueries({ queryKey: attFerriesKey });
+      void qc.invalidateQueries({ queryKey: attFerriesByViajeKey(viajeId) });
+      // Borrar tambien cambia el total, los numeros y la ruta del viaje.
+      invalidarViaje(qc, viajeId);
+    },
   });
 }

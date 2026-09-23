@@ -5,6 +5,7 @@ import {
   type PaisInput,
   type ParadaInput,
 } from './destinos-api';
+import { invalidarViaje } from './invalidar';
 
 const keys = {
   byViaje: (viajeId: string) => ['att_viaje_destinos', viajeId] as const,
@@ -31,6 +32,8 @@ export function useSyncViajeDestinos() {
       void qc.invalidateQueries({ queryKey: keys.byViaje(vars.viajeId) });
       // La tarjeta del dashboard muestra país y ciudades, así que también.
       void qc.invalidateQueries({ queryKey: ['att_viajes'] });
+      // Las paradas alimentan el riel de la ruta cuando no hay vuelo ese día.
+      invalidarViaje(qc, vars.viajeId);
     },
   });
 }

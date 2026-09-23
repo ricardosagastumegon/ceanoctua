@@ -17,6 +17,7 @@ import {
   type AttTourInsert,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -49,8 +50,7 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
       void qc.invalidateQueries({ queryKey: attToursKey });
       void qc.invalidateQueries({ queryKey: attToursByViajeKey(viajeId) });
       void qc.invalidateQueries({ queryKey: ['att_tour_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

@@ -21,6 +21,7 @@ import {
   type ServicioInput,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -53,8 +54,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
     onSuccess: (id) => {
       void qc.invalidateQueries({ queryKey: ['att_restaurantes', viajeId] });
       void qc.invalidateQueries({ queryKey: ['att_restaurante_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

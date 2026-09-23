@@ -20,6 +20,7 @@ import {
   type HabitacionInput,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -62,8 +63,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
     onSuccess: (id) => {
       void qc.invalidateQueries({ queryKey: ['att_hoteles', viajeId] });
       void qc.invalidateQueries({ queryKey: ['att_hotel_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

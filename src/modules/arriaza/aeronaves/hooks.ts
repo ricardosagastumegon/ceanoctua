@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { attAeronavesApi, type AttAeronave, type AttAeronaveInsert, type AttAeronaveUpdate } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 export const attAeronavesKey: QueryKey = ['att_aeronaves'];
 export function attAeronavesByViajeKey(viajeId: string): QueryKey {
@@ -47,6 +48,8 @@ export function useDeleteAttAeronave() {
     onSuccess: (_v, { viajeId }) => {
       void qc.invalidateQueries({ queryKey: attAeronavesKey });
       void qc.invalidateQueries({ queryKey: attAeronavesByViajeKey(viajeId) });
+      // Borrar tambien cambia el total, los numeros y la ruta del viaje.
+      invalidarViaje(qc, viajeId);
     },
   });
 }

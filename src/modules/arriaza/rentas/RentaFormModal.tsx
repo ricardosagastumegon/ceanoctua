@@ -22,6 +22,7 @@ import {
   type ExtraInput,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -55,8 +56,7 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
       void qc.invalidateQueries({ queryKey: attRentasKey });
       void qc.invalidateQueries({ queryKey: attRentasByViajeKey(viajeId) });
       void qc.invalidateQueries({ queryKey: ['att_renta_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

@@ -18,6 +18,7 @@ import {
   type AttTerrestreInsert,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -49,8 +50,7 @@ export function TerrestreFormModal({ open, viajeId, terrestreId, onClose }: Prop
       void qc.invalidateQueries({ queryKey: attTerrestresKey });
       void qc.invalidateQueries({ queryKey: attTerrestresByViajeKey(viajeId) });
       void qc.invalidateQueries({ queryKey: ['att_terrestre_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

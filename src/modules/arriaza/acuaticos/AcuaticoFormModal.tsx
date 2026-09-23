@@ -18,6 +18,7 @@ import {
   type AttAcuaticoInsert,
 } from './full-api';
 import type { Database } from '@/types/database';
+import { invalidarViaje } from '../viajes/invalidar';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -49,8 +50,7 @@ export function AcuaticoFormModal({ open, viajeId, acuaticoId, onClose }: Props)
       void qc.invalidateQueries({ queryKey: attAcuaticosKey });
       void qc.invalidateQueries({ queryKey: attAcuaticosByViajeKey(viajeId) });
       void qc.invalidateQueries({ queryKey: ['att_acuatico_full', id] });
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
-      void qc.invalidateQueries({ queryKey: ['att_itinerary_events', viajeId] });
+      invalidarViaje(qc, viajeId);
     },
   });
 

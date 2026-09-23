@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { attAcuaticosApi, type AttAcuatico, type AttAcuaticoInsert, type AttAcuaticoUpdate } from './api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 export const attAcuaticosKey: QueryKey = ['att_acuaticos'];
 export function attAcuaticosByViajeKey(viajeId: string): QueryKey { return ['att_acuaticos', 'by_viaje', viajeId]; }
@@ -32,6 +33,11 @@ export function useDeleteAttAcuatico() {
   const qc = useQueryClient();
   return useMutation<void, Error, { id: string; viajeId: string }>({
     mutationFn: ({ id }) => attAcuaticosApi.remove(id),
-    onSuccess: (_v, { viajeId }) => { void qc.invalidateQueries({ queryKey: attAcuaticosKey }); void qc.invalidateQueries({ queryKey: attAcuaticosByViajeKey(viajeId) }); },
+    onSuccess: (_v, { viajeId }) => {
+      void qc.invalidateQueries({ queryKey: attAcuaticosKey });
+      void qc.invalidateQueries({ queryKey: attAcuaticosByViajeKey(viajeId) });
+      // Borrar tambien cambia el total, los numeros y la ruta del viaje.
+      invalidarViaje(qc, viajeId);
+    },
   });
 }

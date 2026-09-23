@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ticketFullApi, type PaxInput, type SegmentoInput } from './full-api';
 import type { AttTicketInsert } from './full-api';
+import { invalidarViaje } from '../viajes/invalidar';
 
 export function useTicketCompleto(ticketId: string | undefined) {
   return useQuery({
@@ -23,8 +24,9 @@ export function useSaveTicketCompleto(viajeId: string) {
     onSuccess: (ticketId) => {
       void qc.invalidateQueries({ queryKey: ['att_tickets', viajeId] });
       void qc.invalidateQueries({ queryKey: ['att_ticket_full', ticketId] });
-      // La fila del flyer y el total del viaje dependen de esto.
-      void qc.invalidateQueries({ queryKey: ['att_service_counts', viajeId] });
+      // El total, los numeros del encabezado, la ruta del riel y el
+      // itinerario salen de los servicios: hay que refrescarlos todos.
+      invalidarViaje(qc, viajeId);
       void qc.invalidateQueries({ queryKey: ['att_viajes'] });
     },
   });

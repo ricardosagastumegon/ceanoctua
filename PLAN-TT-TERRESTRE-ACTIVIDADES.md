@@ -44,7 +44,20 @@ faltan los dos bloques que pide el documento:
 | `inclusiones`, `tarifa`, `extras`, `monto_extras` | Información de precio |
 | `monto`, `moneda`, `confirmacion_path` | Como el resto de servicios |
 
-**Total:** tarifa por persona × cantidad de personas + monto de extras.
+**Total:** suma de las tarifas de los participantes + monto de extras.
+
+> **Cambio del 2026-09-23**, pedido por el usuario: *"quiero tarifa por
+> participante, me funciona mejor"*. La tarifa pasó del evento a cada
+> participante, porque las entradas de una misma función pueden ser de
+> categorías distintas — un palco y una platea no cuestan lo mismo.
+>
+> Consecuencia en la UI: los participantes dejan de ser chips sueltos y pasan
+> a ser la lista con tarifa, para no escribir los nombres dos veces. La
+> columna `participantes` se sigue llenando con esos nombres, así que el PDF
+> y cualquier otra vista la leen igual que antes.
+>
+> Si el evento no tiene participantes detallados, el total cae a la tarifa por
+> defecto × la cantidad de personas.
 
 ### La lista de tickets
 

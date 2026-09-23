@@ -7,7 +7,6 @@ import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
-import { ChipsInput } from '../shared/ChipsInput';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { ESTATUS_PAGO } from '../tickets/full-api';
 import { attActividadesByViajeKey, attActividadesKey } from './hooks';
@@ -24,12 +23,7 @@ type Currency = Database['public']['Enums']['currency'];
 
 const META = SERVICE_META.actividades;
 
-/** Texto de `participantes` → lista. Solo corta por coma, para no partir
- *  nombres como "Fulano & Mengana". Igual que los del viaje. */
-function splitParticipantes(texto: string | null | undefined): string[] {
-  if (!texto) return [];
-  return texto.split(',').map((s) => s.trim()).filter(Boolean);
-}
+
 
 type Props = {
   open: boolean;
@@ -67,8 +61,6 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
   const [evento, setEvento] = useState('');
   const [ciudad, setCiudad] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [participantes, setParticipantes] = useState<string[]>([]);
-  const [draftParticipante, setDraftParticipante] = useState('');
   const [reservado, setReservado] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -92,9 +84,13 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
+  const participantesConNombre = useMemo(
+    () => entradas.filter((x) => x.nombre.trim() || x.ticket.trim() || x.lugar.trim() || x.tarifa.trim()),
+    [entradas],
+  );
   const total = useMemo(
-    () => totalActividad(tarifa, personas, montoExtras),
-    [tarifa, personas, montoExtras],
+    () => totalActividad(participantesConNombre, tarifa, personas, montoExtras),
+    [participantesConNombre, tarifa, personas, montoExtras],
   );
 
   useEffect(() => {
@@ -103,8 +99,6 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
     setEvento(a?.evento ?? '');
     setCiudad(a?.ciudad ?? '');
     setDireccion(a?.direccion ?? '');
-    setParticipantes(splitParticipantes(a?.participantes));
-    setDraftParticipante('');
     setReservado(a?.reservado ?? '');
     setConfirmacion(a?.confirmacion ?? '');
     setDescripcion(a?.descripcion ?? '');
@@ -122,6 +116,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
         nombre: e.nombre ?? '',
         ticket: e.ticket ?? '',
         lugar: e.lugar ?? '',
+        tarifa: e.tarifa != null ? String(e.tarifa) : '',
       })),
     );
     setInclusiones(a?.inclusiones ?? '');
@@ -149,7 +144,9 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
       evento: evento.trim(),
       ciudad: ciudad.trim() || null,
       direccion: direccion.trim() || null,
-      participantes: participantes.join(', ') || null,
+      // La columna de texto se arma con los nombres de la lista: es la que
+      // leen el PDF y cualquier vista que solo quiera saber quienes van.
+      participantes: participantesConNombre.map((x) => x.nombre.trim()).filter(Boolean).join(', ') || null,
       reservado: reservado.trim() || null,
       confirmacion: confirmacion.trim() || null,
       descripcion: descripcion.trim() || null,
@@ -177,8 +174,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
       await save.mutateAsync({
         id: actividadId,
         cabecera,
-        // Las filas en blanco no se guardan.
-        entradas: entradas.filter((x) => x.nombre.trim() || x.ticket.trim() || x.lugar.trim()),
+        entradas: participantesConNombre,
       });
       toast.success(actividadId ? 'Actividad actualizada.' : 'Actividad agregada.');
       onClose();
@@ -204,16 +200,6 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
               <TextInput label="Ciudad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
             </div>
             <TextInput label="Dirección" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Dirección completa" />
-            <ChipsInput
-              label="Participantes"
-              placeholder="Nombre del participante"
-              draft={draftParticipante}
-              onDraft={setDraftParticipante}
-              items={participantes}
-              onAdd={(v) => setParticipantes((l) => [...l, v])}
-              onRemove={(i) => setParticipantes((l) => l.filter((_, k) => k !== i))}
-              color={{ solid: META.solid, dark: META.dark, light: META.light }}
-            />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextInput label="Reserva a través de" value={reservado} onChange={(e) => setReservado(e.target.value)} placeholder="Agencia / plataforma" />
               <TextInput label="No. de confirmación" value={confirmacion} onChange={(e) => setConfirmacion(e.target.value)} placeholder="Código de confirmación" />
@@ -230,70 +216,106 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
             </div>
           </Bloque>
 
-          <Bloque titulo="Información de participante">
+          <Bloque titulo="Participantes">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <TextInput label="Reserva a nombre de" value={reservaNombre} onChange={(e) => setReservaNombre(e.target.value)} placeholder="Nombre completo" />
               <TextInput label="Lugares" value={lugares} onChange={(e) => setLugares(e.target.value)} placeholder="Ej: Palco 3, fila A" />
               <TextInput label="Cantidad de personas" type="number" min="0" step="1" value={personas} onChange={(e) => setPersonas(e.target.value)} />
             </div>
 
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-dark-2">
-                <input
-                  type="checkbox"
-                  checked={tieneTickets}
-                  onChange={(e) => setTieneTickets(e.target.checked)}
-                  className="h-4 w-4 rounded border-sand"
-                />
-                El evento tiene número de ticket
-              </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-dark-2">
+              <input
+                type="checkbox"
+                checked={tieneTickets}
+                onChange={(e) => setTieneTickets(e.target.checked)}
+                className="h-4 w-4 rounded border-sand"
+              />
+              El evento tiene número de ticket
+            </label>
 
-              {/* La lista solo aparece si aplica, como pide el documento. */}
-              {tieneTickets && (
-                <div className="mt-2 space-y-2">
-                  {entradas.map((x, i) => (
-                    <div key={x.id ?? `nuevo-${i}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1.4fr_1.4fr_auto]">
-                      <input
-                        type="text"
-                        value={x.nombre}
-                        onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, nombre: e.target.value } : y)))}
-                        placeholder="Nombre"
-                        className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
-                      />
-                      <input
-                        type="text"
-                        value={x.ticket}
-                        onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, ticket: e.target.value } : y)))}
-                        placeholder="No. de ticket"
-                        className="block w-full rounded-md border border-sand bg-white px-3 py-2 font-mono text-sm text-dark placeholder:font-sans placeholder:text-dark-3 focus:border-teal focus:outline-none"
-                      />
-                      <input
-                        type="text"
-                        value={x.lugar}
-                        onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, lugar: e.target.value } : y)))}
-                        placeholder="Lugar"
-                        className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEntradas((l) => l.filter((_, k) => k !== i))}
-                        className="rounded-md border border-sand px-2 py-2 text-xs text-dark-3 hover:bg-rust-l hover:text-rust"
-                        aria-label="Quitar entrada"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setEntradas((l) => [...l, { nombre: '', ticket: '', lugar: '' }])}
-                    className="rounded-md border px-3 py-1.5 text-xs font-semibold hover:opacity-80"
-                    style={{ borderColor: META.solid, color: META.dark }}
-                  >
-                    ＋ Agregar ticket
-                  </button>
+            {/* Cada participante con su tarifa: las entradas de una misma
+                función pueden ser de categorías distintas. El número de ticket
+                y el lugar solo se piden si el evento los maneja. */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">
+                Tarifa por participante
+              </div>
+              {entradas.length === 0 && (
+                <p className="text-[11px] italic text-dark-3">
+                  Sin participantes detallados. Mientras tanto el total usa la tarifa por
+                  defecto × la cantidad de personas.
+                </p>
+              )}
+              {/* Encabezados: con los campos llenos, el placeholder ya no
+                  dice cual es cual. */}
+              {entradas.length > 0 && (
+                <div className={`hidden gap-2 px-1 text-[10px] font-extrabold uppercase tracking-wider text-dark-3 sm:grid ${tieneTickets ? 'sm:grid-cols-[2fr_1.3fr_1.3fr_1fr_auto]' : 'sm:grid-cols-[3fr_1fr_auto]'}`}>
+                  <span>Nombre</span>
+                  {tieneTickets && <span>No. de ticket</span>}
+                  {tieneTickets && <span>Lugar</span>}
+                  <span>Tarifa ({moneda})</span>
+                  <span className="w-[34px]" />
                 </div>
               )}
+              {entradas.map((x, i) => (
+                <div
+                  key={x.id ?? `nuevo-${i}`}
+                  className={`grid grid-cols-1 gap-2 ${tieneTickets ? 'sm:grid-cols-[2fr_1.3fr_1.3fr_1fr_auto]' : 'sm:grid-cols-[3fr_1fr_auto]'}`}
+                >
+                  <input
+                    type="text"
+                    value={x.nombre}
+                    onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, nombre: e.target.value } : y)))}
+                    placeholder="Nombre del participante"
+                    className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
+                  />
+                  {tieneTickets && (
+                    <input
+                      type="text"
+                      value={x.ticket}
+                      onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, ticket: e.target.value } : y)))}
+                      placeholder="No. de ticket"
+                      className="block w-full rounded-md border border-sand bg-white px-3 py-2 font-mono text-sm text-dark placeholder:font-sans placeholder:text-dark-3 focus:border-teal focus:outline-none"
+                    />
+                  )}
+                  {tieneTickets && (
+                    <input
+                      type="text"
+                      value={x.lugar}
+                      onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, lugar: e.target.value } : y)))}
+                      placeholder="Lugar"
+                      className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
+                    />
+                  )}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={x.tarifa}
+                    onChange={(e) => setEntradas((l) => l.map((y, k) => (k === i ? { ...y, tarifa: e.target.value } : y)))}
+                    placeholder={`${moneda} 0.00`}
+                    className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEntradas((l) => l.filter((_, k) => k !== i))}
+                    className="rounded-md border border-sand px-2 py-2 text-xs text-dark-3 hover:bg-rust-l hover:text-rust"
+                    aria-label="Quitar participante"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                // La tarifa por defecto propone el monto, que despues se
+                // ajusta por persona si la entrada es de otra categoria.
+                onClick={() => setEntradas((l) => [...l, { nombre: '', ticket: '', lugar: '', tarifa }])}
+                className="rounded-md border px-3 py-1.5 text-xs font-semibold hover:opacity-80"
+                style={{ borderColor: META.solid, color: META.dark }}
+              >
+                ＋ Agregar participante
+              </button>
             </div>
           </Bloque>
 
@@ -303,7 +325,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
               <Select label="Moneda" value={moneda} onChange={(e) => setMoneda(e.target.value as Currency)}>
                 {(['USD', 'GTQ', 'EUR', 'GBP'] as const).map((m) => <option key={m} value={m}>{m}</option>)}
               </Select>
-              <TextInput label={`Tarifa por persona (${moneda})`} type="number" min="0" step="0.01" value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
+              <TextInput label={`Tarifa por defecto (${moneda})`} type="number" min="0" step="0.01" value={tarifa} onChange={(e) => setTarifa(e.target.value)} hint="Propone el monto de cada participante nuevo." />
               <TextInput label={`Monto extras (${moneda})`} type="number" min="0" step="0.01" value={montoExtras} onChange={(e) => setMontoExtras(e.target.value)} />
             </div>
             <TextInput label="Extras" value={extras} onChange={(e) => setExtras(e.target.value)} placeholder="Descripción de extras" />
@@ -319,7 +341,9 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
                 {META.icon} Total de la reserva
               </div>
               <div className="text-[11px] text-white/60">
-                {moneda} {Number(tarifa || 0).toFixed(2)} × {personas || 0} persona{personas === '1' ? '' : 's'}
+                {participantesConNombre.length > 0
+                  ? `Suma de ${participantesConNombre.length} participante${participantesConNombre.length === 1 ? '' : 's'}`
+                  : `${moneda} ${Number(tarifa || 0).toFixed(2)} × ${personas || 0} persona${personas === '1' ? '' : 's'}`}
                 {Number(montoExtras) > 0 ? ' + extras' : ''}
               </div>
             </div>

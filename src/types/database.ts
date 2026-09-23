@@ -2061,17 +2061,20 @@ export type Database = {
         Row: AuditCols & {
           id: string; actividad_id: string;
           nombre: string | null; ticket: string | null; lugar: string | null;
+          tarifa: number | null;
           orden: number;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
           id?: string; actividad_id: string;
           nombre?: string | null; ticket?: string | null; lugar?: string | null;
+          tarifa?: number | null;
           orden?: number;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           nombre?: string | null; ticket?: string | null; lugar?: string | null;
+          tarifa?: number | null;
           orden?: number;
           deleted_at?: string | null;
         };

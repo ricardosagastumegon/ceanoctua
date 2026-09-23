@@ -1,10 +1,12 @@
 // Fase 22 · actividades y eventos.
 //
-// A diferencia de los otros servicios de este documento, la actividad sí tiene
-// una tabla hija: las entradas -- nombre, número de ticket y lugar -- que el
-// documento pide cuando se marca la casilla "No. de Ticket ... si es que
-// aplica". Por eso guardar reconcilia: inserta las nuevas, actualiza las que
-// cambiaron y borra en suave las que el usuario quitó de la lista.
+// A diferencia de los otros servicios, la actividad tiene una tabla hija: sus
+// participantes, cada uno con su tarifa y -- si el evento las maneja -- su
+// número de ticket y su lugar. Por eso guardar reconcilia: inserta los nuevos,
+// actualiza los que cambiaron y borra en suave los que se quitaron.
+//
+// La tarifa vive en el participante desde el 2026-09-23, a pedido del usuario:
+// antes era una sola por evento y todos pagaban igual.
 
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
@@ -13,12 +15,14 @@ export type AttActividad = Database['public']['Tables']['att_actividades']['Row'
 export type AttActividadInsert = Database['public']['Tables']['att_actividades']['Insert'];
 export type AttEntrada = Database['public']['Tables']['att_actividad_entradas']['Row'];
 
-/** Una entrada en el formulario. Sin `id` todavía no existe en la base. */
+/** Un participante del evento. Sin `id` todavía no existe en la base. */
 export type EntradaInput = {
   id?: string;
   nombre: string;
   ticket: string;
   lugar: string;
+  /** Lo que cuesta la entrada de esta persona. */
+  tarifa: string;
 };
 
 const num = (v: string | number | null | undefined): number => {
@@ -27,14 +31,27 @@ const num = (v: string | number | null | undefined): number => {
 };
 
 /**
- * Total del documento: tarifa por persona × cantidad de personas + extras.
+ * Total del evento: la suma de lo que paga cada participante, más los extras.
+ *
+ * La tarifa vive en el participante y no en el evento porque las entradas de
+ * una misma función pueden ser de categorías distintas -- un palco y una
+ * platea no cuestan lo mismo.
+ *
+ * Si el evento todavía no tiene participantes detallados cae a la tarifa por
+ * defecto × la cantidad de personas, para que una carga rápida sin desglosar
+ * siga dando un número.
  */
 export function totalActividad(
-  tarifa: string | number | null | undefined,
+  entradas: readonly { tarifa: string | number | null | undefined }[],
+  tarifaPorDefecto: string | number | null | undefined,
   personas: string | number | null | undefined,
   montoExtras: string | number | null | undefined,
 ): number {
-  return num(tarifa) * num(personas) + num(montoExtras);
+  const extras = num(montoExtras);
+  if (entradas.length > 0) {
+    return entradas.reduce((s, e) => s + num(e.tarifa), 0) + extras;
+  }
+  return num(tarifaPorDefecto) * num(personas) + extras;
 }
 
 export async function subirConfirmacionActividad(id: string, file: File): Promise<string> {
@@ -80,6 +97,7 @@ async function sincronizarEntradas(actividadId: string, deseadas: EntradaInput[]
       nombre: e.nombre.trim() || null,
       ticket: e.ticket.trim() || null,
       lugar: e.lugar.trim() || null,
+      tarifa: e.tarifa.trim() === '' ? null : Number(e.tarifa),
       orden: i,
     };
     if (e.id) {
@@ -123,9 +141,10 @@ export const actividadesFullApi = {
       if (error) throw error;
       id = data.id;
     }
-    // Si la casilla está desmarcada el evento no lleva entradas: se limpian
-    // las que hubiera, en vez de dejarlas escondidas.
-    await sincronizarEntradas(id, input.cabecera.tiene_tickets ? input.entradas : []);
+    // Los participantes se guardan siempre: son los que definen el total. La
+    // casilla `tiene_tickets` solo decide si además se piden número de ticket
+    // y lugar, no si la lista existe.
+    await sincronizarEntradas(id, input.entradas);
     return id;
   },
 };

@@ -8,7 +8,7 @@ import { fmtDate } from '../utils';
 import { useAttActividadesByViaje, useDeleteAttActividadDelViaje } from './hooks';
 import { ActividadFormModal } from './ActividadFormModal';
 import { ActividadPrintable } from './ActividadPrintable';
-import { listarEntradas, totalActividad } from './full-api';
+import { listarEntradas } from './full-api';
 import type { AttActividad } from './api';
 
 const META = SERVICE_META.actividades;
@@ -30,12 +30,13 @@ export function ActividadesSection({ viajeId, canEdit, tripNo, autoOpenCreate, o
   const [editing, setEditing] = useState<{ id?: string } | null>(null);
   const [viendo, setViendo] = useState<AttActividad | null>(null);
 
-  // Las entradas solo se piden cuando se abre la vista previa: la lista de la
-  // sección no las necesita.
+  // Los participantes solo se piden al abrir la vista previa: la lista de la
+  // sección no los necesita. Van siempre, tenga o no números de ticket: son
+  // los que llevan la tarifa.
   const entradas = useQuery({
     queryKey: ['att_actividad_entradas', viendo?.id],
     queryFn: () => listarEntradas(viendo?.id as string),
-    enabled: !!viendo?.id && !!viendo?.tiene_tickets,
+    enabled: !!viendo?.id,
   });
 
   const rows = query.data ?? [];
@@ -117,7 +118,7 @@ export function ActividadesSection({ viajeId, canEdit, tripNo, autoOpenCreate, o
               )}
               {x.tiene_tickets && (
                 <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-dark-2">
-                  🎟 con entradas
+                  🎟 con ticket
                 </span>
               )}
             </div>
@@ -132,7 +133,9 @@ export function ActividadesSection({ viajeId, canEdit, tripNo, autoOpenCreate, o
           </div>
           <div className="shrink-0 text-right">
             <div className="font-heading text-sm font-extrabold" style={{ color: META.dark }}>
-              {x.moneda ?? 'USD'} {totalActividad(x.tarifa, x.personas, x.monto_extras).toFixed(2)}
+              {/* El total depende de las tarifas de los participantes, que
+                  esta lista no trae; se lee el que se guardo al grabar. */}
+              {x.moneda ?? 'USD'} {(Number(x.monto) || 0).toFixed(2)}
             </div>
           </div>
           <div className="flex shrink-0 gap-1">

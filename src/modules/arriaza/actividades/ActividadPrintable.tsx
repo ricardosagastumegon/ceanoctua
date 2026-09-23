@@ -19,7 +19,7 @@ const hhmm = (v: string | null | undefined) => (v ? v.slice(0, 5) : null);
 /** Hoja imprimible de la actividad: el evento, quién va y con qué entrada. */
 export function ActividadPrintable({ open, onClose, actividad: a, entradas, tripNo }: Props) {
   const moneda = a.moneda ?? 'USD';
-  const total = totalActividad(a.tarifa, a.personas, a.monto_extras);
+  const total = totalActividad(entradas, a.tarifa, a.personas, a.monto_extras);
   const inicio = hhmm(a.inicio);
   const fin = hhmm(a.fin);
   const participantes = (a.participantes ?? '')
@@ -70,8 +70,8 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
             </div>
           )}
 
-          {/* Quiénes van · el dato que se consulta en la puerta. */}
-          {participantes.length > 0 && (
+          {/* Quiénes van, cuando no hay tabla detallada que ya los liste. */}
+          {entradas.length === 0 && participantes.length > 0 && (
             <div
               className="rounded-lg border-l-4 px-4 py-3"
               style={{ borderLeftColor: META.solid, backgroundColor: META.light }}
@@ -93,22 +93,23 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
             </div>
           )}
 
-          {/* Las entradas · nombre, número y lugar, que es lo que se presenta. */}
-          {a.tiene_tickets && entradas.length > 0 && (
+          {/* Los participantes con lo que paga cada uno. El número de ticket
+              y el lugar solo se muestran si el evento los maneja. */}
+          {entradas.length > 0 && (
             <div className="overflow-hidden rounded-lg border" style={{ borderColor: META.solid }}>
               <div
                 className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white"
                 style={{ backgroundColor: META.dark }}
               >
-                🎟 Entradas
+                {a.tiene_tickets ? '\u{1F3AB} Participantes y entradas' : '\u{1F465} Participantes'}
               </div>
               <table className="w-full text-[12px]">
                 <thead>
                   <tr style={{ backgroundColor: META.light }}>
-                    {['Nombre', 'No. de ticket', 'Lugar'].map((h) => (
+                    {['Nombre', ...(a.tiene_tickets ? ['No. de ticket', 'Lugar'] : []), 'Tarifa'].map((h, i, arr) => (
                       <th
                         key={h}
-                        className="px-4 py-1.5 text-left text-[9px] font-extrabold uppercase tracking-wider"
+                        className={`px-4 py-1.5 text-[9px] font-extrabold uppercase tracking-wider ${i === arr.length - 1 ? 'text-right' : 'text-left'}`}
                         style={{ color: META.dark }}
                       >
                         {h}
@@ -119,11 +120,18 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
                 <tbody>
                   {entradas.map((e) => (
                     <tr key={e.id} className="border-t" style={{ borderColor: META.light }}>
-                      <td className="px-4 py-1.5 text-dark">{e.nombre || '—'}</td>
-                      <td className="px-4 py-1.5 font-mono font-extrabold" style={{ color: META.dark }}>
-                        {e.ticket || '—'}
+                      <td className="px-4 py-1.5 text-dark">{e.nombre || '\u2014'}</td>
+                      {a.tiene_tickets && (
+                        <td className="px-4 py-1.5 font-mono font-extrabold" style={{ color: META.dark }}>
+                          {e.ticket || '\u2014'}
+                        </td>
+                      )}
+                      {a.tiene_tickets && (
+                        <td className="px-4 py-1.5 text-dark-2">{e.lugar || '\u2014'}</td>
+                      )}
+                      <td className="px-4 py-1.5 text-right font-extrabold" style={{ color: META.dark }}>
+                        {moneda} {(Number(e.tarifa) || 0).toFixed(2)}
                       </td>
-                      <td className="px-4 py-1.5 text-dark-2">{e.lugar || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -163,8 +171,16 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
           <Montos
             serviceKey="actividades"
             moneda={moneda}
-            tarifa={(Number(a.tarifa) || 0) * (Number(a.personas) || 0)}
-            etiquetaTarifa={`Tarifa por persona × ${a.personas ?? 0}`}
+            tarifa={
+              entradas.length > 0
+                ? entradas.reduce((sum, e) => sum + (Number(e.tarifa) || 0), 0)
+                : (Number(a.tarifa) || 0) * (Number(a.personas) || 0)
+            }
+            etiquetaTarifa={
+              entradas.length > 0
+                ? `Tarifas de ${entradas.length} participante${entradas.length === 1 ? '' : 's'}`
+                : `Tarifa por persona × ${a.personas ?? 0}`
+            }
             etiquetaExtras={a.extras || 'Extras'}
             montoExtras={Number(a.monto_extras) || 0}
           />

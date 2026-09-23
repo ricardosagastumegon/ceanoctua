@@ -1591,8 +1591,15 @@ export type Database = {
           personas: number | null; dias: number | null; duracion: string | null;
           tarifa: number | null; cancelacion: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          nombre: string | null;
+          hora_fin: string | null;
+          incluye_alimentacion: boolean | null;
+          alimentacion_detalle: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1605,8 +1612,15 @@ export type Database = {
           personas?: number | null; dias?: number | null; duracion?: string | null;
           tarifa?: number | null; cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          nombre?: string | null;
+          hora_fin?: string | null;
+          incluye_alimentacion?: boolean | null;
+          alimentacion_detalle?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1619,8 +1633,15 @@ export type Database = {
           personas?: number | null; dias?: number | null; duracion?: string | null;
           tarifa?: number | null; cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          nombre?: string | null;
+          hora_fin?: string | null;
+          incluye_alimentacion?: boolean | null;
+          alimentacion_detalle?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1641,8 +1662,11 @@ export type Database = {
           tarifa: number | null; extras: string | null; monto_extras: number | null;
           cancelacion: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1657,8 +1681,11 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1673,8 +1700,11 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1700,8 +1730,11 @@ export type Database = {
           tarifa: number | null; extras: string | null; monto_extras: number | null;
           cancelacion: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -1721,8 +1754,11 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -1742,8 +1778,11 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -1756,7 +1795,7 @@ export type Database = {
           id: string; viaje_id: string; prestador: string;
           ciudad: string | null; direccion: string | null; telefono: string | null;
           tipo_embarcacion: string | null;
-          servicio_para: 'Personas' | 'Vehículos';
+          servicio_para: 'Personas' | 'Vehículos' | 'Persona & Vehículo' | null;
           tipo_servicio: 'Privada' | 'Colectiva' | 'Otro' | null;
           tipo_servicio_otro: string | null;
           descripcion: string | null;
@@ -1770,15 +1809,18 @@ export type Database = {
           tarifa: number | null; extras: string | null; monto_extras: number | null;
           cancelacion: string | null;
           estatus_pago: string | null;
-          estado_pago: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago: string;
           pagado_con: string | null; confirm_file_name: string | null;
+          moneda: Database['public']['Enums']['currency'];
+          monto: number | null;
+          confirmacion_path: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
           id?: string; viaje_id: string; prestador: string;
           ciudad?: string | null; direccion?: string | null; telefono?: string | null;
           tipo_embarcacion?: string | null;
-          servicio_para?: 'Personas' | 'Vehículos';
+          servicio_para?: 'Personas' | 'Vehículos' | 'Persona & Vehículo' | null;
           tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
           tipo_servicio_otro?: string | null;
           descripcion?: string | null;
@@ -1792,15 +1834,18 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
           prestador?: string;
           ciudad?: string | null; direccion?: string | null; telefono?: string | null;
           tipo_embarcacion?: string | null;
-          servicio_para?: 'Personas' | 'Vehículos';
+          servicio_para?: 'Personas' | 'Vehículos' | 'Persona & Vehículo' | null;
           tipo_servicio?: 'Privada' | 'Colectiva' | 'Otro' | null;
           tipo_servicio_otro?: string | null;
           descripcion?: string | null;
@@ -1814,8 +1859,11 @@ export type Database = {
           tarifa?: number | null; extras?: string | null; monto_extras?: number | null;
           cancelacion?: string | null;
           estatus_pago?: string | null;
-          estado_pago?: 'Reservado' | 'Pagado' | 'Pago parcial' | 'A pagar en propiedad' | 'Cancelado';
+          estado_pago?: string;
           pagado_con?: string | null; confirm_file_name?: string | null;
+          moneda?: Database['public']['Enums']['currency'];
+          monto?: number | null;
+          confirmacion_path?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [

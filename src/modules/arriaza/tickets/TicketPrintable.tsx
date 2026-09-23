@@ -182,9 +182,10 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
             <table className="w-full text-[12px]">
               <thead>
                 <tr style={{ backgroundColor: META.light, color: META.dark }} className="text-left">
-                  <th className="px-4 py-1.5 font-extrabold">Nombre</th>
+                  {/* El nombre se lleva el ancho sobrante: es lo que se busca en la
+                      hoja. El pasaporte salio de aqui a pedido del usuario. */}
+                  <th className="w-[38%] px-4 py-1.5 font-extrabold">Nombre</th>
                   <th className="px-2 py-1.5 font-extrabold">Tipo</th>
-                  <th className="px-2 py-1.5 font-extrabold">Pasaporte</th>
                   <th className="px-2 py-1.5 font-extrabold">Ticket</th>
                   <th className="px-2 py-1.5 font-extrabold">Asiento</th>
                   <th className="px-2 py-1.5 font-extrabold" title="Artículo personal · carry on · documentado">
@@ -197,13 +198,12 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
                 {pax.map((p, i) => (
                   <tr key={i} style={{ backgroundColor: i % 2 ? '#ffffff' : 'rgba(0,0,0,.02)' }}>
                     <td className="px-4 py-1.5 font-semibold text-dark">{p.nombre || '—'}</td>
-                    <td className="px-2 py-1.5 text-dark-2">
+                    <td className="whitespace-nowrap px-2 py-1.5 text-dark-2">
                       {p.tipos.join('/') || '—'}
                       {p.nacionalidades.length ? ` · ${p.nacionalidades.join(', ')}` : ''}
                     </td>
-                    <td className="px-2 py-1.5 text-dark-2">{p.pasaporte_num || '—'}</td>
-                    <td className="px-2 py-1.5 text-dark-2">{p.numero_ticket || '—'}</td>
-                    <td className="px-2 py-1.5 text-dark-2">{p.asiento || '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-dark-2">{p.numero_ticket || '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-dark-2">{p.asiento || '—'}</td>
                     <td className="px-2 py-1.5 text-dark-2">
                       <Equipaje personal={p.eq_personal} carryon={p.eq_carryon} documentado={p.eq_documentado} />
                     </td>

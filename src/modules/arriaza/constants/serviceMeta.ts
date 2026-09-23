@@ -82,9 +82,11 @@ export const SERVICE_META: Record<ServiceKey, ServiceMeta> = {
     hasCost: true, table: 'att_ferries', arrayKey: 'ferries',
   },
   terrestre: {
+    // Terracota, pedido en el documento del 2026-09-23. Antes era un gris
+    // azulado que no distinguia el servicio de ningun otro.
     label: 'Traslado Terrestre', icon: '🚐', css: 'svc-terrestre',
-    grad: 'linear-gradient(135deg,#1c2128,#445164,#6b7d94)',
-    solid: '#445164', dark: '#2a323d', light: '#e6e9ee',
+    grad: 'linear-gradient(135deg,#3a1a0d,#a3522e,#cc8154)',
+    solid: '#a3522e', dark: '#7a3c22', light: '#f4e4da',
     hasCost: true, table: 'att_terrestres', arrayKey: 'terrestres',
   },
   actividades: {

@@ -171,43 +171,43 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
             ))}
           </div>
 
-          {/* Pasajeros */}
-          <div>
+          {/* Pasajeros · panel propio, igual que el vehículo en la renta. */}
+          <div className="overflow-hidden rounded-lg border" style={{ borderColor: META.solid }}>
             <div
-              className="mb-2 text-[11px] font-extrabold uppercase tracking-wider"
-              style={{ color: META.dark }}
+              className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white"
+              style={{ backgroundColor: META.dark }}
             >
-              Pasajeros · {pax.length}
+              👤 Pasajeros · {pax.length}
             </div>
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[12px]">
               <thead>
-                <tr style={{ color: META.dark }} className="text-left">
-                  <th className="border-b border-sand py-1">Nombre</th>
-                  <th className="border-b border-sand py-1">Tipo</th>
-                  <th className="border-b border-sand py-1">Pasaporte</th>
-                  <th className="border-b border-sand py-1">Ticket</th>
-                  <th className="border-b border-sand py-1">Asiento</th>
-                  <th className="border-b border-sand py-1" title="Artículo personal · carry on · documentado">
+                <tr style={{ backgroundColor: META.light, color: META.dark }} className="text-left">
+                  <th className="px-4 py-1.5 font-extrabold">Nombre</th>
+                  <th className="px-2 py-1.5 font-extrabold">Tipo</th>
+                  <th className="px-2 py-1.5 font-extrabold">Pasaporte</th>
+                  <th className="px-2 py-1.5 font-extrabold">Ticket</th>
+                  <th className="px-2 py-1.5 font-extrabold">Asiento</th>
+                  <th className="px-2 py-1.5 font-extrabold" title="Artículo personal · carry on · documentado">
                     Equipaje
                   </th>
-                  <th className="border-b border-sand py-1 text-right">Total</th>
+                  <th className="px-4 py-1.5 text-right font-extrabold">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {pax.map((p, i) => (
-                  <tr key={i}>
-                    <td className="border-b border-sand py-1 font-semibold text-dark-2">{p.nombre || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">
+                  <tr key={i} style={{ backgroundColor: i % 2 ? '#ffffff' : 'rgba(0,0,0,.02)' }}>
+                    <td className="px-4 py-1.5 font-semibold text-dark">{p.nombre || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">
                       {p.tipos.join('/') || '—'}
                       {p.nacionalidades.length ? ` · ${p.nacionalidades.join(', ')}` : ''}
                     </td>
-                    <td className="border-b border-sand py-1 text-dark-3">{p.pasaporte_num || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">{p.numero_ticket || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">{p.asiento || '—'}</td>
-                    <td className="border-b border-sand py-1 text-dark-3">
+                    <td className="px-2 py-1.5 text-dark-2">{p.pasaporte_num || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">{p.numero_ticket || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">{p.asiento || '—'}</td>
+                    <td className="px-2 py-1.5 text-dark-2">
                       <Equipaje personal={p.eq_personal} carryon={p.eq_carryon} documentado={p.eq_documentado} />
                     </td>
-                    <td className="border-b border-sand py-1 text-right font-extrabold" style={{ color: META.dark }}>
+                    <td className="px-4 py-1.5 text-right font-extrabold" style={{ color: META.dark }}>
                       {moneda} {((Number(p.tarifa) || 0) + (Number(p.extras) || 0)).toFixed(2)}
                     </td>
                   </tr>

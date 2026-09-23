@@ -60,25 +60,59 @@ export function RestaurantePrintable({ open, onClose, restaurante: r, tripNo }: 
         { label: 'Reservado a través de', value: r.reservado_por ?? '—' },
         { label: 'Tiempo de espera', value: r.tiempo_espera ?? '—' },
         { label: 'Comensales', value: comensales.length || r.covers || '—' },
-        {
-          label: 'Cancelación',
-          value: r.cancelacion_gratuita
-            ? `Gratuita${r.cancelacion_fecha ? ` hasta ${fmtDate(r.cancelacion_fecha)}` : ''}`
-            : r.cancel_policy ?? 'Con penalidad',
-        },
       ]}
       extras={
         <div className="space-y-5">
-          {comensales.length > 0 && (
-            <div>
-              <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wider" style={{ color: META.dark }}>
-                Comensales
+          {/* Los dos momentos que importan: cuándo se come y hasta cuándo se
+              puede cancelar sin costo. */}
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              className="rounded-lg border-l-4 px-4 py-3"
+              style={{ borderLeftColor: META.solid, backgroundColor: META.light }}
+            >
+              <div className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: META.dark }}>
+                🍽 Reserva
               </div>
-              <ol className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
+              <div className="mt-1 font-heading text-base font-extrabold" style={{ color: META.dark }}>
+                {r.fecha ? fmtDate(r.fecha) : '—'}
+                {r.hora ? <span className="ml-2 text-sm">{r.hora.slice(0, 5)}</span> : null}
+              </div>
+              <div className="mt-0.5 text-[12px] text-dark-2">
+                {[r.tipo_servicio, r.tiempo_espera ? `espera ${r.tiempo_espera}` : null]
+                  .filter(Boolean).join(' · ') || '—'}
+              </div>
+            </div>
+            <div
+              className="rounded-lg border-l-4 px-4 py-3"
+              style={{ borderLeftColor: META.solid, backgroundColor: META.light }}
+            >
+              <div className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: META.dark }}>
+                {r.cancelacion_gratuita ? '✅ Cancelación gratuita' : '⚠ Cancelación con penalidad'}
+              </div>
+              <div className="mt-1 font-heading text-base font-extrabold" style={{ color: META.dark }}>
+                {r.cancelacion_gratuita
+                  ? r.cancelacion_fecha ? `Hasta ${fmtDate(r.cancelacion_fecha)}` : 'Sin fecha límite'
+                  : '—'}
+              </div>
+              {!r.cancelacion_gratuita && r.cancel_policy && (
+                <div className="mt-0.5 text-[12px] text-dark-2">{r.cancel_policy}</div>
+              )}
+            </div>
+          </div>
+
+          {comensales.length > 0 && (
+            <div className="overflow-hidden rounded-lg border" style={{ borderColor: META.solid }}>
+              <div
+                className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white"
+                style={{ backgroundColor: META.dark }}
+              >
+                👥 Comensales · {comensales.length}
+              </div>
+              <ol className="grid grid-cols-2 gap-x-6 px-4 py-2 text-[12px]">
                 {comensales.map((c, i) => (
-                  <li key={i} className="flex gap-2 border-b border-sand py-0.5">
+                  <li key={i} className="flex gap-2 py-0.5">
                     <span className="w-4 shrink-0 font-extrabold" style={{ color: META.dark }}>{i + 1}</span>
-                    <span className="text-dark-2">{c.nombre}</span>
+                    <span className="text-dark">{c.nombre}</span>
                   </li>
                 ))}
               </ol>

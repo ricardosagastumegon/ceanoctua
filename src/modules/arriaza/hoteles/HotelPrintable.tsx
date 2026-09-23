@@ -58,8 +58,6 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
         { label: 'Teléfono', value: hotel.telefono ?? '—' },
         { label: 'Dirección', value: hotel.direccion ?? '—' },
         { label: 'Reservado a través de', value: hotel.reservado_por ?? '—' },
-        { label: 'Check-in', value: hotel.checkin ? fmtDate(hotel.checkin) : '—' },
-        { label: 'Check-out', value: hotel.checkout ? fmtDate(hotel.checkout) : '—' },
         { label: 'Noches', value: noches || '—' },
         { label: 'Early check-in', value: hotel.early_checkin ?? '—' },
         { label: 'Estatus de pago', value: hotel.estatus_pago ?? '—' },
@@ -67,6 +65,28 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
       ]}
       extras={
         <div className="space-y-5">
+          {/* Los dos momentos del hospedaje, lado a lado. */}
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { titulo: '🔑 Check-in', fecha: hotel.checkin, nota: hotel.early_checkin },
+              { titulo: '🏁 Check-out', fecha: hotel.checkout, nota: null },
+            ].map((m) => (
+              <div
+                key={m.titulo}
+                className="rounded-lg border-l-4 px-4 py-3"
+                style={{ borderLeftColor: META.solid, backgroundColor: META.light }}
+              >
+                <div className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: META.dark }}>
+                  {m.titulo}
+                </div>
+                <div className="mt-1 font-heading text-base font-extrabold" style={{ color: META.dark }}>
+                  {m.fecha ? fmtDate(m.fecha) : '—'}
+                </div>
+                {m.nota && <div className="mt-0.5 text-[12px] text-dark-2">{m.nota}</div>}
+              </div>
+            ))}
+          </div>
+
           {/* Las habitaciones son lo que se verifica al llegar al hotel, así que
               van en un panel con cabecera de color y filas alternadas, no como
               una tabla suelta que se pierde entre el resto. */}

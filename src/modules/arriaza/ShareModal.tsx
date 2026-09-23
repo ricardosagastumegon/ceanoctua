@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { findCountry } from './constants/countries';
-import { fmtDate, slug, fmtMoney } from './utils';
+import { fmtDate, slug } from './utils';
+import { useServiceSummary } from './viajes/service-counts';
 import { MANUAL_STATUS_COLORS, type ManualStatus } from './constants/serviceMeta';
 import type { AttViaje } from './viajes/api';
 
@@ -13,6 +14,9 @@ type Props = { open: boolean; onClose: () => void; viaje: AttViaje | null };
 // Paridad con ttOpenShareModal + ttBuildShareCardHTML del standalone.
 export function ShareModal({ open, onClose, viaje }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
+  // El total sale del mismo resumen que usan la tarjeta y la pantalla del
+  // viaje; antes estaba escrito como cero fijo y nunca se conectó.
+  const resumen = useServiceSummary(viaje?.id, open);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
@@ -111,11 +115,15 @@ export function ShareModal({ open, onClose, viaje }: Props) {
                 💰 Costo total
               </div>
               <div className="font-heading text-lg font-extrabold text-white">
-                {fmtMoney(0)}
+                {resumen.data
+                  ? `${resumen.data.monedas.length === 1 ? `${resumen.data.monedas[0]} ` : ''}${resumen.data.total.toFixed(2)}`
+                  : '…'}
               </div>
-              <div className="text-[9px] text-white/50">
-                (suma en tiempo real desde el dashboard)
-              </div>
+              {resumen.data?.totalParcial && (
+                <div className="text-[9px] text-white/50">
+                  (parcial · hay servicios sin monto)
+                </div>
+              )}
             </div>
           </div>
 

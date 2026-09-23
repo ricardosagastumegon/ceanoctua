@@ -17,4 +17,13 @@ if (!isSupabaseConfigured && import.meta.env.DEV) {
 const safeUrl = url || 'https://placeholder.supabase.co';
 const safeKey = anonKey || 'placeholder-anon-key';
 
-export const supabase = createClient<Database>(safeUrl, safeKey);
+export const supabase = createClient<Database>(safeUrl, safeKey, {
+  auth: {
+    // Explicitos a proposito aunque sean los valores por defecto: de esto
+    // depende que el presidente abra el icono de su telefono y entre sin ver
+    // una pantalla de login. La sesion vive en el dispositivo y se renueva
+    // sola mientras la aplicacion se abra de vez en cuando.
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});

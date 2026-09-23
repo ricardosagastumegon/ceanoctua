@@ -85,3 +85,27 @@ Un *service worker* para uso sin conexión **no** entra por ahora: la app vive d
 4. Paso responsivo por las pantallas de T&T.
 
 Cada paso se puede probar y subir por separado.
+
+---
+
+## Cómo entra el presidente · decidido el 2026-09-23
+
+El usuario lo planteó así: *"no quiero que requiera autenticación directa con correo"*.
+
+**La aclaración que resolvió la pregunta:** en Supabase el correo es el **nombre de usuario**, no un buzón. La cuenta se crea con una dirección interna que ni existe —`maa@noctuapo.local`— marcada como confirmada, y él nunca recibe ni abre nada.
+
+**Lo elegido:** sesión permanente en sus dispositivos. Se le deja iniciada una vez en el teléfono y una vez en la tablet, se agrega a la pantalla de inicio, y de ahí en adelante abre el ícono y entra. Nunca ve un login.
+
+- `persistSession` y `autoRefreshToken` quedaron explícitos en el cliente, aunque sean el valor por defecto: de eso depende que esto funcione y no se debe tocar sin saberlo.
+- `Inicio` lo manda directo a T&T. El Dashboard le mostraría tarjetas vacías y errores de permiso, porque consulta tablas que no puede leer.
+- **El riesgo real no es la contraseña sino el aparato.** Contra eso: solo ve T&T, solo lectura, y el acceso se revoca desde Admin en un clic o borrando el usuario.
+
+**Registro abierto cerrado.** El proyecto tenía `disable_signup: false`, o sea que cualquiera con la llave pública podía crearse una cuenta. No era grave —un usuario nuevo nace sin módulos y no ve nada— pero no había razón para dejarlo abierto si las cuentas las crea el administrador.
+
+### Qué pasa cuando todo se mueva a Azure
+
+El usuario confirmó que **se mueve todo, incluida la base de datos**, a una VM interna de la empresa.
+
+Eso cambia la autenticación de raíz: cuando Postgres deje de ser Supabase, `auth.uid()` y las políticas que lo usan necesitan otra fuente de identidad. La respuesta natural en ese escenario es **Entra ID (Azure AD)**: el presidente entra con la cuenta de la empresa, que en un teléfono corporativo suele estar ya iniciada, y es el área de sistemas quien da y quita el acceso.
+
+**Lo que se hace hoy es deliberadamente temporal y reversible.** No se está construyendo un sistema de autenticación propio que después haya que desmontar: es una cuenta para una persona, con sesión guardada. Lo que **sí** sobrevive a la mudanza es el modelo de permisos —`usuario_modulos`, la función `puede()` y las políticas que la consultan—, porque no depende de cómo se autentique la gente sino de quién es. Al migrar solo cambia de dónde sale la identidad.

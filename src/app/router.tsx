@@ -2,10 +2,10 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import Login from './Login';
+import { Inicio } from './Inicio';
 
 // Lazy-load every page so each lives in its own chunk.
 // Reduces initial bundle from ~880 KB to ~250 KB.
-const DashboardPage = lazy(() => import('@/modules/dashboard/page'));
 const MaaPage = lazy(() => import('@/modules/maa/page'));
 const JaPage = lazy(() => import('@/modules/ja/page'));
 const LaPage = lazy(() => import('@/modules/la/page'));
@@ -42,7 +42,9 @@ export const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: withSuspense(<DashboardPage />) },
+      // `Inicio` decide: quien administra ve el Dashboard; a quien solo se le
+      // abrio un modulo lo manda directo a lo suyo.
+      { index: true, element: <Inicio /> },
       { path: 'maa', element: withSuspense(<MaaPage />) },
       { path: 'ja', element: withSuspense(<JaPage />) },
       { path: 'la', element: withSuspense(<LaPage />) },

@@ -86,6 +86,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // El número de comensales sale de la lista: si se escribieron nombres, esos
@@ -131,6 +132,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
     setEstadoPago(r?.estado_pago ?? 'HOLD');
     setPagadoCon(r?.pagado_con ?? '');
     setPagadoConId(r?.pagado_con_id ?? null);
+    setFechaCargo(r?.fecha_cargo ?? '');
     setComensalDraft('');
     setError(null);
   }, [open, cargado.data]);
@@ -179,6 +181,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
     };
 
     try {
@@ -445,6 +448,13 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
 
             <div>

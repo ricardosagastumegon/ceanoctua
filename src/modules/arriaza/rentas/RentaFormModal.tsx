@@ -91,6 +91,7 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -137,6 +138,7 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
     setEstadoPago(r?.estado_pago ?? 'HOLD');
     setPagadoCon(r?.pagado_con ?? '');
     setPagadoConId(r?.pagado_con_id ?? null);
+    setFechaCargo(r?.fecha_cargo ?? '');
     setMoneda((r?.moneda as Currency) ?? 'USD');
     setError(null);
   }, [open, cargado.data]);
@@ -192,6 +194,7 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
       moneda,
     };
 
@@ -381,6 +384,13 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
           </Bloque>
 

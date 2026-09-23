@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useDeleteHotel, useHoteles } from './hooks';
 import { HotelFormModal } from './HotelFormModal';
@@ -147,6 +148,20 @@ export function HotelesSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
                 >
                   ✏️
                 </button>
+                <BotonCancelar
+                  tabla="att_hoteles"
+                  viajeId={viajeId}
+                  servicio={{
+                    id: h.id,
+                    nombre: h.nombre,
+                    monto: h.monto,
+                    moneda: h.moneda,
+                    estado_pago: h.estado_pago,
+                    reintegro: h.reintegro,
+                    reintegro_nota: h.reintegro_nota,
+                  }}
+                  onDone={() => void query.refetch()}
+                />
                 <button
                   type="button"
                   onClick={() => void handleDelete(h)}

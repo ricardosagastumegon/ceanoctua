@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useAttFerriesByViaje, useDeleteAttFerry } from './hooks';
 import { FerryFormModal } from './FerryFormModal';
@@ -141,6 +142,20 @@ export function FerriesSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
                 >
                   ✏️
                 </button>
+                <BotonCancelar
+                  tabla="att_ferries"
+                  viajeId={viajeId}
+                  servicio={{
+                    id: x.id,
+                    nombre: x.prestador,
+                    monto: x.monto,
+                    moneda: x.moneda,
+                    estado_pago: x.estado_pago,
+                    reintegro: x.reintegro,
+                    reintegro_nota: x.reintegro_nota,
+                  }}
+                  onDone={() => void query.refetch()}
+                />
                 <button
                   type="button"
                   onClick={() => void handleDelete(x)}

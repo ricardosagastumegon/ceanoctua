@@ -76,6 +76,7 @@ export function TerrestreFormModal({ open, viajeId, terrestreId, onClose }: Prop
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +116,7 @@ export function TerrestreFormModal({ open, viajeId, terrestreId, onClose }: Prop
     setEstadoPago(t?.estado_pago ?? 'HOLD');
     setPagadoCon(t?.pagado_con ?? '');
     setPagadoConId(t?.pagado_con_id ?? null);
+    setFechaCargo(t?.fecha_cargo ?? '');
     setMoneda((t?.moneda as Currency) ?? 'USD');
     setError(null);
   }, [open, cargado.data]);
@@ -165,6 +167,7 @@ export function TerrestreFormModal({ open, viajeId, terrestreId, onClose }: Prop
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
       moneda,
     };
 
@@ -277,6 +280,13 @@ export function TerrestreFormModal({ open, viajeId, terrestreId, onClose }: Prop
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
           </Bloque>
 

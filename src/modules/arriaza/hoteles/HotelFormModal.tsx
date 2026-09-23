@@ -83,6 +83,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [comentarios, setComentarios] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +112,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
     setEstadoPago(h?.estado_pago ?? 'HOLD');
     setPagadoCon(h?.pagado_con ?? h?.pay ?? '');
     setPagadoConId(h?.pagado_con_id ?? null);
+    setFechaCargo(h?.fecha_cargo ?? '');
     setComentarios(h?.comentarios ?? h?.notas ?? '');
     setMoneda((h?.moneda as Currency) ?? 'USD');
     setError(null);
@@ -145,6 +147,7 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
       comentarios: comentarios.trim() || null,
       moneda,
     };
@@ -339,6 +342,13 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
             <TextArea label="Comentarios" value={comentarios} onChange={(e) => setComentarios(e.target.value)} rows={3} placeholder="Comentarios adicionales…" />
           </Bloque>

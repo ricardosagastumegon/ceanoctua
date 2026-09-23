@@ -82,6 +82,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -129,6 +130,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
     setEstadoPago(a?.estado_pago ?? 'HOLD');
     setPagadoCon(a?.pagado_con ?? '');
     setPagadoConId(a?.pagado_con_id ?? null);
+    setFechaCargo(a?.fecha_cargo ?? '');
     setMoneda((a?.moneda as Currency) ?? 'USD');
     setError(null);
   }, [open, cargado.data]);
@@ -170,6 +172,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
       moneda,
     };
 
@@ -375,6 +378,13 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
           </Bloque>
 

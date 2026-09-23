@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useDeleteRestaurante, useRestaurantes } from './hooks';
 import { RestauranteFormModal } from './RestauranteFormModal';
@@ -161,6 +162,20 @@ export function RestaurantesSection({ viajeId, canEdit, tripNo, autoOpenCreate, 
                   >
                     ✏️
                   </button>
+                  <BotonCancelar
+                    tabla="att_restaurantes"
+                    viajeId={viajeId}
+                    servicio={{
+                      id: r.id,
+                      nombre: r.nombre,
+                      monto: r.monto,
+                      moneda: r.moneda,
+                      estado_pago: r.estado_pago,
+                      reintegro: r.reintegro,
+                      reintegro_nota: r.reintegro_nota,
+                    }}
+                    onDone={() => void query.refetch()}
+                  />
                   <button
                     type="button"
                     onClick={() => void handleDelete(r)}

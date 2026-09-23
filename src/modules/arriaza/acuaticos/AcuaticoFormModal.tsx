@@ -76,6 +76,7 @@ export function AcuaticoFormModal({ open, viajeId, acuaticoId, onClose }: Props)
   const [estadoPago, setEstadoPago] = useState('HOLD');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -112,6 +113,7 @@ export function AcuaticoFormModal({ open, viajeId, acuaticoId, onClose }: Props)
     setEstadoPago(a?.estado_pago ?? 'HOLD');
     setPagadoCon(a?.pagado_con ?? '');
     setPagadoConId(a?.pagado_con_id ?? null);
+    setFechaCargo(a?.fecha_cargo ?? '');
     setMoneda((a?.moneda as Currency) ?? 'USD');
     setError(null);
   }, [open, cargado.data]);
@@ -162,6 +164,7 @@ export function AcuaticoFormModal({ open, viajeId, acuaticoId, onClose }: Props)
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
       moneda,
     };
 
@@ -268,6 +271,13 @@ export function AcuaticoFormModal({ open, viajeId, acuaticoId, onClose }: Props)
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
           </Bloque>
 

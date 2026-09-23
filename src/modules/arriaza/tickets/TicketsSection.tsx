@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useDeleteTicket, useTickets } from './hooks';
 import { TicketFormModal } from './TicketFormModal';
@@ -174,6 +175,20 @@ export function TicketsSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
                   >
                     ✏️
                   </button>
+                  <BotonCancelar
+                    tabla="att_tickets"
+                    viajeId={viajeId}
+                    servicio={{
+                      id: t.id,
+                      nombre: t.titulo ?? `${t.origen ?? '?'} → ${t.destino ?? '?'}`,
+                      monto: t.monto,
+                      moneda: t.moneda,
+                      estado_pago: t.estado_pago,
+                      reintegro: t.reintegro,
+                      reintegro_nota: t.reintegro_nota,
+                    }}
+                    onDone={() => void query.refetch()}
+                  />
                   <button
                     type="button"
                     onClick={() => void handleDelete(t)}

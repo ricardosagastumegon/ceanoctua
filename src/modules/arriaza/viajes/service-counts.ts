@@ -1,5 +1,9 @@
 // Cuántos registros y cuánto dinero tiene cada servicio de un viaje.
 //
+// "Cuánto dinero" es el NETO: lo que se pagó menos lo que se reintegró al
+// cancelar. Un servicio cancelado con devolución total costó cero y por eso no
+// mueve el total, pero sigue contando como registro y sigue apareciendo.
+//
 // Para qué: la pantalla del viaje solo muestra los servicios que ya tienen algo
 // guardado — apilar los once satura —, y el encabezado necesita el costo total,
 // que es la suma de lo que cuesta cada servicio.
@@ -70,7 +74,7 @@ export function useServiceSummary(viajeId: string | undefined, enabled: boolean)
           if (conMonto.has(key)) {
             const { data, error } = await supabase
               .from(tabla as 'att_tickets')
-              .select('monto, moneda')
+              .select('monto, moneda, reintegro')
               .eq('viaje_id', viajeId as string)
               .is('deleted_at', null);
             if (error) throw error;
@@ -78,7 +82,12 @@ export function useServiceSummary(viajeId: string | undefined, enabled: boolean)
             return {
               key,
               count: filas.length,
-              monto: filas.reduce((s, f) => s + (Number(f.monto) || 0), 0),
+              // El neto, no el cargo: un servicio cancelado con reintegro
+              // parcial costo la diferencia, y con reintegro total costo cero.
+              monto: filas.reduce(
+                (s, f) => s + ((Number(f.monto) || 0) - (Number(f.reintegro) || 0)),
+                0,
+              ),
               monedas: filas.map((f) => f.moneda).filter(Boolean) as string[],
               sumable: true,
             };

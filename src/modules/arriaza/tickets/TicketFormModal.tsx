@@ -116,6 +116,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
   const [penalidadMonto, setPenalidadMonto] = useState('');
   const [pagadoCon, setPagadoCon] = useState('');
   const [pagadoConId, setPagadoConId] = useState<string | null>(null);
+  const [fechaCargo, setFechaCargo] = useState('');
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
@@ -142,6 +143,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
     setPenalidadMonto(t?.penalidad_monto != null ? String(t.penalidad_monto) : '');
     setPagadoCon(t?.pagado_con ?? '');
     setPagadoConId(t?.pagado_con_id ?? null);
+    setFechaCargo(t?.fecha_cargo ?? '');
     setMoneda((t?.moneda as Currency) ?? 'USD');
     setPnrDraft('');
     setError(null);
@@ -197,6 +199,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
       penalidad_monto: penalidadMonto.trim() === '' ? null : Number(penalidadMonto),
       pagado_con: pagadoCon.trim() || null,
       pagado_con_id: pagadoConId,
+      fecha_cargo: fechaCargo || null,
       moneda,
       // Espejo en el encabezado para que la fila del flyer y el itinerario no
       // tengan que abrir los segmentos.
@@ -444,6 +447,13 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
                 setPagadoCon(texto);
                 setPagadoConId(tarjetaId);
               }}
+            />
+            <TextInput
+              label="Fecha de cargo a la tarjeta"
+              type="date"
+              value={fechaCargo}
+              onChange={(e) => setFechaCargo(e.target.value)}
+              hint="Cuándo se cobró la tarjeta. Puede ser meses antes del viaje; sirve para cuadrar contra el estado de cuenta."
             />
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">

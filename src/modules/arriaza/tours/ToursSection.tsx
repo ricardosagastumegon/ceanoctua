@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useAttToursByViaje, useDeleteAttTour } from './hooks';
 import { TourFormModal } from './TourFormModal';
@@ -141,6 +142,20 @@ export function ToursSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDidOp
                 >
                   ✏️
                 </button>
+                <BotonCancelar
+                  tabla="att_tours"
+                  viajeId={viajeId}
+                  servicio={{
+                    id: t.id,
+                    nombre: t.nombre || t.prestador,
+                    monto: t.monto,
+                    moneda: t.moneda,
+                    estado_pago: t.estado_pago,
+                    reintegro: t.reintegro,
+                    reintegro_nota: t.reintegro_nota,
+                  }}
+                  onDone={() => void query.refetch()}
+                />
                 <button
                   type="button"
                   onClick={() => void handleDelete(t)}

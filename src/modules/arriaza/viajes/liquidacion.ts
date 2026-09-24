@@ -60,18 +60,39 @@ export type Liquidacion = {
  * De dónde sale el nombre y la fecha de cada servicio.
  *
  * `extra` son las columnas propias que hay que pedir además de las comunes.
+ *
+ * Se exporta porque la liquidación por período lee exactamente las mismas diez
+ * tablas. Tener el mapeo en dos lugares sería garantía de que algún día uno de
+ * los dos reportes deje de ver un servicio.
  */
-type Mapeo = {
+export type Mapeo = {
   tabla: TablaServicio;
   extra: string;
   nombre: (r: Record<string, unknown>) => string;
   fecha: (r: Record<string, unknown>) => string | null;
 };
 
-const txt = (v: unknown): string => (typeof v === 'string' ? v : '');
-const fch = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+export const txt = (v: unknown): string => (typeof v === 'string' ? v : '');
+export const fch = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
 
-const MAPEO: Record<string, Mapeo> = {
+/**
+ * Recorta una fecha a `YYYY-MM-DD`.
+ *
+ * La mayoría de las columnas de fecha de los servicios son `date` y vuelven
+ * ya así, pero `att_tickets.fecha_salida` es `timestamptz` y vuelve como
+ * `2026-09-24 00:00:00+00`. Comparar eso contra un `YYYY-MM-DD` deja fuera el
+ * último día del rango, porque `'2026-09-30 00:00:00+00' > '2026-09-30'`.
+ *
+ * Se recorta en vez de convertir a `Date`: estas fechas son días de
+ * calendario guardados a medianoche UTC, y pasarlas por la zona horaria local
+ * (Guatemala, UTC-6) las correría un día hacia atrás.
+ */
+export const soloFecha = (v: unknown): string | null => {
+  const s = fch(v);
+  return s ? s.slice(0, 10) : null;
+};
+
+export const MAPEO: Record<string, Mapeo> = {
   tickets: {
     tabla: 'att_tickets', extra: 'titulo, aerolinea, origen, destino, fecha_salida',
     nombre: (r) => txt(r.titulo) || `${txt(r.origen) || '?'} → ${txt(r.destino) || '?'}`,
@@ -115,7 +136,7 @@ const MAPEO: Record<string, Mapeo> = {
   },
 };
 
-const COMUNES =
+export const COMUNES =
   'monto, reintegro, moneda, estado_pago, cancelado_en, pagado_con, pagado_con_id, fecha_cargo';
 
 export function useLiquidacion(viajeId: string | undefined, enabled = true) {
@@ -174,8 +195,8 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
           renglones.push({
             servicio: clave,
             nombre: m.nombre(r) || '—',
-            fecha: m.fecha(r),
-            fechaCargo: fch(r.fecha_cargo),
+            fecha: soloFecha(m.fecha(r)),
+            fechaCargo: soloFecha(r.fecha_cargo),
             cargo,
             reintegro,
             neto: netoServicio(cargo, reintegro),

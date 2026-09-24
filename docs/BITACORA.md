@@ -6,6 +6,29 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 25 · 2026-09-24 · Liquidación por período
+
+**Objetivo:** la liquidación era por viaje, y para pagar las tarjetas eso no sirve: el estado de cuenta no viene separado por viaje, viene por mes. Falta el reporte al revés — un rango de fechas, todos los viajes, agrupado por tarjeta. Plan en [`PLAN-TT-LIQUIDACION-PERIODO.md`](../PLAN-TT-LIQUIDACION-PERIODO.md). Cierra DT-11.
+
+**Cambios de schema:** ninguno. `pagado_con_id` y `fecha_cargo` ya estaban desde las migraciones `...011` y `...012` de la Fase 23.
+
+**Cambios de UI:**
+- Botón **Liquidación por período** en la barra de T&T.
+- La hoja: resumen por tarjeta arriba, detalle por tarjeta abajo, total del período. Mismo azul marino y gris que la liquidación del viaje, y sin íconos, porque es el mismo tipo de documento y se archiva igual.
+- Rango con atajos de mes actual, mes pasado y año.
+
+**Comentarios:**
+- **La fecha que manda es `coalesce(fecha_cargo, fecha del servicio)`.** Un hotel de diciembre pagado en octubre aparece en el estado de cuenta de octubre, no en el de diciembre. Cuando las dos difieren, el renglón lo dice.
+- **Bug encontrado y arreglado en el camino:** `att_tickets.fecha_salida` es `timestamptz` y vuelve como `2026-09-24 00:00:00+00`, no como `2026-09-24`. Comparado contra un `YYYY-MM-DD` eso dejaba fuera **el último día de cada período** — `'2026-09-30 00:00:00+00' > '2026-09-30'` — o sea que un ticket comprado el 30 desaparecía del reporte de septiembre sin avisar. Se agregó `soloFecha()` en `liquidacion.ts`, que recorta a 10 caracteres en vez de convertir a `Date` (convertir correría el día hacia atrás en UTC-6). Verificado contra el valor real que devuelve Postgres.
+- **Los servicios sin ninguna fecha se muestran igual**, en un bloque aparte y fuera del total. Filtrarlos sin más los habría hecho invisibles en todos los reportes, y se pagaría de menos sin enterarse.
+- Solo entran renglones con dinero. La liquidación del viaje lista el viaje entero; esta es de consumo, y un servicio en cero es ruido entre lo que hay que pagar.
+- El mapeo de los diez servicios se exportó desde `liquidacion.ts` en vez de copiarse: si mañana se agrega un servicio, aparece en los dos reportes o en ninguno.
+- Se consultan las diez tablas enteras y se filtra en el cliente. La condición real es sobre un `coalesce`, que en PostgREST obliga a un `or(and(...),and(...))` distinto por tabla: diez cadenas a mano en un reporte de dinero. Con el volumen actual no vale el riesgo; si crece, se vuelve una función en la base.
+
+**Commits clave:** ver `git log` de 2026-09-24.
+
+---
+
 ## Fase 24 · 2026-09-24 · Restablecer la contraseña
 
 **Objetivo:** el usuario instaló la webapp en su teléfono, no recordaba su contraseña y no tenía desde dónde cambiarla — ni siquiera siendo admin. No había ninguna ruta de recuperación en la aplicación.

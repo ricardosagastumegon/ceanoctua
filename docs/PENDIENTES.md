@@ -50,13 +50,11 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 2-3 h.
 - **Estado:** Pendiente.
 
-### DT-11 · Liquidación por período, cruzando viajes
+### ~~DT-11 · Liquidación por período, cruzando viajes~~ ✅
 
-- **Origen:** conversación 2026-09-23. El usuario: *"me parece fantástico por período porque puedo sacar información por TC para pagos"*.
-- **Impacto:** Hoy la liquidación es por viaje. Falta el reporte que cruza todos los viajes y agrupa por tarjeta en un rango de fechas.
-- **La base ya está:** cada servicio guarda `pagado_con_id` y `fecha_cargo`. El reporte debe usar `fecha_cargo` y caer a la fecha del servicio si está vacía.
-- **Estimado:** 3-4 h.
-- **Estado:** Pendiente.
+Cerrado el 2026-09-24 en la Fase 25. Botón **Liquidación por período** en la barra de T&T:
+rango de fechas, todos los viajes, agrupado por tarjeta. Usa `coalesce(fecha_cargo, fecha
+del servicio)`. Los servicios sin ninguna fecha se listan aparte en vez de desaparecer.
 
 ### DT-12 · `att_reuniones.cita` y `.asunto` deprecadas
 
@@ -119,7 +117,7 @@ Ya no depende de GitHub App de Vercel ni de OAuth tokens múltiple-cuenta. Redun
 - **22 · Servicios** — los **11 servicios** reconstruidos uno por documento, cada uno con su formulario, su PDF, su color y su aporte al total del viaje.
 - **23 · Liquidación** — cada servicio apunta a su tarjeta, se puede cancelar con reintegro total o parcial, y el viaje se liquida con el consumo por TC.
 
-Lo que sigue: DT-10 y DT-11 de arriba. Ver [`docs/BITACORA.md`](BITACORA.md).
+Lo que sigue: DT-10 de arriba (DT-11 cerrado el 2026-09-24). Ver [`docs/BITACORA.md`](BITACORA.md).
 
 ## Deferred a polish futuro (no bloquean uso)
 
@@ -157,6 +155,8 @@ Lo que sigue: DT-10 y DT-11 de arriba. Ver [`docs/BITACORA.md`](BITACORA.md).
 
 | Fecha | ID | Cerrado en commit |
 |---|---|---|
+| 2026-09-24 | **DT-11** · liquidación por período, agrupada por tarjeta | Fase 25 · sin migración |
+| 2026-09-24 | **Restablecer contraseña** · no había ninguna ruta de recuperación en la app | Fase 24 · `1ea07a7` |
 | 2026-09-23 | **Fase 22 completa** · los 11 servicios de T&T, uno por documento | commits `4385d58..0edf09f` · 10 migraciones |
 | 2026-09-23 | **Fase 23** · liquidación de viaje y consumo por tarjeta | commits `5371982..321ca00` · migraciones `...011` y `...012` |
 | 2026-09-23 | **Itinerario general vacío** · `.match({deleted_at:null})` nunca devolvía filas | `d7f8bc1` |
@@ -174,4 +174,4 @@ Lo que sigue: DT-10 y DT-11 de arriba. Ver [`docs/BITACORA.md`](BITACORA.md).
 
 ---
 
-**Última actualización:** 2026-07-12 · post-fix C-1. Actualizar cada vez que se cierre un item o se agregue uno nuevo.
+**Última actualización:** 2026-09-24 · cierre de DT-11. Actualizar cada vez que se cierre un item o se agregue uno nuevo.

@@ -8,6 +8,7 @@ import { AttHero } from './AttHero';
 import { TripFormModal, type TripDestinos } from './TripFormModal';
 import { TripCard } from './TripCard';
 import { BackupModal } from './BackupModal';
+import { LiquidacionPeriodoModal } from './LiquidacionPeriodoModal';
 import { FinishedFolder } from './FinishedFolder';
 import { CalendarPanel } from './CalendarPanel';
 import { useAttReuniones } from './reuniones/hooks';
@@ -46,6 +47,7 @@ export function AttPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [sortMode, setSortMode] = useState<SortMode>('start-asc');
   const [backupOpen, setBackupOpen] = useState(false);
+  const [periodoOpen, setPeriodoOpen] = useState(false);
 
   const viajes = query.data ?? [];
   // Las reuniones de todos los viajes, para marcarlas en el calendario.
@@ -169,8 +171,16 @@ export function AttPage() {
         </select>
         <button
           type="button"
+          onClick={() => setPeriodoOpen(true)}
+          className="ml-auto rounded-md border border-navy/30 bg-sand-l px-3 py-2 text-xs font-extrabold text-navy hover:opacity-90"
+          title="Consumo por tarjeta en un rango de fechas, cruzando todos los viajes"
+        >
+          Liquidación por período
+        </button>
+        <button
+          type="button"
           onClick={() => setBackupOpen(true)}
-          className="ml-auto rounded-md border border-gold/40 bg-gold-light px-3 py-2 text-xs font-extrabold text-gold hover:opacity-90"
+          className="rounded-md border border-gold/40 bg-gold-light px-3 py-2 text-xs font-extrabold text-gold hover:opacity-90"
         >
           💾 Respaldo
         </button>
@@ -238,6 +248,8 @@ export function AttPage() {
       />
 
       <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} />
+
+      <LiquidacionPeriodoModal open={periodoOpen} onClose={() => setPeriodoOpen(false)} />
     </section>
   );
 }

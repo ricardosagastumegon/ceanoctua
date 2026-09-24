@@ -34,6 +34,15 @@ const RIEL = '#ece7da';
 const TINTA = '#2a2016';
 const TINTA_SUAVE = '#7d7364';
 
+/**
+ * La hora sin segundos.
+ *
+ * Las actividades escritas a mano guardan la hora en una columna `time`, que
+ * vuelve como `22:00:00`. Los servicios ya llegan como `HH:MM`, así que sin
+ * esto la columna mezclaba los dos formatos y se veía recargada.
+ */
+const hhmm = (v: string | null | undefined): string => (v ? v.slice(0, 5) : '');
+
 /** Una actividad escrita a mano no es un servicio; se ve distinta a propósito. */
 const MANUAL = { solid: '#8a7f70', dark: '#5c5347', light: '#f5f2e9' };
 
@@ -375,7 +384,7 @@ function DiaBloque({
         {renglones.map((r, idx) => {
           const ultimo = idx === renglones.length - 1 && !nota;
           const meta = r.tipo === 'servicio' ? SERVICE_META[r.evento.servicio] : MANUAL;
-          const horaVisible = r.tipo === 'servicio' ? r.evento.hora : r.fila.horario;
+          const horaVisible = hhmm(r.tipo === 'servicio' ? r.evento.hora : r.fila.horario);
 
           return (
             <div key={r.k} className="flex gap-3">

@@ -164,6 +164,7 @@ function Ficha({ aeronave: a }: { aeronave: Aeronave }) {
  * vez de imponer una tabla plana.
  */
 function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: boolean }) {
+  const col = acento(aeronave.acento);
   const q = useDocumentos(aeronave.id);
   const borrar = useBorrarDocumento(aeronave.id);
   const toast = useToast();
@@ -250,74 +251,48 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
         </p>
       )}
 
-      <div className="space-y-5">
+      {/* Un cuadro por año con su lista debajo, como en el documento del
+          usuario. Sin tarjetas ni bordes por renglón: la lista se lee de
+          corrido y el nombre del certificado es el que se toca para abrirlo. */}
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {porAnio.map(([anio, docs]) => (
           <div key={anio}>
-            <div className="mb-2 flex items-center gap-3">
-              <span className="rounded-md bg-teal px-3 py-1 font-heading text-sm font-extrabold text-white">
-                {anio}
-              </span>
-              <span className="text-[11px] text-dark-3">
-                {docs.length} {docs.length === 1 ? 'certificado' : 'certificados'}
-              </span>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditando(null);
-                    setAnioSugerido(anio);
-                    setAbierto(true);
-                  }}
-                  className="text-[11px] font-semibold text-teal-d underline"
-                >
-                  agregar a {anio}
-                </button>
-              )}
+            <div
+              className="rounded-xl py-2 text-center font-heading text-lg font-extrabold text-white"
+              style={{ backgroundColor: col.solid }}
+            >
+              {anio}
             </div>
 
-            <ul className="space-y-1.5">
+            <ul className="mt-3 space-y-1.5">
               {docs.map((d) => (
-                <li
-                  key={d.id}
-                  className="flex flex-wrap items-center gap-2 rounded-md border border-sand bg-sand-l/40 px-3 py-2"
-                >
+                <li key={d.id} className="group flex items-start justify-center gap-1">
                   <button
                     type="button"
                     onClick={() => void abrir(d)}
-                    className="min-w-0 flex-1 text-left"
                     title={d.archivo_nombre ?? 'Abrir'}
+                    className="text-center text-[12px] font-semibold leading-snug text-dark hover:text-teal-d hover:underline"
                   >
-                    <span className="text-[13px] font-extrabold text-dark hover:text-teal-d">
-                      {d.tipo_nombre}
-                    </span>
-                    <span className="ml-2 text-[11px] text-dark-3">
-                      {[d.numero, d.vence ? `vence ${d.vence}` : null].filter(Boolean).join(' · ')}
-                    </span>
-                  </button>
-
-                  {!d.archivo_path && (
-                    <span className="rounded-full bg-gold-light px-2 py-0.5 text-[9px] font-extrabold uppercase text-gold">
-                      sin archivo
-                    </span>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => void abrir(d)}
-                    className="rounded-md border border-sand bg-white px-2 py-1 text-[11px] font-semibold text-teal-d hover:border-teal"
-                  >
-                    Ver
+                    {d.tipo_nombre}
+                    {d.numero && (
+                      <span className="ml-1 font-normal text-dark-3">{d.numero}</span>
+                    )}
+                    {!d.archivo_path && (
+                      <span className="ml-1 text-[9px] font-extrabold uppercase text-gold">
+                        sin archivo
+                      </span>
+                    )}
                   </button>
 
                   {canEdit && (
-                    <>
+                    <span className="mt-0.5 flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={() => {
                           setEditando(d);
                           setAbierto(true);
                         }}
-                        className="rounded-md border border-sand bg-white px-2 py-1 text-[11px] hover:border-teal"
+                        className="text-[10px] leading-none"
                         title="Editar"
                       >
                         ✏️
@@ -325,16 +300,30 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
                       <button
                         type="button"
                         onClick={() => void quitar(d)}
-                        className="rounded-md border border-sand bg-white px-2 py-1 text-[11px] hover:border-rust"
+                        className="text-[10px] leading-none"
                         title="Quitar"
                       >
                         🗑
                       </button>
-                    </>
+                    </span>
                   )}
                 </li>
               ))}
             </ul>
+
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditando(null);
+                  setAnioSugerido(anio);
+                  setAbierto(true);
+                }}
+                className="mt-2 w-full text-center text-[11px] font-semibold text-dark-3 hover:text-teal-d"
+              >
+                ＋ agregar a {anio}
+              </button>
+            )}
           </div>
         ))}
       </div>

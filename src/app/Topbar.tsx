@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/auth';
 import { Clock } from './Clock';
 import { BotonBloqueo } from './Bloqueo';
+import { Link } from 'react-router-dom';
 
 const rolLabel: Record<string, string> = {
   admin: 'Admin',
@@ -33,6 +34,13 @@ export function Topbar() {
           )}
           <Clock />
           <BotonBloqueo />
+          <Link
+            to="/nueva-clave"
+            title="Cambiar mi contraseña"
+            className="rounded-md border border-sand/30 px-2 py-1.5 text-xs font-semibold text-sand-l transition-colors hover:border-teal hover:text-teal"
+          >
+            🔑
+          </Link>
           <button
             type="button"
             onClick={() => void signOut()}

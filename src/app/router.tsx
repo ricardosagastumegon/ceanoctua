@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import Login from './Login';
 import { Inicio } from './Inicio';
+import NuevaClave from './NuevaClave';
 
 // Lazy-load every page so each lives in its own chunk.
 // Reduces initial bundle from ~880 KB to ~250 KB.
@@ -38,6 +39,9 @@ function withSuspense(node: ReactNode) {
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
+  // Fuera del Layout: se llega aqui desde el correo de recuperacion, con una
+  // sesion temporal y sin haber pasado por el menu.
+  { path: '/nueva-clave', element: <NuevaClave /> },
   {
     path: '/',
     element: <Layout />,

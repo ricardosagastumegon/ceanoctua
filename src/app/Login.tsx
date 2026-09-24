@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 export default function Login() {
   const { session, loading, signIn } = useAuth();
@@ -8,6 +9,40 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  /**
+   * Restablecer la contraseña.
+   *
+   * No existe «ver la contraseña»: se guardan cifradas de un solo sentido y no
+   * hay forma de recuperarlas, ni desde aquí ni desde Supabase. Lo único
+   * posible es mandar un correo con un enlace para poner una nueva.
+   *
+   * Ojo: esto exige que el correo del usuario sea real. Una cuenta creada con
+   * una dirección interna que no existe -- el caso del presidente -- solo la
+   * puede restablecer el administrador desde el panel de Supabase.
+   */
+  async function recuperar() {
+    const correo = email.trim();
+    if (!correo) {
+      setError('Escribe tu correo arriba y vuelve a tocar el enlace.');
+      return;
+    }
+    setError(null);
+    setAviso(null);
+    setSubmitting(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(correo, {
+      redirectTo: `${window.location.origin}/nueva-clave`,
+    });
+    setSubmitting(false);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    setAviso(
+      `Si ${correo} tiene una cuenta, le llegará un correo con el enlace para poner una contraseña nueva. Revisa también la carpeta de no deseados.`,
+    );
+  }
 
   if (loading) return <Splash />;
   if (session) return <Navigate to="/" replace />;
@@ -62,12 +97,27 @@ export default function Login() {
           </p>
         )}
 
+        {aviso && (
+          <p className="mt-4 rounded-md border border-teal/30 bg-teal-l px-3 py-2 text-sm text-teal-d">
+            {aviso}
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={submitting}
           className="mt-6 w-full rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-d disabled:opacity-60"
         >
           {submitting ? 'Ingresando…' : 'Ingresar'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void recuperar()}
+          disabled={submitting}
+          className="mt-4 w-full text-center text-xs font-semibold text-teal-d underline disabled:opacity-60"
+        >
+          Olvidé mi contraseña
         </button>
 
         <p className="mt-6 text-xs text-dark-3">

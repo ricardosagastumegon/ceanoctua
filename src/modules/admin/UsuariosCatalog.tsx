@@ -43,6 +43,7 @@ const NIVELES: { key: Permiso; label: string; pie: string }[] = [
 type UsuarioFila = {
   id: string;
   nombre: string | null;
+  email: string | null;
   rol: AppRol;
   activo: boolean;
 };
@@ -53,7 +54,7 @@ function useUsuarios() {
     queryFn: async (): Promise<UsuarioFila[]> => {
       const { data, error } = await supabase
         .from('usuarios')
-        .select('id, nombre, rol, activo')
+        .select('id, nombre, email, rol, activo')
         .order('nombre');
       if (error) throw error;
       return (data ?? []) as UsuarioFila[];
@@ -186,7 +187,8 @@ export function UsuariosCatalog({ canEdit }: { canEdit: boolean }) {
                   <div className="font-heading text-lg font-extrabold text-dark">
                     {usuario.nombre ?? '(sin nombre)'}
                   </div>
-                  <div className="text-xs text-dark-3">{usuario.id}</div>
+                  <div className="text-xs text-dark-2">{usuario.email ?? '(sin correo)'}</div>
+                  <ContrasenaUsuario email={usuario.email} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-dark-2">
@@ -289,6 +291,64 @@ function Nivel({
       ].join(' ')}
     >
       {label}
+    </button>
+  );
+}
+
+/**
+ * Restablecer la contraseña de alguien.
+ *
+ * No hay forma de VER una contraseña: se guardan cifradas de un solo sentido.
+ * Lo único posible es mandarle un correo con un enlace para que ponga una
+ * nueva, y eso exige que su dirección sea real. Para una cuenta creada con un
+ * correo interno que no existe -- el caso del presidente -- el restablecimiento
+ * se hace desde el panel de Supabase.
+ */
+function ContrasenaUsuario({ email }: { email: string | null }) {
+  const toast = useToast();
+  const [enviando, setEnviando] = useState(false);
+
+  const real = !!email && !/\.(local|invalid|test)$/i.test(email);
+
+  async function enviar() {
+    if (!email) return;
+    setEnviando(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/nueva-clave`,
+    });
+    setEnviando(false);
+    if (error) {
+      toast.error(describeError(error));
+      return;
+    }
+    toast.success(`Correo de restablecimiento enviado a ${email}.`);
+  }
+
+  if (!email) {
+    return (
+      <p className="mt-1 text-[11px] text-dark-3">
+        Sin correo registrado. Restablece su contraseña desde el panel de Supabase.
+      </p>
+    );
+  }
+
+  if (!real) {
+    return (
+      <p className="mt-1 max-w-sm text-[11px] text-dark-3">
+        Este correo es interno y no recibe mensajes, así que no se le puede mandar un
+        enlace. Restablece su contraseña desde Supabase → Authentication → Users.
+      </p>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void enviar()}
+      disabled={enviando}
+      className="mt-1 text-[11px] font-semibold text-teal-d underline disabled:opacity-60"
+    >
+      {enviando ? 'Enviando…' : 'Enviar correo para restablecer su contraseña'}
     </button>
   );
 }

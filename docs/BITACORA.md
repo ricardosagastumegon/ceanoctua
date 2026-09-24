@@ -6,6 +6,31 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 24 · 2026-09-24 · Restablecer la contraseña
+
+**Objetivo:** el usuario instaló la webapp en su teléfono, no recordaba su contraseña y no tenía desde dónde cambiarla — ni siquiera siendo admin. No había ninguna ruta de recuperación en la aplicación.
+
+**Cambios de schema:**
+- `usuarios.email`, espejo de `auth.users.email`. El correo vive en el esquema `auth`, que no se puede leer desde el navegador, así que la pantalla de Usuarios no tenía forma de saber con qué correo entra cada quien.
+- `handle_new_user()` reescrita para copiar el correo al crear la cuenta, con `on conflict (id) do update`.
+- `handle_user_email_change()` + trigger `on_auth_user_email_changed`, para que el espejo no se quede viejo si el correo cambia después.
+
+**Cambios de UI:**
+- Login: enlace **Olvidé mi contraseña**, que manda el correo de recuperación con `resetPasswordForEmail`.
+- Ruta `/nueva-clave` (fuera del armazón con menú, porque también se llega sin sesión desde el enlace del correo). Sirve para los dos casos: llegar del correo y cambiarla estando adentro.
+- Barra superior: 🔑 para cambiarla en cualquier momento.
+- Admin → Usuarios: se ve el correo de cada quien y hay un botón para mandarle el restablecimiento.
+
+**Comentarios:**
+- **Una contraseña no se puede ver, nunca.** Se guardan cifradas de un solo sentido; lo único posible es reemplazarlas. La pantalla de Admin lo dice explícitamente para que nadie vuelva a buscar dónde estaba.
+- Las cuentas con correo interno inventado — el caso del presidente, `@cea.local` — no pueden recibir el enlace. Ese caso se atiende desde el panel de Supabase, y la pantalla lo explica en vez de ofrecer un botón que iba a fallar en silencio.
+- `/nueva-clave` lleva un enlace **Volver sin cambiarla**: en la app instalada en el teléfono no hay botón de atrás del navegador, así que sin eso quedaba sin salida.
+- No se pudo hacer desde aquí lo obvio —restablecer la contraseña de otro usuario directamente— porque eso exige la llave `service_role`, que no puede viajar al cliente. De ahí el rodeo del correo.
+
+**Commits clave:** ver `git log` de 2026-09-24.
+
+---
+
 ## Fase 23 · 2026-09-23 · Liquidación de viajes y consumo por tarjeta
 
 **Objetivo:** que cada viaje pueda liquidarse para reporte financiero, con el detalle por servicio y —lo que de verdad pedía el usuario— cuánto consumió cada tarjeta. Plan en [`PLAN-TT-LIQUIDACION.md`](../PLAN-TT-LIQUIDACION.md).

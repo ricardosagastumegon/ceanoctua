@@ -33,6 +33,11 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 - El bucket es privado, así que tanto los escaneos como la foto de la aeronave se sirven con URL firmada. Las firmas de las fotos se guardan en un mapa de módulo porque la misma imagen aparece en el botón de la flota y en el encabezado de la aeronave.
 - Se exportó `AuthContext` de `lib/auth.tsx` para poder montar estas pantallas con una sesión simulada al revisarlas fuera de la aplicación.
 
+**Ajustes del mismo día, ya con documentos cargados:**
+- **Visor dentro de la aplicación.** El certificado se abría en otra pestaña y en algunos navegadores se descargaba de una vez, lo que sacaba al usuario de la pantalla. Ahora hay un **ojo** junto a cada certificado que lo abre en una ventana encima, y desde el visor del navegador se decide si imprimir o guardar. No se puso un botón de «Imprimir» propio a propósito: el archivo vive en otro dominio, así que la página no puede ordenarle imprimir al marco; el visor de PDF incorporado sí trae sus propios botones, que es justo lo que hacía falta. Las imágenes, que no traen visor, se muestran directo y quedan los botones de descargar y abrir en otra pestaña.
+- **«Todos» por año**: junta todos los certificados de un año en un solo PDF y lo muestra en el mismo visor, listo para descargar. Un PDF aporta todas sus páginas y una imagen se vuelve una página. Aquí **no hay nada que el sistema genere** --son únicamente los archivos subidos-- así que no hace falta capturar pantallas, que es la parte frágil del mecanismo de T&T; se pegan archivos y ya. Si alguno no se puede leer (protegido con clave, formato raro) se avisa cuál fue y el resto sigue: en un respaldo es peor perder el documento entero que perder una hoja.
+- `descargar()` se mudó de `arriaza/viajes/liquidacion-pdf.ts` a `@/lib/descargar`, porque ahora lo usan los dos módulos.
+
 **Lo que viene:** horas de vuelo (con la tarifa capturada **en el vuelo** y no solo en la ficha, para que subir la tarifa no recalcule lo ya cobrado), mantenimientos, pagos, renta y al final el dashboard.
 
 **Commits clave:** ver `git log` de 2026-09-24.

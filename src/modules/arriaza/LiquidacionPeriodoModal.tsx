@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
-import { armarLiquidacionCompleta, descargar, type ProgresoExport } from './viajes/liquidacion-pdf';
+import { armarLiquidacionCompleta, type ProgresoExport } from './viajes/liquidacion-pdf';
+import { descargar } from '@/lib/descargar';
 import {
   anioActual,
   mesActual,

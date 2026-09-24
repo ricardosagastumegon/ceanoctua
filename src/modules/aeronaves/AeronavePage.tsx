@@ -9,7 +9,9 @@ import { AeronaveFormModal } from './AeronaveFormModal';
 import { DocumentoFormModal } from './DocumentoFormModal';
 import { FotoAeronave } from './FotoAeronave';
 import { acento, ESTADO_COLOR } from './constants';
-import { urlArchivo, type Aeronave, type Documento } from './api';
+import { type Aeronave, type Documento } from './api';
+import { VisorDocumento, type Visor } from './VisorDocumento';
+import { unirDocumentos } from './documentos-pdf';
 
 /**
  * Una aeronave · capa 3 del módulo.
@@ -172,6 +174,8 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
   const [abierto, setAbierto] = useState(false);
   const [editando, setEditando] = useState<Documento | null>(null);
   const [anioSugerido, setAnioSugerido] = useState<number | undefined>();
+  const [visor, setVisor] = useState<Visor | null>(null);
+  const [armando, setArmando] = useState<number | null>(null);
 
   const porAnio = useMemo(() => {
     const mapa = new Map<number, Documento[]>();
@@ -183,15 +187,50 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
     return [...mapa.entries()].sort((a, b) => b[0] - a[0]);
   }, [q.data]);
 
-  async function abrir(d: Documento) {
+  function ver(d: Documento) {
     if (!d.archivo_path) {
       toast.error('Este certificado no tiene archivo cargado.');
       return;
     }
+    setVisor({
+      tipo: 'archivo',
+      path: d.archivo_path,
+      titulo: `${d.tipo_nombre} · ${d.anio}`,
+      nombre: d.archivo_nombre,
+    });
+  }
+
+  /**
+   * Todos los certificados de un año en un solo documento.
+   *
+   * Aquí no hay nada que el sistema genere --son únicamente los archivos que
+   * se subieron-- así que se pegan uno tras otro sin capturar pantallas. Se
+   * muestra en el visor y de ahí se descarga o se imprime.
+   */
+  async function verElAnio(anio: number, docs: Documento[]) {
+    const conArchivo = docs.filter((d) => d.archivo_path);
+    if (conArchivo.length === 0) {
+      toast.error(`Los certificados de ${anio} no tienen archivo cargado.`);
+      return;
+    }
+    setArmando(anio);
     try {
-      window.open(await urlArchivo(d.archivo_path), '_blank', 'noopener');
+      const { blob, fallidos } = await unirDocumentos(
+        conArchivo.map((d) => ({ path: d.archivo_path as string, titulo: d.tipo_nombre })),
+      );
+      if (fallidos.length) {
+        toast.error(`No se pudo incluir: ${fallidos.join(', ')}.`);
+      }
+      setVisor({
+        tipo: 'blob',
+        blob,
+        titulo: `${aeronave.matricula} · Documentación ${anio}`,
+        nombre: `${aeronave.matricula} documentacion ${anio}.pdf`,
+      });
     } catch (err) {
       toast.error(describeError(err));
+    } finally {
+      setArmando(null);
     }
   }
 
@@ -219,7 +258,8 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
             Documentación DGAC
           </h2>
           <p className="mt-0.5 text-[11px] text-dark-3">
-            Los certificados escaneados, por año. Un clic los abre.
+            Los certificados escaneados, por año. El ojo los abre aquí mismo, y «Todos»
+            junta los del año en un solo documento.
           </p>
         </div>
         {canEdit && (
@@ -258,10 +298,19 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
         {porAnio.map(([anio, docs]) => (
           <div key={anio}>
             <div
-              className="rounded-xl py-2 text-center font-heading text-lg font-extrabold text-white"
+              className="relative rounded-xl py-2 text-center font-heading text-lg font-extrabold text-white"
               style={{ backgroundColor: col.solid }}
             >
               {anio}
+              <button
+                type="button"
+                onClick={() => void verElAnio(anio, docs)}
+                disabled={armando === anio}
+                title={`Ver los ${docs.length} certificados de ${anio} en un solo documento`}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-white/20 px-2 py-1 text-[10px] font-extrabold text-white hover:bg-white/30 disabled:opacity-60"
+              >
+                {armando === anio ? 'Armando…' : '👁 Todos'}
+              </button>
             </div>
 
             <ul className="mt-3 space-y-1.5">
@@ -269,8 +318,8 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
                 <li key={d.id} className="group flex items-start justify-center gap-1">
                   <button
                     type="button"
-                    onClick={() => void abrir(d)}
-                    title={d.archivo_nombre ?? 'Abrir'}
+                    onClick={() => ver(d)}
+                    title={d.archivo_nombre ?? 'Ver'}
                     className="text-center text-[12px] font-semibold leading-snug text-dark hover:text-teal-d hover:underline"
                   >
                     {d.tipo_nombre}
@@ -282,6 +331,15 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
                         sin archivo
                       </span>
                     )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => ver(d)}
+                    title="Ver"
+                    className="mt-0.5 shrink-0 text-[11px] leading-none opacity-40 transition-opacity hover:opacity-100"
+                  >
+                    👁
                   </button>
 
                   {canEdit && (
@@ -327,6 +385,8 @@ function Certificados({ aeronave, canEdit }: { aeronave: Aeronave; canEdit: bool
           </div>
         ))}
       </div>
+
+      <VisorDocumento visor={visor} onClose={() => setVisor(null)} />
 
       <DocumentoFormModal
         open={abierto}

@@ -3,11 +3,8 @@ import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { ItinerarioHojas } from './ItineraryModal';
-import {
-  armarLiquidacionCompleta,
-  descargar,
-  type ProgresoExport,
-} from './viajes/liquidacion-pdf';
+import { armarLiquidacionCompleta, type ProgresoExport } from './viajes/liquidacion-pdf';
+import { descargar } from '@/lib/descargar';
 import { SERVICE_META } from './constants/serviceMeta';
 import { fmtDate } from './utils';
 import { useLiquidacion } from './viajes/liquidacion';

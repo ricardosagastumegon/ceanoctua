@@ -11,6 +11,8 @@
 // Tanto `pdf-lib` como `html2canvas` se cargan solo cuando se genera el
 // documento: no engordan el bundle del día a día.
 
+// `descargar` se mudo a `@/lib/descargar`: tambien lo usa Aeronaves.
+
 /** Carta en puntos, que es la unidad de pdf-lib. */
 const ANCHO = 612;
 const ALTO = 792;
@@ -75,21 +77,4 @@ export async function armarLiquidacionCompleta(
   onProgreso?.({ paso: 'Cerrando el documento…', hechos, total });
   const bytes = await doc.save();
   return { blob: new Blob([bytes as BlobPart], { type: 'application/pdf' }) };
-}
-
-export function descargar(blob: Blob, nombre: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nombre;
-  // El ancla tiene que estar en el documento y el enlace no se puede soltar
-  // enseguida: revocarlo en la misma vuelta aborta la descarga antes de que
-  // el navegador alcance a leer el blob.
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    a.remove();
-    URL.revokeObjectURL(url);
-  }, 60_000);
 }

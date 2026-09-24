@@ -70,6 +70,13 @@ export type Mapeo = {
   extra: string;
   nombre: (r: Record<string, unknown>) => string;
   fecha: (r: Record<string, unknown>) => string | null;
+  /**
+   * Columnas que solo el resumen del viaje necesita, y el subtítulo que arma
+   * con ellas. Los dos reportes financieros las ignoran: la liquidación va sin
+   * detalle a propósito.
+   */
+  subExtra?: string;
+  sub?: (r: Record<string, unknown>) => string;
 };
 
 export const txt = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -92,47 +99,98 @@ export const soloFecha = (v: unknown): string | null => {
   return s ? s.slice(0, 10) : null;
 };
 
+// Ayudas para armar los subtítulos del resumen.
+const unir = (partes: (string | null)[], sep = ' · '): string =>
+  partes.filter((p) => !!p && p.trim()).join(sep);
+
+const dia = (v: unknown): string => {
+  const f = soloFecha(v);
+  if (!f) return '';
+  const [a, m, d] = f.split('-');
+  const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]} ${a}`;
+};
+
+const rango = (a: unknown, b: unknown): string => {
+  const ini = dia(a);
+  const fin = dia(b);
+  if (ini && fin) return `${ini} — ${fin}`;
+  return ini || fin;
+};
+
+/** 'HH:MM' de un 'HH:MM:SS'; vacío si no hay hora. */
+const hhmm = (v: unknown): string => {
+  const t = fch(v);
+  return t ? t.slice(0, 5) : '';
+};
+
+const tramo = (r: Record<string, unknown>): string => {
+  const o = txt(r.origen);
+  const d = txt(r.destino);
+  if (!o && !d) return '';
+  return `${o || '?'} → ${d || '?'}`;
+};
+
 export const MAPEO: Record<string, Mapeo> = {
   tickets: {
     tabla: 'att_tickets', extra: 'titulo, aerolinea, origen, destino, fecha_salida',
     nombre: (r) => txt(r.titulo) || `${txt(r.origen) || '?'} → ${txt(r.destino) || '?'}`,
     fecha: (r) => fch(r.fecha_salida),
+    sub: (r) => unir([txt(r.aerolinea), `${txt(r.origen) || '?'} → ${txt(r.destino) || '?'}`]),
   },
   hotel: {
     tabla: 'att_hoteles', extra: 'nombre, ciudad, checkin',
     nombre: (r) => txt(r.nombre), fecha: (r) => fch(r.checkin),
+    subExtra: 'pais, checkout',
+    sub: (r) => unir([unir([txt(r.ciudad), txt(r.pais)], ', '), rango(r.checkin, r.checkout)]),
   },
   restaurantes: {
     tabla: 'att_restaurantes', extra: 'nombre, ciudad, fecha',
     nombre: (r) => txt(r.nombre), fecha: (r) => fch(r.fecha),
+    subExtra: 'hora',
+    sub: (r) => unir([txt(r.ciudad), dia(r.fecha), hhmm(r.hora)]),
   },
   renta: {
     tabla: 'att_rentas', extra: 'nombre, recepcion_fecha',
     nombre: (r) => txt(r.nombre), fecha: (r) => fch(r.recepcion_fecha),
+    subExtra: 'ciudad, entrega_fecha',
+    sub: (r) => unir([txt(r.ciudad), rango(r.recepcion_fecha, r.entrega_fecha)]),
   },
   tours: {
     tabla: 'att_tours', extra: 'nombre, prestador, fecha',
     nombre: (r) => txt(r.nombre) || txt(r.prestador), fecha: (r) => fch(r.fecha),
+    subExtra: 'ciudad, hora',
+    sub: (r) => unir([txt(r.prestador), txt(r.ciudad), dia(r.fecha), hhmm(r.hora)]),
   },
   aeronave: {
     tabla: 'att_aeronaves', extra: 'prestador, fecha',
     nombre: (r) => txt(r.prestador), fecha: (r) => fch(r.fecha),
+    subExtra: 'origen, destino, hora',
+    sub: (r) => unir([tramo(r), dia(r.fecha), hhmm(r.hora)]),
   },
   acuatico: {
     tabla: 'att_acuaticos', extra: 'prestador, fecha',
     nombre: (r) => txt(r.prestador), fecha: (r) => fch(r.fecha),
+    subExtra: 'origen, destino, etd',
+    sub: (r) => unir([tramo(r), dia(r.fecha), hhmm(r.etd)]),
   },
   ferry: {
     tabla: 'att_ferries', extra: 'prestador, fecha',
     nombre: (r) => txt(r.prestador), fecha: (r) => fch(r.fecha),
+    subExtra: 'origen, destino, etd',
+    sub: (r) => unir([tramo(r), dia(r.fecha), hhmm(r.etd)]),
   },
   terrestre: {
     tabla: 'att_terrestres', extra: 'prestador, fecha',
     nombre: (r) => txt(r.prestador), fecha: (r) => fch(r.fecha),
+    subExtra: 'origen, destino, etd',
+    sub: (r) => unir([tramo(r), dia(r.fecha), hhmm(r.etd)]),
   },
   actividades: {
     tabla: 'att_actividades', extra: 'evento, fecha',
     nombre: (r) => txt(r.evento), fecha: (r) => fch(r.fecha),
+    subExtra: 'ciudad, inicio',
+    sub: (r) => unir([txt(r.ciudad), dia(r.fecha), hhmm(r.inicio)]),
   },
 };
 

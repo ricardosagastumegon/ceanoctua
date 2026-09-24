@@ -74,4 +74,21 @@
   .no-print {
     display: none !important;
   }
+
+  /* Lo contrario: el espejo estatico de un campo editable. En pantalla se
+     edita en su casilla; en papel sale el texto limpio, sin bordes ni la ✕. */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Un dia no se parte a la mitad entre dos hojas. */
+  .evitar-corte {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* Fuera de impresion el espejo estatico no existe. */
+.print-only {
+  display: none;
 }

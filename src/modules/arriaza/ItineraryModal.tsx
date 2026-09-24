@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { tripDateRange, fmtDate, fmtDateLong } from './utils';
@@ -24,38 +24,36 @@ type Props = {
   canEdit?: boolean;
 };
 
+// Colores del documento. Van en hex y no en clases de Tailwind porque al
+// imprimir las clases se pueden purgar y esto tiene que salir en papel igual
+// que en pantalla.
+const TEAL_OSCURO = '#0d2b2e';
+const TEAL = '#077e84';
+const ARENA_LINEA = '#e8e2d3';
+const RIEL = '#ece7da';
+const TINTA = '#2a2016';
+const TINTA_SUAVE = '#7d7364';
+
+/** Una actividad escrita a mano no es un servicio; se ve distinta a propósito. */
+const MANUAL = { solid: '#8a7f70', dark: '#5c5347', light: '#f5f2e9' };
+
 /**
- * Itinerario Final del viaje, día por día.
+ * Itinerario del viaje, día por día.
+ *
+ * Esto se le entrega al cliente, así que está armado como un documento y no
+ * como una pantalla: portada con la marca, los datos del viaje de un vistazo,
+ * y cada día como una línea de tiempo donde cada servicio lleva su color.
  *
  * Cada día trae dos cosas: los servicios reservados, que entran solos por su
- * fecha, y las actividades que se escriben a mano — hora y descripción — para
- * rellenar lo que ningún servicio cubre.
- *
- * El día se dibuja como una banda con la fecha y una tarjeta debajo, para que
- * los bloques se distingan de un vistazo, también impresos.
+ * fecha, y las actividades que se escriben a mano para rellenar lo que ningún
+ * servicio cubre.
  */
 export function ItineraryModal({ open, onClose, viaje, canEdit = false }: Props) {
   if (!viaje) return null;
   return (
-    <Modal open={open} onClose={onClose} title={`📋 Itinerario · ${viaje.titulo}`} size="xl">
+    <PrintableModal open={open} onClose={onClose} title={`Itinerario · ${viaje.titulo}`}>
       <ItinerarioHojas viaje={viaje} canEdit={canEdit} activo={open} />
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l"
-        >
-          Cerrar
-        </button>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md bg-teal px-4 py-2 text-sm font-extrabold text-white hover:bg-teal-d"
-        >
-          🖨 Imprimir / Guardar PDF
-        </button>
-      </div>
-    </Modal>
+    </PrintableModal>
   );
 }
 
@@ -66,7 +64,9 @@ export function ItineraryModal({ open, onClose, viaje, canEdit = false }: Props)
  * pantalla y capturarlo sin abrirle una ventana encima al usuario.
  */
 export function ItinerarioHojas({
-  viaje, canEdit = false, activo = true,
+  viaje,
+  canEdit = false,
+  activo = true,
 }: {
   viaje: AttViaje;
   canEdit?: boolean;
@@ -96,21 +96,98 @@ export function ItinerarioHojas({
     });
   }, [viaje, plansQuery.data, rowsQuery.data, notesQuery.data, eventsQuery.data]);
 
-  return (
-    <div id="tt-itinerary-print" className="space-y-4">
-        <header className="flex items-center justify-between rounded-lg border-b-4 border-gold bg-sand-l px-5 py-3">
-          <img src={logoColor} alt="Arriaza Tour &amp; Travel" className="h-9 w-auto" />
-          <div className="text-right">
-            <div className="font-heading text-lg font-extrabold text-dark">{viaje.titulo}</div>
-            <div className="text-[11px] font-semibold text-dark-3">
-              {viaje.trip_no ? `${viaje.trip_no} · ` : ''}
-              {fmtDate(viaje.fecha_ini)} — {fmtDate(viaje.fecha_fin)}
-            </div>
-          </div>
-        </header>
+  const totalServicios = (eventsQuery.data ?? []).length;
+  const noches = Math.max(0, days.length - 1);
 
+  return (
+    <div id="tt-itinerary-print" style={{ fontFamily: 'Nunito, sans-serif', color: TINTA }}>
+      {/* ── Portada ─────────────────────────────────────────────────── */}
+      <header
+        className="relative overflow-hidden px-8 pb-6 pt-7 text-white"
+        style={{ background: `linear-gradient(135deg,${TEAL_OSCURO} 0%,${TEAL} 58%,#00b4c5 100%)` }}
+      >
+        {/* Un círculo apenas visible: le quita la sensación de banda plana. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: '-70px',
+            top: '-90px',
+            width: '250px',
+            height: '250px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,.07)',
+          }}
+        />
+
+        <div className="relative flex items-start justify-between gap-5">
+          <div className="min-w-0">
+            <div className="text-[10px] font-extrabold uppercase tracking-[.22em] text-white/55">
+              {viaje.trip_no ? `${viaje.trip_no} · ` : ''}Itinerario de viaje
+            </div>
+            <h1 className="mt-1 font-heading text-[27px] font-extrabold leading-tight">
+              {viaje.titulo}
+            </h1>
+            {(viaje.destino || viaje.pais) && (
+              <div className="mt-1 text-[13px] text-white/80">
+                {[viaje.destino, viaje.pais].filter(Boolean).join(' · ')}
+              </div>
+            )}
+          </div>
+          <img
+            src={logoColor}
+            alt="Arriaza Tour &amp; Travel"
+            style={{ height: '40px', filter: 'brightness(0) invert(1)', flexShrink: 0 }}
+          />
+        </div>
+
+        {/* Los cuatro datos que se buscan primero. */}
+        <div className="relative mt-6 grid grid-cols-4 gap-2">
+          <Dato rotulo="Salida" valor={fmtDate(viaje.fecha_ini)} />
+          <Dato rotulo="Regreso" valor={fmtDate(viaje.fecha_fin)} />
+          <Dato
+            rotulo="Duración"
+            valor={days.length ? `${days.length} días` : '—'}
+            pie={noches > 0 ? `${noches} noche${noches > 1 ? 's' : ''}` : undefined}
+          />
+          <Dato rotulo="Servicios" valor={String(totalServicios)} />
+        </div>
+      </header>
+
+      {(viaje.acompanantes || viaje.proposito) && (
+        <div
+          className="flex flex-wrap gap-x-10 gap-y-2 px-8 py-3"
+          style={{ backgroundColor: '#f7f4ec', borderBottom: `1px solid ${ARENA_LINEA}` }}
+        >
+          {viaje.acompanantes && (
+            <div className="min-w-0">
+              <div
+                className="text-[9px] font-extrabold uppercase tracking-[.16em]"
+                style={{ color: TINTA_SUAVE }}
+              >
+                Viajan
+              </div>
+              <div className="text-[12px] font-semibold">{viaje.acompanantes}</div>
+            </div>
+          )}
+          {viaje.proposito && (
+            <div className="min-w-0">
+              <div
+                className="text-[9px] font-extrabold uppercase tracking-[.16em]"
+                style={{ color: TINTA_SUAVE }}
+              >
+                Motivo
+              </div>
+              <div className="text-[12px] font-semibold">{viaje.proposito}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Los días ────────────────────────────────────────────────── */}
+      <div className="px-8 py-6">
         {days.length === 0 && (
-          <p className="text-sm italic text-dark-3">
+          <p className="text-sm italic" style={{ color: TINTA_SUAVE }}>
             Este viaje no tiene fechas de inicio y fin definidas, así que no puedo armar el
             itinerario por día.
           </p>
@@ -130,6 +207,30 @@ export function ItinerarioHojas({
             canEdit={canEdit}
           />
         ))}
+      </div>
+
+      <footer
+        className="px-8 py-3 text-center text-[10px] font-extrabold uppercase tracking-[.2em] text-white/50"
+        style={{ backgroundColor: TEAL_OSCURO }}
+      >
+        Arriaza Tour &amp; Travel
+      </footer>
+    </div>
+  );
+}
+
+/** Una celda de la portada. */
+function Dato({ rotulo, valor, pie }: { rotulo: string; valor: string; pie?: string }) {
+  return (
+    <div
+      className="rounded-md px-3 py-2"
+      style={{ backgroundColor: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.18)' }}
+    >
+      <div className="text-[9px] font-extrabold uppercase tracking-[.16em] text-white/55">
+        {rotulo}
+      </div>
+      <div className="mt-0.5 font-heading text-[14px] font-extrabold leading-tight">{valor}</div>
+      {pie && <div className="text-[10px] text-white/55">{pie}</div>}
     </div>
   );
 }
@@ -144,7 +245,15 @@ type FilaPlan = {
 type EventoDia = { servicio: ServiceKey; hora: string; titulo: string; detalle: string };
 
 function DiaBloque({
-  viajeId, dia, fecha, planId, lugar, filas, nota, servicios, canEdit,
+  viajeId,
+  dia,
+  fecha,
+  planId,
+  lugar,
+  filas,
+  nota,
+  servicios,
+  canEdit,
 }: {
   viajeId: string;
   dia: number;
@@ -212,7 +321,12 @@ function DiaBloque({
    */
   const renglones = useMemo(() => {
     const items = [
-      ...servicios.map((e, k) => ({ tipo: 'servicio' as const, hora: e.hora, k: `s-${k}`, evento: e })),
+      ...servicios.map((e, k) => ({
+        tipo: 'servicio' as const,
+        hora: e.hora,
+        k: `s-${k}`,
+        evento: e,
+      })),
       ...filas.map((f) => ({ tipo: 'fila' as const, hora: f.horario ?? '', k: f.id, fila: f })),
     ];
     return items.sort((a, b) => {
@@ -224,93 +338,150 @@ function DiaBloque({
   }, [servicios, filas]);
 
   return (
-    <article className="overflow-hidden rounded-lg border border-sand shadow-sm">
-      {/* Banda del día · es lo que separa los bloques de un vistazo. */}
-      <header className="flex flex-wrap items-baseline justify-between gap-2 bg-navy px-4 py-2 text-white">
-        <span className="font-heading text-lg font-extrabold">Día {dia}</span>
-        <span className="text-sm font-semibold text-white/80">{fmtDateLong(fecha)}</span>
+    <article className="evitar-corte mb-4 last:mb-0">
+      {/* Banda del día · el número grande es lo que deja hojear el documento. */}
+      <header
+        className="flex items-center gap-3 rounded-t-lg px-4 py-2.5"
+        style={{ backgroundColor: TEAL_OSCURO }}
+      >
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-heading text-[15px] font-extrabold text-white"
+          style={{ backgroundColor: TEAL }}
+        >
+          {dia}
+        </span>
+        <div className="min-w-0">
+          <div className="text-[9px] font-extrabold uppercase tracking-[.2em] text-white/50">
+            Día {dia}
+          </div>
+          <div className="font-heading text-[13px] font-extrabold text-white first-letter:uppercase">
+            {fmtDateLong(fecha)}
+          </div>
+        </div>
+        {lugar && (
+          <span
+            className="ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold text-white/85"
+            style={{ backgroundColor: 'rgba(255,255,255,.14)' }}
+          >
+            {lugar}
+          </span>
+        )}
       </header>
 
-      <div className="space-y-2 bg-white px-4 py-3">
-        {lugar && <div className="text-xs font-semibold text-dark-2">📍 {lugar}</div>}
+      <div
+        className="rounded-b-lg px-5 py-4"
+        style={{ border: `1px solid ${ARENA_LINEA}`, borderTop: 'none', backgroundColor: '#fff' }}
+      >
+        {renglones.map((r, idx) => {
+          const ultimo = idx === renglones.length - 1 && !nota;
+          const meta = r.tipo === 'servicio' ? SERVICE_META[r.evento.servicio] : MANUAL;
+          const horaVisible = r.tipo === 'servicio' ? r.evento.hora : r.fila.horario;
 
-        {/* Servicios y actividades, en una sola línea de tiempo. */}
-        {renglones.map((r) => {
-          if (r.tipo === 'servicio') {
-            const e = r.evento;
-            const meta = SERVICE_META[e.servicio];
-            return (
-              <div
-                key={r.k}
-                className="flex items-center gap-2 rounded-md border-l-4 px-3 py-1.5 text-xs"
-                style={{ borderLeftColor: meta.solid, backgroundColor: meta.light }}
-              >
-                <span className="w-12 shrink-0 font-extrabold" style={{ color: meta.dark }}>
-                  {e.hora || '—'}
-                </span>
-                <span className="shrink-0">{meta.icon}</span>
-                <span className="font-extrabold" style={{ color: meta.dark }}>{e.titulo}</span>
-                {e.detalle && <span className="truncate text-dark-3">· {e.detalle}</span>}
-              </div>
-            );
-          }
-          const f = r.fila;
           return (
-            <div key={r.k} className="flex items-center gap-2 rounded-md bg-sand-l px-3 py-1.5 text-xs">
-              {canEdit ? (
-                <>
-                  <input
-                    type="time"
-                    defaultValue={f.horario ?? ''}
-                    onBlur={(ev) => void editar(f, 'horario', ev.target.value)}
-                    className="w-24 shrink-0 rounded border border-sand bg-white px-1 py-0.5 font-extrabold text-teal-d"
+            <div key={r.k} className="flex gap-3">
+              {/* Hora */}
+              <div
+                className="w-[46px] shrink-0 pt-1.5 text-right font-heading text-[11px] font-extrabold"
+                style={{ color: horaVisible ? meta.dark : '#bdb5a6' }}
+              >
+                {horaVisible || '—'}
+              </div>
+
+              {/* Riel con el punto */}
+              <div className="relative w-3 shrink-0">
+                {!ultimo && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '5px',
+                      top: '8px',
+                      bottom: '-4px',
+                      width: '2px',
+                      backgroundColor: RIEL,
+                    }}
                   />
-                  <input
-                    type="text"
-                    defaultValue={f.itinerario ?? ''}
-                    onBlur={(ev) => void editar(f, 'itinerario', ev.target.value)}
-                    className="flex-1 rounded border border-sand bg-white px-2 py-0.5 text-dark-2"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void borrarFila.mutateAsync({ id: f.id, dayPlanId: planId as string })}
-                    className="shrink-0 text-dark-3 hover:text-rust"
-                    aria-label="Quitar actividad"
+                )}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: '7px',
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: meta.solid,
+                    border: '2px solid #ffffff',
+                    boxShadow: `0 0 0 1.5px ${meta.solid}`,
+                  }}
+                />
+              </div>
+
+              {/* Contenido */}
+              <div className="min-w-0 flex-1 pb-3">
+                {r.tipo === 'servicio' ? (
+                  <div
+                    className="rounded-md px-3 py-2"
+                    style={{
+                      backgroundColor: SERVICE_META[r.evento.servicio].light,
+                      borderLeft: `3px solid ${SERVICE_META[r.evento.servicio].solid}`,
+                    }}
                   >
-                    ✕
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className="w-16 shrink-0 font-extrabold text-teal-d">{f.horario ?? '—'}</span>
-                  <span className="flex-1 text-dark-2">{f.itinerario ?? '—'}</span>
-                </>
-              )}
-              {f.es_auto_reunion && (
-                <span className="shrink-0 rounded-full bg-purple/10 px-2 text-[10px] font-extrabold text-purple">
-                  reunión
-                </span>
-              )}
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[12px]">{SERVICE_META[r.evento.servicio].icon}</span>
+                      <span
+                        className="text-[12px] font-extrabold"
+                        style={{ color: SERVICE_META[r.evento.servicio].dark }}
+                      >
+                        {r.evento.titulo}
+                      </span>
+                    </div>
+                    {r.evento.detalle && (
+                      <div className="mt-0.5 text-[11px]" style={{ color: TINTA_SUAVE }}>
+                        {r.evento.detalle}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <FilaManual
+                    fila={r.fila}
+                    canEdit={canEdit}
+                    onEditar={editar}
+                    onBorrar={() =>
+                      void borrarFila.mutateAsync({ id: r.fila.id, dayPlanId: planId as string })
+                    }
+                  />
+                )}
+              </div>
             </div>
           );
         })}
 
         {nota && (
-          <div className="rounded-md border-l-4 border-gold bg-gold-light/50 px-3 py-2 text-xs text-dark-2">
-            <div className="text-[10px] font-extrabold uppercase tracking-wider text-gold">
+          <div
+            className="rounded-md px-3 py-2"
+            style={{ backgroundColor: '#f5f0d8', borderLeft: '3px solid #9e7a1a' }}
+          >
+            <div
+              className="text-[9px] font-extrabold uppercase tracking-[.16em]"
+              style={{ color: '#7a5e14' }}
+            >
               Nota del día
             </div>
-            <div className="mt-0.5 whitespace-pre-wrap">{nota}</div>
+            <div className="mt-0.5 whitespace-pre-wrap text-[11px]" style={{ color: TINTA }}>
+              {nota}
+            </div>
           </div>
         )}
 
-        {vacio && !canEdit && (
-          <p className="text-xs italic text-dark-3">Sin actividades planificadas para este día.</p>
+        {vacio && (
+          <p className="py-1 text-[11px] italic" style={{ color: '#b3aa9a' }}>
+            Día libre.
+          </p>
         )}
 
         {/* Agregar actividad · el "rellenar lo que haga falta" del documento. */}
         {canEdit && (
-          <div className="no-print flex flex-wrap items-center gap-2 pt-1">
+          <div className="no-print mt-2 flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: ARENA_LINEA }}>
             <input
               type="time"
               value={hora}
@@ -343,5 +514,95 @@ function DiaBloque({
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * Una actividad escrita a mano.
+ *
+ * Con permiso de edición se escribe en su casilla, pero esa casilla lleva
+ * `no-print`: en papel sale el espejo estático de al lado, sin bordes ni la ✕.
+ * El documento se le entrega al cliente y no puede ir con los controles de
+ * quien lo armó.
+ */
+function FilaManual({
+  fila,
+  canEdit,
+  onEditar,
+  onBorrar,
+}: {
+  fila: FilaPlan;
+  canEdit: boolean;
+  onEditar: (f: FilaPlan, campo: 'horario' | 'itinerario', valor: string) => void;
+  onBorrar: () => void;
+}) {
+  const cuerpo = (
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-[12px] font-semibold" style={{ color: MANUAL.dark }}>
+        {fila.itinerario ?? '—'}
+      </span>
+      {fila.es_auto_reunion && (
+        <span
+          className="rounded-full px-1.5 text-[9px] font-extrabold uppercase"
+          style={{ backgroundColor: '#ece3f2', color: '#5a3472' }}
+        >
+          reunión
+        </span>
+      )}
+    </div>
+  );
+
+  if (!canEdit) {
+    return (
+      <div
+        className="rounded-md px-3 py-2"
+        style={{ backgroundColor: MANUAL.light, borderLeft: `3px solid ${MANUAL.solid}` }}
+      >
+        {cuerpo}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className="print-only rounded-md px-3 py-2"
+        style={{ backgroundColor: MANUAL.light, borderLeft: `3px solid ${MANUAL.solid}` }}
+      >
+        {cuerpo}
+      </div>
+
+      <div className="no-print flex items-center gap-2">
+        <input
+          type="time"
+          defaultValue={fila.horario ?? ''}
+          onBlur={(ev) => onEditar(fila, 'horario', ev.target.value)}
+          className="w-24 shrink-0 rounded border border-sand bg-white px-1 py-1 text-[11px] font-extrabold text-teal-d"
+        />
+        <input
+          type="text"
+          defaultValue={fila.itinerario ?? ''}
+          onBlur={(ev) => onEditar(fila, 'itinerario', ev.target.value)}
+          className="min-w-0 flex-1 rounded border border-sand bg-white px-2 py-1 text-[12px]"
+          style={{ color: MANUAL.dark }}
+        />
+        {fila.es_auto_reunion && (
+          <span
+            className="shrink-0 rounded-full px-1.5 text-[9px] font-extrabold uppercase"
+            style={{ backgroundColor: '#ece3f2', color: '#5a3472' }}
+          >
+            reunión
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={onBorrar}
+          className="shrink-0 text-dark-3 hover:text-rust"
+          aria-label="Quitar actividad"
+        >
+          ✕
+        </button>
+      </div>
+    </>
   );
 }

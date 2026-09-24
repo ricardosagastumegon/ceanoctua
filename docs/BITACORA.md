@@ -6,6 +6,29 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 26 · 2026-09-24 · El itinerario como documento, y el archivo de viajes
+
+**Objetivo:** el itinerario se le entrega al cliente final y salía como una pantalla impresa, no como un documento. El usuario: *"NO ME GUSTA EN LO ABSOLUTO... de ninguna manera puedo entregar algo así tan básico"*. Además faltaban dos cosas que el HTML original sí tenía en la carpeta de viajes realizados: un color por viaje y el botón **Ver**.
+
+**Cambios de schema:** ninguno.
+
+**Cambios de UI:**
+- **Itinerario rediseñado.** Portada con la marca en degradado, el título, el destino y los cuatro datos que se buscan primero (salida, regreso, duración con noches, cantidad de servicios). Debajo, quiénes viajan y el motivo. Cada día es una banda oscura con el número grande y la fecha larga, y su contenido es una línea de tiempo con riel, un punto por evento del color de su servicio, y la hora a la izquierda. Nota del día en dorado, día sin nada como "Día libre", y una banda de cierre con la marca.
+- **Carpeta de viajes realizados:** los diez degradados del HTML original, uno por viaje según su posición.
+- **Vista previa del viaje** (botón **Ver**): portada, fechas / participantes / motivo, y la lista completa de servicios con su color, su estado, su subtítulo y su monto, más el total. Desde ahí se salta al itinerario o se abre el viaje.
+
+**Comentarios:**
+- **Los controles de edición se estaban imprimiendo.** Las casillas de hora y descripción, con su ✕, salían en el PDF que se le entrega al cliente. Ahora cada actividad escrita a mano tiene dos caras: la casilla editable, marcada `no-print`, y un espejo estático marcado `print-only` que es el que sale en papel. Se agregaron las clases `print-only` y `evitar-corte` a `index.css`. Verificado: 41 controles en pantalla, 0 al imprimir, y los 9 espejos en su lugar.
+- El itinerario pasó de `Modal` a `PrintableModal`, que es el que trae la clase `printable` con `print-color-adjust: exact`. Sin eso el navegador se come los fondos y los degradados al imprimir.
+- **Sin bandera en la portada del itinerario.** Windows no dibuja los emojis de bandera y los deja como dos letras sueltas: el título salía "us NEW YORK- BODA", que en un documento para el cliente se lee como un error de tipeo. El país va escrito debajo. En las tarjetas de la carpeta sí se conserva, porque ahí es de uso interno y es como se ve en el HTML original.
+- `capitalize` de Tailwind sube la inicial de **cada** palabra: la fecha salía "Jueves 24 De Septiembre". Se cambió por `first-letter:uppercase`.
+- El mapeo de servicios de `liquidacion.ts` ganó `sub` y `subExtra` opcionales, que solo usa el resumen del viaje. Los dos reportes financieros los ignoran: la liquidación va sin detalle a propósito. Sigue habiendo un solo lugar donde se declara de qué tabla sale cada servicio.
+- El resumen suma las reuniones, que no tienen costo y por eso no están en los reportes financieros pero sí son parte del viaje. No cuentan como "sin monto": no es que se haya olvidado capturarlo.
+
+**Commits clave:** ver `git log` de 2026-09-24.
+
+---
+
 ## Fase 25 · 2026-09-24 · Liquidación por período
 
 **Objetivo:** la liquidación era por viaje, y para pagar las tarjetas eso no sirve: el estado de cuenta no viene separado por viaje, viene por mes. Falta el reporte al revés — un rango de fechas, todos los viajes, agrupado por tarjeta. Plan en [`PLAN-TT-LIQUIDACION-PERIODO.md`](../PLAN-TT-LIQUIDACION-PERIODO.md). Cierra DT-11.

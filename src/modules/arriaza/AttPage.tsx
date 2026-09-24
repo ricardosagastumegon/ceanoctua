@@ -9,6 +9,8 @@ import { TripFormModal, type TripDestinos } from './TripFormModal';
 import { TripCard } from './TripCard';
 import { BackupModal } from './BackupModal';
 import { LiquidacionPeriodoModal } from './LiquidacionPeriodoModal';
+import { TripPreviewModal } from './TripPreviewModal';
+import { ItineraryModal } from './ItineraryModal';
 import { FinishedFolder } from './FinishedFolder';
 import { CalendarPanel } from './CalendarPanel';
 import { useAttReuniones } from './reuniones/hooks';
@@ -48,6 +50,8 @@ export function AttPage() {
   const [sortMode, setSortMode] = useState<SortMode>('start-asc');
   const [backupOpen, setBackupOpen] = useState(false);
   const [periodoOpen, setPeriodoOpen] = useState(false);
+  const [viendo, setViendo] = useState<AttViaje | null>(null);
+  const [itinerario, setItinerario] = useState<AttViaje | null>(null);
 
   const viajes = query.data ?? [];
   // Las reuniones de todos los viajes, para marcarlas en el calendario.
@@ -224,6 +228,7 @@ export function AttPage() {
               canEdit={canEdit}
               onEdit={() => setEditing(v)}
               onDelete={() => void handleDelete(v)}
+              onVer={() => setViendo(v)}
               onManualStatusChange={(s) => void handleManualStatusChange(v, s)}
             />
           ))}
@@ -250,6 +255,23 @@ export function AttPage() {
       <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} />
 
       <LiquidacionPeriodoModal open={periodoOpen} onClose={() => setPeriodoOpen(false)} />
+
+      <TripPreviewModal
+        open={!!viendo}
+        viaje={viendo}
+        onClose={() => setViendo(null)}
+        onItinerario={() => {
+          setItinerario(viendo);
+          setViendo(null);
+        }}
+      />
+
+      <ItineraryModal
+        open={!!itinerario}
+        viaje={itinerario}
+        canEdit={canEdit}
+        onClose={() => setItinerario(null)}
+      />
     </section>
   );
 }

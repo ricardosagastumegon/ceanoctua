@@ -10,6 +10,8 @@ type Props = {
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  /** Abre la vista previa con el resumen de servicios, sin salir del tablero. */
+  onVer: () => void;
   onManualStatusChange: (status: ManualStatus) => void;
 };
 
@@ -31,7 +33,7 @@ const AUTO_BADGE: Record<ReturnType<typeof autoTripStatus>, string> = {
  * desplegaba aquí mismo las secciones de servicios, lo que mezclaba ver la
  * lista de viajes con construir uno y saturaba el dashboard.
  */
-export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChange }: Props) {
+export function TripCard({ viaje, canEdit, onEdit, onDelete, onVer, onManualStatusChange }: Props) {
   const auto = autoTripStatus(viaje);
   const manualStatus = (viaje.manual_status ?? 'Solicitado') as ManualStatus;
   // Comparte caché con la pantalla del viaje: es la misma query key.
@@ -134,12 +136,23 @@ export function TripCard({ viaje, canEdit, onEdit, onDelete, onManualStatusChang
           )}
         </div>
 
-        <Link
-          to={`/arriaza/viaje/${viaje.id}`}
-          className="mt-3 inline-flex rounded-md bg-teal px-3 py-1.5 text-xs font-extrabold text-white hover:bg-teal-d"
-        >
-          Abrir viaje →
-        </Link>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {/* Ver resume el viaje sin sacar al usuario del tablero; Abrir es
+              para trabajarlo. */}
+          <button
+            type="button"
+            onClick={onVer}
+            className="inline-flex rounded-md border border-teal/40 px-3 py-1.5 text-xs font-extrabold text-teal-d hover:bg-teal-l"
+          >
+            👁 Ver
+          </button>
+          <Link
+            to={`/arriaza/viaje/${viaje.id}`}
+            className="inline-flex rounded-md bg-teal px-3 py-1.5 text-xs font-extrabold text-white hover:bg-teal-d"
+          >
+            Abrir viaje →
+          </Link>
+        </div>
       </div>
     </article>
   );

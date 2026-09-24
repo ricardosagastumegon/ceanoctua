@@ -583,6 +583,140 @@ export type Database = {
       };
 
       // ====================================================
+      // Aeronaves · Fase 1 (modulo Aeronaves)
+      // Ojo: `modelo` es el ANO del modelo (2018) y `color` es el color de
+      // pintura de la aeronave. El color de pantalla es `acento`.
+      // ====================================================
+      avn_aeronaves: {
+        Row: {
+          id: string;
+          matricula: string;
+          nombre: string | null;
+          serie: string | null;
+          modelo: string | null;
+          tipo_aeronave: string | null;
+          tipo_pista: string | null;
+          uso: string | null;
+          pax: number | null;
+          tripulantes: number | null;
+          autonomia: string | null;
+          color: string | null;
+          base_operaciones: string | null;
+          foto_path: string | null;
+          acento: string;
+          estado: string;
+          orden: number;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          matricula: string;
+          nombre?: string | null;
+          serie?: string | null;
+          modelo?: string | null;
+          tipo_aeronave?: string | null;
+          tipo_pista?: string | null;
+          uso?: string | null;
+          pax?: number | null;
+          tripulantes?: number | null;
+          autonomia?: string | null;
+          color?: string | null;
+          base_operaciones?: string | null;
+          foto_path?: string | null;
+          acento?: string;
+          estado?: string;
+          orden?: number;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          matricula?: string;
+          nombre?: string | null;
+          serie?: string | null;
+          modelo?: string | null;
+          tipo_aeronave?: string | null;
+          tipo_pista?: string | null;
+          uso?: string | null;
+          pax?: number | null;
+          tripulantes?: number | null;
+          autonomia?: string | null;
+          color?: string | null;
+          base_operaciones?: string | null;
+          foto_path?: string | null;
+          acento?: string;
+          estado?: string;
+          orden?: number;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      avn_tipos_certificado: {
+        Row: {
+          id: string;
+          nombre: string;
+          orden: number;
+          activo: boolean;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; orden?: number; activo?: boolean; notas?: string | null };
+        Update: { nombre?: string; orden?: number; activo?: boolean; notas?: string | null };
+        Relationships: [];
+      };
+
+      avn_documentos: {
+        Row: {
+          id: string;
+          aeronave_id: string;
+          tipo_id: string;
+          anio: number;
+          numero: string | null;
+          emision: string | null;
+          vence: string | null;
+          autoridad: string | null;
+          archivo_path: string | null;
+          archivo_nombre: string | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          aeronave_id: string;
+          tipo_id: string;
+          anio: number;
+          numero?: string | null;
+          emision?: string | null;
+          vence?: string | null;
+          autoridad?: string | null;
+          archivo_path?: string | null;
+          archivo_nombre?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          tipo_id?: string;
+          anio?: number;
+          numero?: string | null;
+          emision?: string | null;
+          vence?: string | null;
+          autoridad?: string | null;
+          archivo_path?: string | null;
+          archivo_nombre?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      // ====================================================
       // Status Solicitud de Pago (Fase 16 · F-0)
       // ====================================================
       status_solicitud_pago: {

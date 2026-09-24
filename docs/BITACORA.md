@@ -6,6 +6,39 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 27 · 2026-09-24 · Módulo Aeronaves · Fase 1
+
+**Objetivo:** arrancar el módulo de administración y control operativo de las aeronaves. El alcance de esta primera fase es la ficha de cada aeronave y sus certificados escaneados. Plan completo en [`PLAN-AERONAVES.md`](../PLAN-AERONAVES.md).
+
+**El alcance, acotado por el usuario:** el rol es administrativo, no técnico de mantenimiento. **Sin ciclos** —todo se mide en horas— y sin control de aeronavegabilidad por componente, que lo lleva el taller. Eso simplifica el modelo a la mitad: el mantenimiento será un historial, no un motor de cumplimiento.
+
+**La flota:** TG-OBI (Cirrus SR22T) como plan piloto, TG-FLY (King Air 300) después, y un helicóptero más adelante. Se construye para varias desde el primer día aunque hoy solo se administre una.
+
+**Cambios de schema:** migración `20260925000001_aeronaves_fase1.sql`.
+- `avn_aeronaves` · la ficha. **La nomenclatura es la del perfil que ya usa el usuario**, no la de un sistema de aeronavegabilidad. Dos columnas engañan y llevan comentario en la base: `modelo` es el **año** del modelo (2018) y `color` es el color de **pintura** de la aeronave; el color de pantalla es `acento`.
+- `avn_tipos_certificado` · el catálogo, sembrado con los 7 certificados de la documentación histórica DGAC del OBI, sin repetir.
+- `avn_documentos` · los escaneos, uno por año y por tipo.
+- RLS con el módulo nuevo `aeronaves` de la fase 23, y bucket privado `avn-documentos` con sus cuatro políticas.
+
+**Cambios de UI:**
+- **Capa 2 · la flota**: un botón grande por aeronave, con su color, más «Registrar aeronave».
+- **Capa 3 · la aeronave**: ficha y **Documentación DGAC agrupada por año**, que es exactamente como el usuario los tiene organizados en su propio documento. Un clic abre el escaneo.
+- **Agregar documento**: a propósito corto —nombre desde el catálogo, año y archivo— con los datos opcionales plegados.
+- **Admin → Certificados Aéreos**: el catálogo, editable.
+
+**Comentarios:**
+- La estructura en capas la pidió el usuario así: dashboard general, luego la flota con un botón por aeronave, y de ahí adentro cada una con lo suyo. «Para que la información esté independiente pero en el mismo lugar». El **dashboard se construye al final**, cuando haya con qué llenarlo, y no al principio con números inventados.
+- La **matrícula va en la dirección** (`/aeronaves/TG-OBI`) en vez de un identificador interno: es única, no cambia y se lee.
+- El nombre del certificado sale de un catálogo y no de texto libre, para que el mismo documento no quede guardado con tres nombres distintos según quién lo subió. Un tipo ya usado se desactiva, no se borra.
+- El bucket es privado, así que tanto los escaneos como la foto de la aeronave se sirven con URL firmada. Las firmas de las fotos se guardan en un mapa de módulo porque la misma imagen aparece en el botón de la flota y en el encabezado de la aeronave.
+- Se exportó `AuthContext` de `lib/auth.tsx` para poder montar estas pantallas con una sesión simulada al revisarlas fuera de la aplicación.
+
+**Lo que viene:** horas de vuelo (con la tarifa capturada **en el vuelo** y no solo en la ficha, para que subir la tarifa no recalcule lo ya cobrado), mantenimientos, pagos, renta y al final el dashboard.
+
+**Commits clave:** ver `git log` de 2026-09-24.
+
+---
+
 ## Fase 26 · 2026-09-24 · El itinerario como documento, y el archivo de viajes
 
 **Objetivo:** el itinerario se le entrega al cliente final y salía como una pantalla impresa, no como un documento. El usuario: *"NO ME GUSTA EN LO ABSOLUTO... de ninguna manera puedo entregar algo así tan básico"*. Además faltaban dos cosas que el HTML original sí tenía en la carpeta de viajes realizados: un color por viaje y el botón **Ver**.

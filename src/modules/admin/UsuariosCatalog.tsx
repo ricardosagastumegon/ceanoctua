@@ -20,6 +20,7 @@ import type { AppRol, Modulo, Permiso } from '@/types';
 
 const MODULOS: { key: Modulo; label: string; grupo: string }[] = [
   { key: 'tt', label: 'Arriaza T&T', grupo: 'Módulos' },
+  { key: 'aeronaves', label: 'Aeronaves', grupo: 'Módulos' },
   { key: 'cea', label: 'CEA', grupo: 'Módulos' },
   { key: 'finanzas', label: 'Finanzas', grupo: 'Módulos' },
   { key: 'caja_chica', label: 'Caja Chica', grupo: 'Módulos' },

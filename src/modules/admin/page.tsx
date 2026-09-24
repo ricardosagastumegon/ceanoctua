@@ -12,6 +12,7 @@ import { TipoPagoForm } from './components/TipoPagoForm';
 import { ProveedorForm } from './components/ProveedorForm';
 import { TarjetaForm } from './components/TarjetaForm';
 import { StatusSpForm } from './components/StatusSpForm';
+import { TipoCertificadoForm } from './components/TipoCertificadoForm';
 import {
   useCreateEmpleado,
   useCreateEntidad,
@@ -33,6 +34,10 @@ import {
   usePersonas,
   useProveedores,
   useStatusSp,
+  useTiposCertificado,
+  useCreateTipoCertificado,
+  useUpdateTipoCertificado,
+  useDeleteTipoCertificado,
   useTarjetas,
   useTiposPago,
   useUpdateEmpleado,
@@ -51,6 +56,7 @@ import type {
   StatusSp,
   Tarjeta,
   TipoPago,
+  TipoCertificado,
 } from './api';
 
 type CatalogKey =
@@ -62,6 +68,7 @@ type CatalogKey =
   | 'tarjetas'
   | 'vehiculos'
   | 'status_sp'
+  | 'certificados_aereos'
   | 'usuarios';
 
 const tabs: { key: CatalogKey; label: string }[] = [
@@ -73,6 +80,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
   { key: 'vehiculos', label: 'Vehículos' },
   { key: 'status_sp', label: 'Status Solicitud de Pago' },
+  { key: 'certificados_aereos', label: 'Certificados Aéreos' },
   { key: 'usuarios', label: 'Usuarios y accesos' },
 ];
 
@@ -120,6 +128,7 @@ export default function AdminPage() {
       {tab === 'tarjetas' && <TarjetasCatalog canEdit={isAdmin} />}
       {tab === 'vehiculos' && <VehiculosSection canEdit={isAdmin} />}
       {tab === 'status_sp' && <StatusSpCatalog canEdit={isAdmin} />}
+      {tab === 'certificados_aereos' && <CertificadosAereosCatalog canEdit={isAdmin} />}
     </section>
   );
 }
@@ -769,5 +778,90 @@ function StatusSpCatalog({ canEdit }: { canEdit: boolean }) {
         exampleCsv={'nombre,orden,activo\nGenerado,1,true\nFirmado,3,true'}
       />
     </>
+  );
+}
+
+// ============================================================
+// Certificados Aéreos · catálogo del módulo Aeronaves
+// ============================================================
+/**
+ * La lista de certificados que puede tener una aeronave.
+ *
+ * Es de donde sale el desplegable al cargar un escaneo en
+ * Aeronaves → la aeronave → Agregar documento. Sirve para que el mismo
+ * certificado no quede guardado con tres nombres distintos.
+ *
+ * Un tipo que ya se usó se desactiva en vez de borrarse: deja de aparecer al
+ * cargar documentos nuevos, pero los que ya existen conservan su nombre.
+ */
+function CertificadosAereosCatalog({ canEdit }: { canEdit: boolean }) {
+  const query = useTiposCertificado();
+  const create = useCreateTipoCertificado();
+  const update = useUpdateTipoCertificado();
+  const remove = useDeleteTipoCertificado();
+
+  const columns: DataTableColumn<TipoCertificado>[] = [
+    {
+      key: 'orden',
+      header: 'Orden',
+      sortable: true,
+      accessor: (r) => r.orden,
+      render: (r) => (
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-teal-l font-mono text-xs font-bold text-teal-d">
+          {r.orden}
+        </span>
+      ),
+    },
+    {
+      key: 'nombre',
+      header: 'Certificado',
+      sortable: true,
+      accessor: (r) => r.nombre,
+      render: (r) => <span className="font-medium text-dark">{r.nombre}</span>,
+    },
+    {
+      key: 'notas',
+      header: 'Notas',
+      accessor: (r) => r.notas,
+      render: (r) => <span className="text-dark-3">{r.notas ?? '—'}</span>,
+    },
+    {
+      key: 'activo',
+      header: 'Estado',
+      sortable: true,
+      accessor: (r) => (r.activo ? 1 : 0),
+      render: (r) =>
+        r.activo ? (
+          <span className="inline-flex rounded-full bg-teal-l px-2 py-0.5 text-xs font-semibold text-teal-d">
+            Activo
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-sand-l px-2 py-0.5 text-xs font-semibold text-dark-3">
+            Inactivo
+          </span>
+        ),
+    },
+  ];
+
+  return (
+    <CatalogPage
+      title="Certificados Aéreos"
+      description="Los certificados que puede tener una aeronave. De aquí sale el desplegable al cargar un documento."
+      newLabel="+ Nuevo certificado"
+      modalSize="md"
+      columns={columns}
+      rows={query.data ?? []}
+      loading={query.isLoading}
+      isError={query.isError}
+      error={query.error}
+      onRetry={() => void query.refetch()}
+      onCreate={(values) => create.mutateAsync(values)}
+      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+      onDelete={(id) => remove.mutateAsync(id)}
+      submitting={create.isPending || update.isPending}
+      Form={TipoCertificadoForm}
+      rowLabel={(r) => r.nombre}
+      canEdit={canEdit}
+    />
   );
 }

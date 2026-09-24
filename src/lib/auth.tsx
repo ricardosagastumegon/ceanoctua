@@ -20,7 +20,9 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+// Exportado para poder montar una pantalla con una sesion simulada al
+// revisarla fuera de la aplicacion. En la aplicacion se usa AuthProvider.
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function loadProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase

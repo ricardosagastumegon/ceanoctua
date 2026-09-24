@@ -33,6 +33,44 @@ export type StatusSp = Database['public']['Tables']['status_solicitud_pago']['Ro
 export type StatusSpInsert = Database['public']['Tables']['status_solicitud_pago']['Insert'];
 export type StatusSpUpdate = Database['public']['Tables']['status_solicitud_pago']['Update'];
 
+// ── Certificados Aereos · el catalogo del modulo Aeronaves ───────────────
+// Vive en Admin como los demas catalogos: es la lista de la que se escoge al
+// cargar un certificado de una aeronave, para que el mismo documento no quede
+// guardado con tres nombres distintos segun quien lo subio.
+export type TipoCertificado = Database['public']['Tables']['avn_tipos_certificado']['Row'];
+export type TipoCertificadoInsert = Database['public']['Tables']['avn_tipos_certificado']['Insert'];
+export type TipoCertificadoUpdate = Database['public']['Tables']['avn_tipos_certificado']['Update'];
+
+export const tiposCertificadoApi = {
+  async list(): Promise<TipoCertificado[]> {
+    const { data, error } = await supabase
+      .from('avn_tipos_certificado')
+      .select('*')
+      .order('orden')
+      .order('nombre');
+    if (error) throw error;
+    return data ?? [];
+  },
+  async create(input: TipoCertificadoInsert): Promise<TipoCertificado> {
+    const { data, error } = await supabase
+      .from('avn_tipos_certificado').insert(input).select('*').single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, patch: TipoCertificadoUpdate): Promise<TipoCertificado> {
+    const { data, error } = await supabase
+      .from('avn_tipos_certificado').update(patch).eq('id', id).select('*').single();
+    if (error) throw error;
+    return data;
+  },
+  // Este catalogo no lleva borrado suave: es una lista corta de nombres y un
+  // tipo que ya se uso no se borra, se desactiva.
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase.from('avn_tipos_certificado').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
 export const statusSpApi = {
   async list(): Promise<StatusSp[]> {
     const { data, error } = await supabase

@@ -8,6 +8,7 @@ import {
   personasApi,
   proveedoresApi,
   statusSpApi,
+  tiposCertificadoApi,
   tarjetasApi,
   tiposPagoApi,
 } from './api';
@@ -41,6 +42,7 @@ const tiposPago = createCrudHooks('tipos_pago', tiposPagoApi);
 const proveedores = createCrudHooks('proveedores', proveedoresApi);
 const tarjetas = createCrudHooks('tarjetas_credito', tarjetasApi);
 const statusSp = createCrudHooks('status_solicitud_pago', statusSpApi);
+const tiposCertificado = createCrudHooks('avn_tipos_certificado', tiposCertificadoApi);
 
 export const adminKeys = {
   entidades: entidades.queryKey,
@@ -50,9 +52,15 @@ export const adminKeys = {
   proveedores: proveedores.queryKey,
   tarjetas: tarjetas.queryKey,
   statusSp: statusSp.queryKey,
+  tiposCertificado: tiposCertificado.queryKey,
 };
 
 // Status Solicitud de Pago
+export const useTiposCertificado = tiposCertificado.useList;
+export const useCreateTipoCertificado = tiposCertificado.useCreate;
+export const useUpdateTipoCertificado = tiposCertificado.useUpdate;
+export const useDeleteTipoCertificado = tiposCertificado.useDelete;
+
 export const useStatusSp = statusSp.useList;
 export const useCreateStatusSp = statusSp.useCreate;
 export const useUpdateStatusSp = statusSp.useUpdate;

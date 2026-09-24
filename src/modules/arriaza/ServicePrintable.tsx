@@ -16,10 +16,15 @@ type Props = {
   moneda?: string | null;
   estadoPago?: string | null;
   pagadoCon?: string | null;
+  /**
+   * El número que dio la OTA, el GDS o el prestador. Va arriba, junto a
+   * «Reservado a través de», y no en el pie: es lo primero que se busca
+   * cuando hay un problema con la reserva.
+   */
   confirmacion?: string | null;
   cancelacion?: string | null;
   /** Filas del cuerpo, cada una label + valor. */
-  rows: Array<{ label: string; value: ReactNode }>;
+  rows: Array<{ label: string; value: ReactNode; destacado?: boolean }>;
   /** Bloques extra al final (pasajeros, habitaciones, tickets de actividad…). */
   extras?: ReactNode;
   /**
@@ -47,6 +52,10 @@ type Props = {
   pie?: string;
 };
 
+/** Sin acentos ni mayúsculas, para comparar etiquetas sin depender de cómo se escribieron. */
+const normalizar = (s: string): string =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
 /**
  * Vista previa imprimible, compartida por los 11 servicios.
  *
@@ -65,6 +74,29 @@ export function ServicePrintable({
   pie = 'Arriaza Tour & Travel · Documento de uso interno',
 }: Props) {
   const meta = SERVICE_META[serviceKey];
+
+  // El número de confirmación va pegado a «Reservado a través de», que es su
+  // contexto: quién hizo la reserva y con qué número.
+  //
+  // No basta con insertarlo después: como el bloque es una rejilla que se
+  // llena por filas, «después» puede caer al inicio de la fila siguiente y
+  // quedar en diagonal. Se saca la fila de su lugar y se vuelve a meter el
+  // par junto, corriendo el arranque una casilla cuando caería partido entre
+  // dos filas.
+  const columnas = rowsLayout === 'compacto' ? 4 : 2;
+  const filas = [...rows];
+  if (confirmacion) {
+    const conf = { label: 'N.º de confirmación', value: confirmacion, destacado: true };
+    const i = filas.findIndex((f) => normalizar(f.label).startsWith('reservado a traves'));
+    if (i < 0) {
+      filas.unshift(conf);
+    } else {
+      const [reservado] = filas.splice(i, 1);
+      const inicio = i % columnas === columnas - 1 ? i - 1 : i;
+      filas.splice(Math.max(0, inicio), 0, reservado, conf);
+    }
+  }
+
   return (
     <PrintableModal open={open} onClose={onClose} title={`${meta.icon} ${meta.label} — ${title}`}>
       <article style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
@@ -141,15 +173,41 @@ export function ServicePrintable({
               : 'grid grid-cols-2 gap-x-8 gap-y-3 px-8 py-5'
           }
         >
-          {rows.map(({ label, value }, i) => (
-            <div key={i}>
+          {filas.map(({ label, value, destacado }, i) => (
+            <div
+              key={i}
+              style={
+                destacado
+                  ? {
+                      borderLeft: `3px solid ${meta.solid}`,
+                      backgroundColor: meta.light,
+                      borderRadius: '4px',
+                      padding: '.3rem .6rem',
+                      marginTop: '-.3rem',
+                    }
+                  : undefined
+              }
+            >
               <span
                 className="inline-block rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider"
-                style={{ backgroundColor: meta.light, color: meta.dark }}
+                style={
+                  destacado
+                    ? { backgroundColor: meta.solid, color: '#ffffff' }
+                    : { backgroundColor: meta.light, color: meta.dark }
+                }
               >
                 {label}
               </span>
-              <div className="mt-1 text-[13px] leading-snug text-dark">{value ?? '—'}</div>
+              {destacado ? (
+                <div
+                  className="mt-1 font-mono text-[15px] font-extrabold leading-snug"
+                  style={{ color: meta.dark, letterSpacing: '.02em' }}
+                >
+                  {value ?? '—'}
+                </div>
+              ) : (
+                <div className="mt-1 text-[13px] leading-snug text-dark">{value ?? '—'}</div>
+              )}
             </div>
           ))}
         </section>
@@ -180,10 +238,9 @@ export function ServicePrintable({
           </footer>
         )}
 
-        {(confirmacion || cancelacion) && (
+        {cancelacion && (
           <section className="border-t border-sand px-8 py-4 text-xs text-dark-3">
-            {confirmacion && <div><b>Confirmación:</b> {confirmacion}</div>}
-            {cancelacion && <div><b>Cancelación:</b> {cancelacion}</div>}
+            <b>Cancelación:</b> {cancelacion}
           </section>
         )}
 

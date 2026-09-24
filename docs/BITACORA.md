@@ -25,6 +25,10 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 - El mapeo de servicios de `liquidacion.ts` ganó `sub` y `subExtra` opcionales, que solo usa el resumen del viaje. Los dos reportes financieros los ignoran: la liquidación va sin detalle a propósito. Sigue habiendo un solo lugar donde se declara de qué tabla sale cada servicio.
 - El resumen suma las reuniones, que no tienen costo y por eso no están en los reportes financieros pero sí son parte del viaje. No cuentan como "sin monto": no es que se haya olvidado capturarlo.
 
+**Ajustes posteriores del mismo día:**
+- Se quitaron los segundos de la columna de horas del itinerario. Las actividades escritas a mano guardan la hora en una columna `time`, que vuelve como `22:00:00`, mientras que los servicios ya llegaban como `HH:MM`: la columna mezclaba dos formatos.
+- **El número de confirmación subió del pie a junto de «Reservado a través de»**, en las hojas de los 9 servicios que lo llevan. Es el número que da la OTA, el GDS o el prestador, y estaba al final en letra chica y gris — justo el dato que hay que encontrar rápido cuando algo sale mal con una reserva. Ahora va en una casilla con el color del servicio, en monoespaciada y destacado. No basta con insertarlo después en la lista: el bloque es una rejilla que se llena por filas, así que «después» caía al inicio de la fila siguiente y quedaba en diagonal; se reordena el par para que las dos casillas caigan juntas. En el pie quedó solo la política de cancelación, que sí es letra chica.
+
 **Commits clave:** ver `git log` de 2026-09-24.
 
 ---

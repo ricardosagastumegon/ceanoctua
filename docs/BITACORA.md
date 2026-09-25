@@ -6,6 +6,34 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 28 · 2026-09-24 · Aeronaves · Control de combustible
+
+**Objetivo:** el registro de vales y facturas de combustible del OBI, y el puente hacia la solicitud de pago. Hoy el usuario lo hace uno a uno en papel y luego lo digitaliza.
+
+**Cambios de schema:** migración `20260925000002_combustible.sql`.
+- `avn_combustible_registros` · correlativo `CB-YYYY-####` por trigger, fecha, vale, factura, FER/AP, entidad y proveedor, moneda, total, escaneo adjunto.
+- `avn_combustible_lineas` · producto, galones, precio unitario. **El total de la línea es una columna generada** (`galones × precio`) y **el total del registro lo mantiene un trigger** sumando sus líneas: ninguno de los dos se escribe desde el cliente, así que no pueden quedar desincronizados de sus factores.
+- Se amplió el CHECK de `pagos_notificaciones.origen_tipo` para aceptar `combustible`.
+
+**Cambios de UI:**
+- La aeronave ahora tiene **pestañas** —Ficha y documentos · Combustible— porque con horas, mantenimientos y pagos por venir, una sola columna se volvía interminable.
+- **Control de fuel**: la tabla de registros con su serial, y por cada uno el estado de su solicitud de pago en tres momentos: **Enviar a SP**, **enviada a pagos**, o **👁 Ver SP-XXXX**.
+- El formulario refleja el Excel del usuario: entidad y proveedor con su NIT, fecha/vale/factura/FER-AP, líneas de producto con **＋ Producto**, y el total calculándose en vivo.
+- En **Finanzas → Pagos**, la solicitud que nace de una notificación de combustible ahora se prellena con el **proveedor, su NIT y la entidad** leídos del registro de origen.
+
+**Comentarios:**
+- **El puente hacia Pagos no se inventó.** `pagos_notificaciones` ya existía y ya lo usaban las liquidaciones de Caja Chica y los consumos de tarjeta, con el mismo flujo que pidió el usuario: el módulo de origen deja una notificación, y quien administra pagos la procesa extrayendo los datos del documento que la originó. Lo único que hacía falta era dejar la tabla aceptar este origen.
+- **La cadena para poder ver la solicitud desde el registro** ya estaba, pero al revés de lo esperado: `pagos_notificaciones.pago_id` nunca se escribe (12 filas, 0 enlazadas), y el enlace real es `pagos.origen_notificacion_id`. Así que se navega registro → notificación → pago, en dos saltos.
+- Los datos del proveedor **se leen del registro en el momento**, no se copian a la notificación: duplicarlos en dos lugares es lo que después se desincroniza. Y si el origen no se puede leer, la solicitud se llena a mano —nunca vale la pena bloquear la creación de un pago por un prellenado.
+- El registro guarda el **nombre y el NIT** de entidad y proveedor además de su id, por la misma razón que la tarjeta en la liquidación de T&T: renombrar el catálogo no puede reescribir lo que decía un documento de hace un año.
+- Quien procesa pagos puede **leer** los registros de combustible aunque no tenga el módulo de Aeronaves: sin eso el prellenado saldría vacío.
+- Un registro ya enviado a pagos **no se puede quitar** desde esta pantalla: del otro lado hay una solicitud que quedaría apuntando al vacío.
+- Los productos (Gasolina, Aceite, Diesel) van como lista en el código y la columna es texto libre: sumar el Jet A1 del King Air será agregar un renglón, sin migración.
+
+**Commits clave:** ver `git log` de 2026-09-24.
+
+---
+
 ## Fase 27 · 2026-09-24 · Módulo Aeronaves · Fase 1
 
 **Objetivo:** arrancar el módulo de administración y control operativo de las aeronaves. El alcance de esta primera fase es la ficha de cada aeronave y sus certificados escaneados. Plan completo en [`PLAN-AERONAVES.md`](../PLAN-AERONAVES.md).

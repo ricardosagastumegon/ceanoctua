@@ -655,6 +655,104 @@ export type Database = {
         Relationships: [];
       };
 
+      // ====================================================
+      // Aeronaves · Control de combustible
+      // `total` de la linea lo calcula la base (galones x precio) y el del
+      // registro lo mantiene un trigger sumando sus lineas: ninguno de los
+      // dos se escribe desde el cliente.
+      // ====================================================
+      avn_combustible_registros: {
+        Row: {
+          id: string;
+          aeronave_id: string;
+          serial: string | null;
+          fecha: string;
+          vale: string | null;
+          factura: string | null;
+          fer_ap: string | null;
+          entidad_id: string | null;
+          entidad: string | null;
+          entidad_nit: string | null;
+          proveedor_id: string | null;
+          proveedor: string | null;
+          proveedor_nit: string | null;
+          moneda: string;
+          total: number;
+          archivo_path: string | null;
+          archivo_nombre: string | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          aeronave_id: string;
+          fecha: string;
+          vale?: string | null;
+          factura?: string | null;
+          fer_ap?: string | null;
+          entidad_id?: string | null;
+          entidad?: string | null;
+          entidad_nit?: string | null;
+          proveedor_id?: string | null;
+          proveedor?: string | null;
+          proveedor_nit?: string | null;
+          moneda?: string;
+          archivo_path?: string | null;
+          archivo_nombre?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          fecha?: string;
+          vale?: string | null;
+          factura?: string | null;
+          fer_ap?: string | null;
+          entidad_id?: string | null;
+          entidad?: string | null;
+          entidad_nit?: string | null;
+          proveedor_id?: string | null;
+          proveedor?: string | null;
+          proveedor_nit?: string | null;
+          moneda?: string;
+          archivo_path?: string | null;
+          archivo_nombre?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      avn_combustible_lineas: {
+        Row: {
+          id: string;
+          registro_id: string;
+          producto: string;
+          galones: number;
+          precio_unitario: number;
+          total: number;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          registro_id: string;
+          producto: string;
+          galones?: number;
+          precio_unitario?: number;
+          orden?: number;
+        };
+        Update: {
+          producto?: string;
+          galones?: number;
+          precio_unitario?: number;
+          orden?: number;
+        };
+        Relationships: [];
+      };
+
       avn_tipos_certificado: {
         Row: {
           id: string;
@@ -2658,7 +2756,7 @@ export type Database = {
       pagos_notificaciones: {
         Row: {
           id: string;
-          origen_tipo: 'liquidacion' | 'consumo_tc';
+          origen_tipo: 'liquidacion' | 'consumo_tc' | 'combustible';
           origen_id: string;
           monto: number | null;
           moneda: string | null;
@@ -2670,7 +2768,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          origen_tipo: 'liquidacion' | 'consumo_tc';
+          origen_tipo: 'liquidacion' | 'consumo_tc' | 'combustible';
           origen_id: string;
           monto?: number | null;
           moneda?: string | null;

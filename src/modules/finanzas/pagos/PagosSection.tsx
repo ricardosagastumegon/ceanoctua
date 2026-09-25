@@ -292,16 +292,19 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
         <NotificacionesPanel
           onCreateFromNotif={(notif) => {
-            // Pre-rellena los campos del nuevo pago con los datos del origen.
-            setFromNotif(notif.id);
-            setEditing({
-              id: '',
-              monto: notif.monto ?? 0,
-              moneda: (notif.moneda as 'GTQ' | 'USD' | 'EUR' | 'GBP') ?? 'GTQ',
-              concepto: notif.resumen ?? null,
-              origen_notificacion_id: notif.id,
-              fecha: new Date().toISOString().slice(0, 10),
-            } as unknown as Pago);
+            void prellenarDesdeNotificacion(notif).then((extra) => {
+              // Pre-rellena los campos del nuevo pago con los datos del origen.
+              setFromNotif(notif.id);
+              setEditing({
+                id: '',
+                monto: notif.monto ?? 0,
+                moneda: (notif.moneda as 'GTQ' | 'USD' | 'EUR' | 'GBP') ?? 'GTQ',
+                concepto: notif.resumen ?? null,
+                origen_notificacion_id: notif.id,
+                fecha: new Date().toISOString().slice(0, 10),
+                ...extra,
+              } as unknown as Pago);
+            });
           }}
         />
       <div className="space-y-3">
@@ -523,4 +526,39 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
       />
     </section>
   );
+}
+
+/**
+ * Los datos que se pueden sacar del documento que origino la notificacion.
+ *
+ * Una notificacion solo carga monto, moneda y un resumen. Para que la
+ * solicitud salga ya con el proveedor y su NIT hay que ir al documento de
+ * origen, que es donde estan. Se leen en el momento y no se copian a la
+ * notificacion para no duplicar el dato en dos lugares.
+ *
+ * Si el origen no se puede leer, se sigue sin el: la solicitud se llena a
+ * mano, que es lo que pasaba antes. Nunca vale la pena bloquear la creacion
+ * de un pago por un prellenado.
+ */
+async function prellenarDesdeNotificacion(
+  notif: { origen_tipo: string; origen_id: string },
+): Promise<Record<string, unknown>> {
+  if (notif.origen_tipo !== 'combustible') return {};
+  try {
+    const { data, error } = await supabase
+      .from('avn_combustible_registros')
+      .select('proveedor_id, proveedor, proveedor_nit, entidad_id, entidad')
+      .eq('id', notif.origen_id)
+      .maybeSingle();
+    if (error || !data) return {};
+    return {
+      proveedor_id: data.proveedor_id,
+      proveedor: data.proveedor,
+      nit: data.proveedor_nit,
+      entidad_id: data.entidad_id,
+      entidad: data.entidad,
+    };
+  } catch {
+    return {};
+  }
 }

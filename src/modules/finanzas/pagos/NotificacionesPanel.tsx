@@ -131,7 +131,7 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
 
 // Helper que insertan F-2/F-4 al despachar al panel.
 export async function pushPagoNotificacion(input: {
-  origen_tipo: 'liquidacion' | 'consumo_tc';
+  origen_tipo: 'liquidacion' | 'consumo_tc' | 'combustible';
   origen_id: string;
   monto: number | null;
   moneda: string | null;

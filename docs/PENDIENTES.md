@@ -56,6 +56,14 @@ Cerrado el 2026-09-24 en la Fase 25. Botón **Liquidación por período** en la 
 rango de fechas, todos los viajes, agrupado por tarjeta. Usa `coalesce(fecha_cargo, fecha
 del servicio)`. Los servicios sin ninguna fecha se listan aparte en vez de desaparecer.
 
+### DT-14 · «Monto total de compra» sale vacío en la solicitud de pago
+
+- **Origen:** prueba del flujo de combustible, 2026-09-24. El circuito completo funciona hasta generar la SP; solo ese campo del PDF oficial no se llena.
+- **Dónde:** `SolicitudPagoPrintable.tsx` lo toma de `pago.cotizacion`, que existe en el formulario pero **no se prellena desde ninguna notificación** — ni las de combustible ni las de caja chica o tarjetas. Hoy hay que escribirlo a mano en la SP.
+- **A decidir antes de arreglarlo:** si «monto total de compra» debe igualar el monto del pago cuando no hay una cotización mayor de por medio, o si de verdad es un dato aparte que siempre se captura. No es obvio y define si se prellena solo o se marca como obligatorio en el formulario.
+- **Impacto:** cosmético en el PDF, pero es un documento oficial que se firma.
+- **Estado:** pendiente. Es del módulo de **Finanzas**, no de Aeronaves — el usuario lo dejó explícitamente para después.
+
 ### DT-12 · `att_reuniones.cita` y `.asunto` deprecadas
 
 - **Origen:** migración `20260923000010`
@@ -174,4 +182,4 @@ Lo que sigue: DT-10 de arriba (DT-11 cerrado el 2026-09-24). Ver [`docs/BITACORA
 
 ---
 
-**Última actualización:** 2026-09-24 · cierre de DT-11. Actualizar cada vez que se cierre un item o se agregue uno nuevo.
+**Última actualización:** 2026-09-24 · alta de DT-14. Actualizar cada vez que se cierre un item o se agregue uno nuevo.

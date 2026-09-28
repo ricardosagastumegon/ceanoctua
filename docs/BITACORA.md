@@ -6,6 +6,32 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 29 · 2026-09-28 · Cada cargo adicional con su tarjeta y su fecha
+
+**El problema, reportado por el usuario:** al agregar un monto extra a un servicio —asientos, maletas— solo había un campo para el monto. Ningún lugar para decir con qué se pagó ni cuándo, así que el extra se sumaba al `monto` del servicio y al liquidar se le cargaba entero a la tarjeta del servicio. *«El monto por TC está incorrecto porque todo se cargó a la TC con la que se pagó el boleto inicial.»*
+
+Con datos reales: el ticket EWR-GUA eran 2 × (603.50 + 103.50) = 1414.00, y los 207.00 de asientos y maleta aparecían en la Amex del boleto aunque se hubieran pagado otro día y con otra tarjeta.
+
+**Cambios de schema:** migración `20260928000001_cargos_extra.sql`.
+- `att_cargos` · una sola tabla para los once servicios, con descripción, monto, reintegro, **`pagado_con_id`** y **`fecha_cargo`** propios. `viaje_id` va denormalizado para que la liquidación lea todos los cargos del viaje en una consulta, sin pasar por las once tablas de servicio.
+- `pax_id` opcional: en el ticket permite decir de qué pasajero es el cargo, y la hoja conserva el desglose.
+- **Rescate de lo capturado:** los 6 extras de pasajero (345.40) se convirtieron en cargos conservando la tarjeta y la fecha del boleto —la única información que había— y con una nota que pide verificarlos. `att_tickets.monto` se redujo a la base y `att_ticket_pax.extras` quedó en cero y marcada como deprecada, para que nada lo sume dos veces. Verificado: los totales no se movieron (1414.00, 1358.86, 606.96).
+
+**Cambios de UI:**
+- `CargosEditor` compartido: un renglón por cargo con descripción, monto, **tarjeta** y **fecha de pago**. En el ticket además deja amarrar el cargo a un pasajero.
+- El total del ticket pasó a mostrarse como **boleto + cargos**.
+- Las **dos liquidaciones** —por viaje y por período— listan cada cargo como renglón propio, sangrado bajo su servicio con «↳ cargo», y el consumo por tarjeta reparte correctamente.
+
+**Comentarios:**
+- **A partir de aquí `monto` del servicio es lo que se le cargó a SU tarjeta**, no el total del servicio. El total que ve el usuario es base + cargos. Era la única forma de que un servicio pueda aportar a varias tarjetas.
+- Una sola tabla en vez de dos columnas por cada tabla de servicio y el mismo formulario repetido nueve veces. Ya había tres formas distintas de guardar extras —`extras` numérico por pasajero, `extras`+`monto_extras` en cinco servicios, y `extras` jsonb en rentas—; esto las unifica.
+- `guardarCargos` actualiza y borra en suave en vez de rehacer la lista, porque un cargo es dinero con historial en `audit_log` y rehacerlo perdería el rastro.
+- Falta montar el editor en los otros nueve servicios (DT-15). No hay dinero mal atribuido hoy porque ninguno tiene extras capturados; se verificó contra la base.
+
+**Commits clave:** ver `git log` de 2026-09-28.
+
+---
+
 ## Fase 28 · 2026-09-24 · Aeronaves · Control de combustible
 
 **Objetivo:** el registro de vales y facturas de combustible del OBI, y el puente hacia la solicitud de pago. Hoy el usuario lo hace uno a uno en papel y luego lo digitaliza.

@@ -17,6 +17,8 @@ import { COMUNES, MAPEO, fch, soloFecha, txt } from './liquidacion';
 export type RenglonPeriodo = {
   servicio: ServiceKey;
   nombre: string;
+  /** Un cargo adicional del servicio, con su propia tarjeta y su propia fecha. */
+  esCargo?: boolean;
   /** Cuándo ocurre el servicio. */
   fecha: string | null;
   /** Cuándo se cobró la tarjeta, si se capturó. */
@@ -113,7 +115,7 @@ export function useLiquidacionPeriodo(desde: string, hasta: string, enabled = tr
       // diez cadenas escritas a mano, cada una una forma de equivocarse en
       // silencio en un reporte de dinero. Con el volumen de esta operación no
       // vale la pena. Si crece, esto se vuelve una función en la base.
-      const [resultados, viajes, tarjetas] = await Promise.all([
+      const [resultados, viajes, tarjetas, cargos] = await Promise.all([
         Promise.all(
           claves.map(async (clave) => {
             const m = MAPEO[clave];
@@ -127,10 +129,15 @@ export function useLiquidacionPeriodo(desde: string, hasta: string, enabled = tr
         ),
         supabase.from('att_viajes').select('id, titulo, trip_no').is('deleted_at', null),
         supabase.from('tarjetas_credito').select('id, tc_id, red, banco, titular'),
+        supabase
+          .from('att_cargos')
+          .select('viaje_id, servicio_tipo, descripcion, monto, reintegro, moneda, pagado_con, pagado_con_id, fecha_cargo')
+          .is('deleted_at', null),
       ]);
 
       if (viajes.error) throw viajes.error;
       if (tarjetas.error) throw tarjetas.error;
+      if (cargos.error) throw cargos.error;
 
       const porViaje = new Map((viajes.data ?? []).map((v) => [v.id, v]));
       const nombreTarjeta = new Map(
@@ -188,6 +195,37 @@ export function useLiquidacionPeriodo(desde: string, hasta: string, enabled = tr
             pagadoConId: fch(r.pagado_con_id),
           });
         }
+      }
+
+      // Los cargos adicionales entran como renglones propios: se pagaron
+      // aparte del servicio, muchas veces con otra tarjeta y otro dia, y es
+      // asi como aparecen en el estado de cuenta.
+      for (const c of cargos.data ?? []) {
+        const cargo = Number(c.monto) || 0;
+        const reintegro = Number(c.reintegro) || 0;
+        if (cargo === 0 && reintegro === 0) continue;
+        const v = porViaje.get(fch(c.viaje_id) ?? '');
+        const f = soloFecha(c.fecha_cargo);
+        todos.push({
+          servicio: (c.servicio_tipo as ServiceKey) ?? 'tickets',
+          nombre: c.descripcion,
+          esCargo: true,
+          fecha: f,
+          fechaCargo: f,
+          fechaEfectiva: f,
+          viajeId: fch(c.viaje_id) ?? '',
+          viajeTitulo: v?.titulo ?? 'Viaje borrado',
+          viajeNo: v?.trip_no ?? null,
+          cargo,
+          reintegro,
+          neto: netoServicio(cargo, reintegro),
+          moneda: txt(c.moneda) || 'USD',
+          estadoPago: null,
+          canceladoEn: null,
+          pagadoCon: fch(c.pagado_con),
+          pagadoConCorto: cortoHistorico(fch(c.pagado_con), fch(c.pagado_con_id)),
+          pagadoConId: fch(c.pagado_con_id),
+        });
       }
 
       const dentro = todos.filter(

@@ -173,9 +173,17 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
                         className="border-b"
                         style={{ borderColor: GRIS, opacity: cancelado && r.neto === 0 ? 0.55 : 1 }}
                       >
-                        {/* Sin icono: es un documento financiero, va limpio. */}
-                        <td className="px-2 py-1.5 text-dark-2">{meta.label}</td>
-                        <td className="px-2 py-1.5 text-dark">
+                        {/* Sin icono: es un documento financiero, va limpio.
+                            Un cargo adicional se sangra bajo su servicio: se
+                            pagó aparte, muchas veces con otra tarjeta. */}
+                        <td className="px-2 py-1.5 text-dark-2">
+                          {r.esCargo ? (
+                            <span className="pl-3 text-dark-3">↳ cargo</span>
+                          ) : (
+                            meta.label
+                          )}
+                        </td>
+                        <td className={`px-2 py-1.5 text-dark${r.esCargo ? ' pl-5' : ''}`}>
                           {r.nombre}
                           {cancelado && (
                             <span className="ml-1 rounded bg-rust-l px-1 text-[9px] font-extrabold uppercase text-rust">

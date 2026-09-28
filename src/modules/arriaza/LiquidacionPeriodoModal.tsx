@@ -388,7 +388,11 @@ function TablaRenglones({
                 )}
               </td>
               <td className="whitespace-nowrap px-2 py-1.5 text-dark-2">
-                {SERVICE_META[r.servicio].label}
+                {r.esCargo ? (
+                  <span className="text-dark-3">↳ cargo</span>
+                ) : (
+                  SERVICE_META[r.servicio].label
+                )}
               </td>
               <td className="px-2 py-1.5 text-dark">
                 {r.nombre}

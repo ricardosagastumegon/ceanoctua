@@ -95,10 +95,17 @@ export type TicketCompleto = {
 
 const ORDEN = { ascending: true, nullsFirst: true } as const;
 
-/** Suma de (tarifa + extras) de cada pasajero. No se multiplica por el número
- *  de pasajeros: cada uno ya trae su propia tarifa. */
+/**
+ * Suma de las tarifas de los pasajeros. No se multiplica por el número de
+ * pasajeros: cada uno ya trae la suya.
+ *
+ * Los cargos adicionales --asientos, maletas, cambios-- ya NO van aquí: cada
+ * uno se paga con su propia tarjeta y en su propia fecha, así que viven en
+ * `att_cargos`. Esto es lo que se le cargó a la tarjeta del boleto, y el
+ * total que ve el usuario es esto más los cargos.
+ */
 export function totalTicket(pax: PaxInput[]): number {
-  return pax.reduce((s, p) => s + num(p.tarifa) + num(p.extras), 0);
+  return pax.reduce((s, p) => s + num(p.tarifa), 0);
 }
 
 function num(v: string): number {

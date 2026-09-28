@@ -14,6 +14,13 @@ import { netoServicio, type TablaServicio } from '../shared/cancelacion';
 export type RenglonLiquidacion = {
   servicio: ServiceKey;
   nombre: string;
+  /**
+   * Un cargo adicional --asientos, maletas, un cambio de fecha-- es un cobro
+   * aparte del servicio que lo origino, con su propia tarjeta y su propia
+   * fecha. Se lista como renglon propio porque eso es lo que aparece en el
+   * estado de cuenta.
+   */
+  esCargo?: boolean;
   /** 'YYYY-MM-DD' de cuándo ocurre el servicio. */
   fecha: string | null;
   /** Cuándo se cobró la tarjeta, si se capturó. */
@@ -219,6 +226,15 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
         }),
       );
 
+      // Los cargos adicionales del viaje. Van en una sola consulta gracias a
+      // que `att_cargos` lleva el viaje denormalizado.
+      const cargos = await supabase
+        .from('att_cargos')
+        .select('servicio_tipo, descripcion, monto, reintegro, moneda, pagado_con, pagado_con_id, fecha_cargo')
+        .eq('viaje_id', id)
+        .is('deleted_at', null);
+      if (cargos.error) throw cargos.error;
+
       // Las tarjetas, para poner nombre a cada `pagado_con_id`.
       const tarjetas = await supabase
         .from('tarjetas_credito').select('id, tc_id, red, banco, titular');
@@ -266,6 +282,27 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
             pagadoConId: fch(r.pagado_con_id),
           });
         }
+      }
+
+      for (const c of cargos.data ?? []) {
+        const cargo = Number(c.monto) || 0;
+        const reintegro = Number(c.reintegro) || 0;
+        renglones.push({
+          servicio: (c.servicio_tipo as ServiceKey) ?? 'tickets',
+          nombre: c.descripcion,
+          esCargo: true,
+          fecha: soloFecha(c.fecha_cargo),
+          fechaCargo: soloFecha(c.fecha_cargo),
+          cargo,
+          reintegro,
+          neto: netoServicio(cargo, reintegro),
+          moneda: txt(c.moneda) || 'USD',
+          estadoPago: null,
+          canceladoEn: null,
+          pagadoCon: fch(c.pagado_con),
+          pagadoConCorto: cortoHistorico(fch(c.pagado_con), fch(c.pagado_con_id)),
+          pagadoConId: fch(c.pagado_con_id),
+        });
       }
 
       // Lo más temprano primero; lo que no tiene fecha, al final.

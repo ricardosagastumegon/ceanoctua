@@ -1092,6 +1092,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      // ====================================================
+      // T&T · Cargos adicionales de un servicio
+      // Un extra deja de ser un numero dentro del servicio: es un cobro con
+      // su propia tarjeta y su propia fecha. `viaje_id` va denormalizado
+      // para que la liquidacion lea todos los del viaje de un golpe.
+      // ====================================================
+      att_cargos: {
+        Row: {
+          id: string;
+          viaje_id: string;
+          servicio_tipo: string;
+          servicio_id: string;
+          pax_id: string | null;
+          descripcion: string;
+          monto: number;
+          reintegro: number;
+          moneda: string;
+          pagado_con: string | null;
+          pagado_con_id: string | null;
+          fecha_cargo: string | null;
+          notas: string | null;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          viaje_id: string;
+          servicio_tipo: string;
+          servicio_id: string;
+          pax_id?: string | null;
+          descripcion: string;
+          monto?: number;
+          reintegro?: number;
+          moneda?: string;
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha_cargo?: string | null;
+          notas?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          pax_id?: string | null;
+          descripcion?: string;
+          monto?: number;
+          reintegro?: number;
+          moneda?: string;
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha_cargo?: string | null;
+          notas?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       att_tickets: {
         Row: AuditCols & {
           id: string;

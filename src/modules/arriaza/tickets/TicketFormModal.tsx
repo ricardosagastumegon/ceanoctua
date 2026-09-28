@@ -24,6 +24,10 @@ import {
   type SegmentoInput,
 } from './full-api';
 import { useSaveTicketCompleto, useTicketCompleto } from './full-hooks';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { cargoAInput, guardarCargos, sumaCargos, type CargoInput } from '../cargos/api';
+import { useCargosServicio } from '../cargos/hooks';
+import { useTarjetas } from '@/modules/admin/hooks';
 import type { Database } from '@/types/database';
 
 type Currency = Database['public']['Enums']['currency'];
@@ -93,6 +97,9 @@ const paxVacio = (): PaxInput => ({
  */
 export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
   const cargado = useTicketCompleto(open ? ticketId : undefined);
+  const cargosGuardados = useCargosServicio('tickets', ticketId, open);
+  const tarjetas = useTarjetas();
+  const [cargos, setCargos] = useState<CargoInput[]>([]);
   const save = useSaveTicketCompleto(viajeId);
   const toast = useToast();
 
@@ -146,10 +153,16 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
     setFechaCargo(t?.fecha_cargo ?? '');
     setMoneda((t?.moneda as Currency) ?? 'USD');
     setPnrDraft('');
+    setCargos((cargosGuardados.data ?? []).map(cargoAInput));
     setError(null);
-  }, [open, cargado.data]);
+  }, [open, cargado.data, cargosGuardados.data]);
 
-  const total = useMemo(() => totalTicket(pax), [pax]);
+  // El total que se ve es la base del boleto mas los cargos adicionales.
+  // Se guardan por separado porque casi nunca se pagan con la misma
+  // tarjeta ni el mismo dia.
+  const base = useMemo(() => totalTicket(pax), [pax]);
+  const totalCargos = useMemo(() => sumaCargos(cargos), [cargos]);
+  const total = base + totalCargos;
   const ida = segmentos.filter((s) => s.direccion !== 'retorno');
   const retorno = segmentos.filter((s) => s.direccion === 'retorno');
 
@@ -211,7 +224,16 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
     };
 
     try {
-      await save.mutateAsync({ ticketId, cabecera, pnrs, segmentos, pax });
+      const id = await save.mutateAsync({ ticketId, cabecera, pnrs, segmentos, pax });
+      // Los cargos se guardan despues porque un ticket nuevo no tiene id
+      // hasta que la base se lo da.
+      await guardarCargos(
+        viajeId, 'tickets', id, moneda, cargos,
+        (tarjetas.data ?? []).map((t) => ({
+          id: t.id,
+          etiqueta: [t.tc_id, t.red, t.banco, t.titular].filter(Boolean).join(' · '),
+        })),
+      );
       toast.success(ticketId ? 'Ticket actualizado.' : 'Ticket aéreo agregado.');
       onClose();
     } catch (err) {
@@ -387,6 +409,15 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
             </button>
           </Bloque>
 
+          <CargosEditor
+            cargos={cargos}
+            onChange={setCargos}
+            moneda={moneda}
+            pasajeros={pax
+              .map((p, i) => ({ id: p.id ?? '', nombre: p.nombre || `Pasajero ${i + 1}` }))
+              .filter((p) => p.id)}
+          />
+
           {/* ── Total y pago ────────────────────────────────────────── */}
           <div
             className="flex items-center justify-between rounded-lg px-5 py-4 text-white"
@@ -397,7 +428,9 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
                 ✈ Total general del ticket
               </div>
               <div className="text-[11px] text-white/60">
-                {pax.length} pasajero{pax.length === 1 ? '' : 's'} — suma de tarifa + extras
+                {pax.length} pasajero{pax.length === 1 ? '' : 's'} · boleto {moneda}{' '}
+                {base.toFixed(2)}
+                {totalCargos > 0 ? ` + cargos ${moneda} ${totalCargos.toFixed(2)}` : ''}
               </div>
             </div>
             <div className="font-heading text-2xl font-extrabold">
@@ -769,7 +802,7 @@ function PaxCard({
   onChange: (patch: Partial<PaxInput>) => void;
   onRemove?: () => void;
 }) {
-  const totalPax = (Number(pax.tarifa) || 0) + (Number(pax.extras) || 0);
+  const totalPax = Number(pax.tarifa) || 0;
   return (
     <div className="space-y-3 rounded-md border border-sand bg-sand-l/40 p-3">
       <div className="flex items-center justify-between">
@@ -854,8 +887,8 @@ function PaxCard({
           <TextInput label="Comentario" value={pax.tarifa_nota} onChange={(e) => onChange({ tarifa_nota: e.target.value })} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <TextInput label={`Extras (${moneda})`} type="number" min="0" step="0.01" value={pax.extras} onChange={(e) => onChange({ extras: e.target.value })} />
-          <TextInput label="Comentario" value={pax.extras_nota} onChange={(e) => onChange({ extras_nota: e.target.value })} />
+          {/* Los extras del pasajero se mudaron a «Cargos adicionales», abajo:
+              ahi cada uno lleva con que se pago y cuando. */}
         </div>
       </div>
 

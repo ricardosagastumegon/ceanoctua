@@ -64,6 +64,16 @@ del servicio)`. Los servicios sin ninguna fecha se listan aparte en vez de desap
 - **Impacto:** cosmético en el PDF, pero es un documento oficial que se firma.
 - **Estado:** pendiente. Es del módulo de **Finanzas**, no de Aeronaves — el usuario lo dejó explícitamente para después.
 
+### DT-15 · Llevar los cargos adicionales a los servicios que faltan
+
+- **Origen:** corrección del 2026-09-28. Los cargos adicionales con su propia tarjeta y fecha (`att_cargos`) ya funcionan de punta a punta en **Ticket Aéreo** y en las dos liquidaciones.
+- **Qué falta:** montar el `CargosEditor` en los otros servicios, que siguen con el campo viejo de un solo extra sin forma de pago: hotel, restaurante, renta, tour, aeronave, acuático, ferry, terrestre y actividades.
+- **Por qué no urge:** hoy **ninguno de ellos tiene extras capturados** —se verificó contra la base, están todos en cero—, así que no hay dinero mal atribuido en la liquidación. El riesgo aparece el día que alguien capture un extra en uno de esos servicios.
+- **Cómo se hace:** es mecánico y el patrón ya está. En cada formulario: cargar con `useCargosServicio(tipo, id)`, montar `<CargosEditor>`, y llamar `guardarCargos(...)` después de guardar el servicio. El total mostrado pasa a ser base + cargos.
+- **Aparte:** el hotel tiene `att_hotel_services` (lista de servicios extra, vacía) que queda redundante con `att_cargos`. Decidir si se migra o se deja morir.
+- **Estimado:** 2-3 h para los nueve.
+- **Estado:** Pendiente.
+
 ### DT-12 · `att_reuniones.cita` y `.asunto` deprecadas
 
 - **Origen:** migración `20260923000010`
@@ -182,4 +192,4 @@ Lo que sigue: DT-10 de arriba (DT-11 cerrado el 2026-09-24). Ver [`docs/BITACORA
 
 ---
 
-**Última actualización:** 2026-09-24 · alta de DT-14. Actualizar cada vez que se cierre un item o se agregue uno nuevo.
+**Última actualización:** 2026-09-28 · alta de DT-15. Actualizar cada vez que se cierre un item o se agregue uno nuevo.

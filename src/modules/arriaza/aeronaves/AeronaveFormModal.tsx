@@ -5,6 +5,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { useCargosDeServicio } from '../cargos/useCargosDeServicio';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
@@ -66,8 +68,7 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
   const [hora, setHora] = useState('');
   const [inclusiones, setInclusiones] = useState('');
   const [tarifa, setTarifa] = useState('');
-  const [extras, setExtras] = useState('');
-  const [montoExtras, setMontoExtras] = useState('');
+  const cargosSrv = useCargosDeServicio('aeronave', aeronaveId, viajeId, open);
   const [cancelacion, setCancelacion] = useState('');
   const [estatusNota, setEstatusNota] = useState('');
   const [estadoPago, setEstadoPago] = useState('HOLD');
@@ -77,7 +78,10 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
-  const total = useMemo(() => totalTarifaExtras(tarifa, montoExtras), [tarifa, montoExtras]);
+  // La base es lo que se le cargo a la tarjeta del servicio; los cargos
+  // adicionales se pagan aparte y suman encima.
+  const base = useMemo(() => totalTarifaExtras(tarifa, 0), [tarifa]);
+  const total = base + cargosSrv.total;
 
   useEffect(() => {
     if (!open) return;
@@ -99,8 +103,6 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
     setHora(a?.hora ?? '');
     setInclusiones(a?.inclusiones ?? '');
     setTarifa(a?.tarifa != null ? String(a.tarifa) : '');
-    setExtras(a?.extras ?? '');
-    setMontoExtras(a?.monto_extras != null ? String(a.monto_extras) : '');
     setCancelacion(a?.cancelacion ?? '');
     setEstatusNota(a?.estatus_pago ?? '');
     setEstadoPago(a?.estado_pago ?? 'HOLD');
@@ -135,11 +137,9 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
       hora: hora || null,
       inclusiones: inclusiones.trim() || null,
       tarifa: tarifa.trim() === '' ? null : Number(tarifa),
-      extras: extras.trim() || null,
-      monto_extras: montoExtras.trim() === '' ? null : Number(montoExtras),
       // El total se guarda para que el viaje pueda sumar sus servicios sin
       // recalcular la fórmula de cada uno.
-      monto: total,
+      monto: base,
       cancelacion: cancelacion.trim() || null,
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
@@ -150,7 +150,10 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
     };
 
     try {
-      await save.mutateAsync({ id: aeronaveId, cabecera });
+      const idGuardado = await save.mutateAsync({ id: aeronaveId, cabecera });
+      // Despues del servicio: uno nuevo no tiene id hasta que la
+      // base se lo da.
+      await cargosSrv.guardar(idGuardado, moneda);
       toast.success(aeronaveId ? 'Renta de aeronave actualizada.' : 'Renta de aeronave agregada.');
       onClose();
     } catch (err) {
@@ -214,11 +217,20 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
                 {(['USD', 'GTQ', 'EUR', 'GBP'] as const).map((m) => <option key={m} value={m}>{m}</option>)}
               </Select>
               <TextInput label={`Tarifa de servicio (${moneda})`} type="number" min="0" step="0.01" value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
-              <TextInput label={`Monto extras (${moneda})`} type="number" min="0" step="0.01" value={montoExtras} onChange={(e) => setMontoExtras(e.target.value)} />
             </div>
-            <TextInput label="Extras" value={extras} onChange={(e) => setExtras(e.target.value)} placeholder="Descripción de extras" />
             <TextArea label="Cancelación" value={cancelacion} onChange={(e) => setCancelacion(e.target.value)} rows={2} placeholder="Política de cancelación" />
           </Bloque>
+
+          <CargosEditor
+
+            cargos={cargosSrv.cargos}
+
+            onChange={cargosSrv.setCargos}
+
+            moneda={moneda}
+
+          />
+
 
           <div
             className="flex items-center justify-between rounded-lg px-5 py-4 text-white"
@@ -228,7 +240,7 @@ export function AeronaveFormModal({ open, viajeId, aeronaveId, onClose }: Props)
               <div className="text-[11px] font-extrabold uppercase tracking-[.18em] text-white/70">
                 {META.icon} Total de la reserva
               </div>
-              <div className="text-[11px] text-white/60">Tarifa de servicio + monto de extras</div>
+              <div className="text-[11px] text-white/60">Tarifa del servicio + cargos adicionales</div>
             </div>
             <div className="font-heading text-2xl font-extrabold">
               {moneda} {total.toFixed(2)}

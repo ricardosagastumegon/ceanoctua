@@ -5,6 +5,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { useCargosDeServicio } from '../cargos/useCargosDeServicio';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
@@ -83,7 +85,11 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
-  const total = useMemo(() => totalTour(tarifa, personas), [tarifa, personas]);
+  const cargosSrv = useCargosDeServicio('tours', tourId, viajeId, open);
+  // La base es lo que se le cargó a la tarjeta del tour; los cargos
+  // adicionales se pagan aparte y suman encima.
+  const base = useMemo(() => totalTour(tarifa, personas), [tarifa, personas]);
+  const total = base + cargosSrv.total;
 
   useEffect(() => {
     if (!open) return;
@@ -151,7 +157,7 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
       tarifa: tarifa.trim() === '' ? null : Number(tarifa),
       // El total se guarda para que el viaje pueda sumar sus servicios sin
       // recalcular la fórmula de cada uno.
-      monto: total,
+      monto: base,
       cancelacion: cancelacion.trim() || null,
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
@@ -162,7 +168,8 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
     };
 
     try {
-      await save.mutateAsync({ id: tourId, cabecera });
+      const idGuardado = await save.mutateAsync({ id: tourId, cabecera });
+      await cargosSrv.guardar(idGuardado, moneda);
       toast.success(tourId ? 'Tour actualizado.' : 'Tour agregado.');
       onClose();
     } catch (err) {
@@ -250,6 +257,12 @@ export function TourFormModal({ open, viajeId, tourId, onClose }: Props) {
             </div>
             <TextArea label="Cancelación" value={cancelacion} onChange={(e) => setCancelacion(e.target.value)} rows={2} placeholder="Política de cancelación" />
           </Bloque>
+
+          <CargosEditor
+            cargos={cargosSrv.cargos}
+            onChange={cargosSrv.setCargos}
+            moneda={moneda}
+          />
 
           <div
             className="flex items-center justify-between rounded-lg px-5 py-4 text-white"

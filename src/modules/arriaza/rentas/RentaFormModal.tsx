@@ -5,6 +5,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { useCargosDeServicio } from '../cargos/useCargosDeServicio';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { attRentasByViajeKey, attRentasKey } from './hooks';
@@ -99,10 +101,14 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
     () => diasEntre(recepcionFecha, entregaFecha),
     [recepcionFecha, entregaFecha],
   );
-  const total = useMemo(
+  const cargosSrv = useCargosDeServicio('renta', rentaId, viajeId, open);
+  // La base es lo que se le cargó a la tarjeta de la renta; los cargos
+  // adicionales se pagan aparte y suman encima.
+  const base = useMemo(
     () => totalRenta(tarifa, dias, deposito, extras),
     [tarifa, dias, deposito, extras],
   );
+  const total = base + cargosSrv.total;
 
   useEffect(() => {
     if (!open) return;
@@ -188,7 +194,7 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
         .map((e) => ({ label: e.label.trim(), amount: Number(e.amount) || 0 })),
       // El total se guarda para que el viaje pueda sumar sus servicios
       // sin recalcular la fórmula de cada uno.
-      monto: total,
+      monto: base,
       cancelacion: cancelacion.trim() || null,
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
@@ -199,7 +205,8 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
     };
 
     try {
-      await save.mutateAsync({ id: rentaId, cabecera });
+      const idGuardado = await save.mutateAsync({ id: rentaId, cabecera });
+      await cargosSrv.guardar(idGuardado, moneda);
       toast.success(rentaId ? 'Renta actualizada.' : 'Renta agregada.');
       onClose();
     } catch (err) {
@@ -349,6 +356,12 @@ export function RentaFormModal({ open, viajeId, rentaId, onClose }: Props) {
               </button>
             </div>
           </Bloque>
+
+          <CargosEditor
+            cargos={cargosSrv.cargos}
+            onChange={cargosSrv.setCargos}
+            moneda={moneda}
+          />
 
           <div
             className="flex items-center justify-between rounded-lg px-5 py-4 text-white"

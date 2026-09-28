@@ -5,6 +5,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { useCargosDeServicio } from '../cargos/useCargosDeServicio';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
@@ -75,8 +77,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
   const [entradas, setEntradas] = useState<EntradaInput[]>([]);
   const [inclusiones, setInclusiones] = useState('');
   const [tarifa, setTarifa] = useState('');
-  const [extras, setExtras] = useState('');
-  const [montoExtras, setMontoExtras] = useState('');
+  const cargosSrv = useCargosDeServicio('actividades', actividadId, viajeId, open);
   const [cancelacion, setCancelacion] = useState('');
   const [estatusNota, setEstatusNota] = useState('');
   const [estadoPago, setEstadoPago] = useState('HOLD');
@@ -90,10 +91,13 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
     () => entradas.filter((x) => x.nombre.trim() || x.ticket.trim() || x.lugar.trim() || x.tarifa.trim()),
     [entradas],
   );
-  const total = useMemo(
-    () => totalActividad(participantesConNombre, tarifa, personas, montoExtras),
-    [participantesConNombre, tarifa, personas, montoExtras],
+  // La base es lo que se le cargó a la tarjeta de la actividad; los cargos
+  // adicionales se pagan aparte y suman encima.
+  const base = useMemo(
+    () => totalActividad(participantesConNombre, tarifa, personas, 0),
+    [participantesConNombre, tarifa, personas],
   );
+  const total = base + cargosSrv.total;
 
   useEffect(() => {
     if (!open) return;
@@ -123,8 +127,6 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
     );
     setInclusiones(a?.inclusiones ?? '');
     setTarifa(a?.tarifa != null ? String(a.tarifa) : '');
-    setExtras(a?.extras ?? '');
-    setMontoExtras(a?.monto_extras != null ? String(a.monto_extras) : '');
     setCancelacion(a?.cancelacion ?? '');
     setEstatusNota(a?.estatus_pago ?? '');
     setEstadoPago(a?.estado_pago ?? 'HOLD');
@@ -164,9 +166,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
       tiene_tickets: tieneTickets,
       inclusiones: inclusiones.trim() || null,
       tarifa: tarifa.trim() === '' ? null : Number(tarifa),
-      extras: extras.trim() || null,
-      monto_extras: montoExtras.trim() === '' ? null : Number(montoExtras),
-      monto: total,
+      monto: base,
       cancelacion: cancelacion.trim() || null,
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
@@ -177,11 +177,14 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
     };
 
     try {
-      await save.mutateAsync({
+      const idGuardado = await save.mutateAsync({
         id: actividadId,
         cabecera,
         entradas: participantesConNombre,
       });
+      // Después de la actividad: una nueva no tiene id hasta que la base se
+      // lo da.
+      await cargosSrv.guardar(idGuardado, moneda);
       toast.success(actividadId ? 'Actividad actualizada.' : 'Actividad agregada.');
       onClose();
     } catch (err) {
@@ -337,11 +340,15 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
                 {(['USD', 'GTQ', 'EUR', 'GBP'] as const).map((m) => <option key={m} value={m}>{m}</option>)}
               </Select>
               <TextInput label={`Tarifa por persona (${moneda})`} type="number" min="0" step="0.01" value={tarifa} onChange={(e) => setTarifa(e.target.value)} hint="La paga cada participante. En la lista se puede cambiar a quien pague distinto." />
-              <TextInput label={`Monto extras (${moneda})`} type="number" min="0" step="0.01" value={montoExtras} onChange={(e) => setMontoExtras(e.target.value)} />
             </div>
-            <TextInput label="Extras" value={extras} onChange={(e) => setExtras(e.target.value)} placeholder="Descripción de extras" />
             <TextArea label="Cancelación" value={cancelacion} onChange={(e) => setCancelacion(e.target.value)} rows={2} placeholder="Política de cancelación" />
           </Bloque>
+
+          <CargosEditor
+            cargos={cargosSrv.cargos}
+            onChange={cargosSrv.setCargos}
+            moneda={moneda}
+          />
 
           <div
             className="flex items-center justify-between rounded-lg px-5 py-4 text-white"
@@ -355,7 +362,7 @@ export function ActividadFormModal({ open, viajeId, actividadId, onClose }: Prop
                 {participantesConNombre.length > 0
                   ? `${participantesConNombre.length} persona${participantesConNombre.length === 1 ? '' : 's'}`
                   : `${moneda} ${Number(tarifa || 0).toFixed(2)} × ${personas || 0} persona${personas === '1' ? '' : 's'}`}
-                {Number(montoExtras) > 0 ? ' + extras' : ''}
+                {cargosSrv.total > 0 ? ` + cargos ${moneda} ${cargosSrv.total.toFixed(2)}` : ''}
               </div>
             </div>
             <div className="font-heading text-2xl font-extrabold">

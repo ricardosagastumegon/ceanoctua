@@ -26,7 +26,9 @@ Con datos reales: el ticket EWR-GUA eran 2 × (603.50 + 103.50) = 1414.00, y los
 - **A partir de aquí `monto` del servicio es lo que se le cargó a SU tarjeta**, no el total del servicio. El total que ve el usuario es base + cargos. Era la única forma de que un servicio pueda aportar a varias tarjetas.
 - Una sola tabla en vez de dos columnas por cada tabla de servicio y el mismo formulario repetido nueve veces. Ya había tres formas distintas de guardar extras —`extras` numérico por pasajero, `extras`+`monto_extras` en cinco servicios, y `extras` jsonb en rentas—; esto las unifica.
 - `guardarCargos` actualiza y borra en suave en vez de rehacer la lista, porque un cargo es dinero con historial en `audit_log` y rehacerlo perdería el rastro.
-- Falta montar el editor en los otros nueve servicios (DT-15). No hay dinero mal atribuido hoy porque ninguno tiene extras capturados; se verificó contra la base.
+- **Los diez servicios con costo** quedaron con el editor el mismo día: ticket, hotel, restaurante, renta, tour, aeronave, acuático, ferry, terrestre y actividades. El cableado vive en el hook `useCargosDeServicio` —cargar, mantener, sumar y guardar después del servicio— así que cada formulario son tres líneas y no once oportunidades de equivocarse.
+- Los campos viejos salieron de las pantallas: el «Monto extras» sin forma de pago de cinco servicios, los «Servicios extras» del hotel y los extras por pasajero del ticket. `monto` del servicio quedó en la base en todos.
+- `att_hotel_services` queda sin uso, redundante con `att_cargos`.
 
 **Commits clave:** ver `git log` de 2026-09-28.
 

@@ -5,6 +5,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { useCargosDeServicio } from '../cargos/useCargosDeServicio';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
@@ -96,10 +98,14 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
     () => totalReserva(tarifaPax, numComensales),
     [tarifaPax, numComensales],
   );
-  const total = useMemo(
+  const cargosSrv = useCargosDeServicio('restaurantes', restauranteId, viajeId, open);
+  // La base es lo que se le cargó a la tarjeta del restaurante; los cargos
+  // adicionales se pagan aparte y suman encima.
+  const base = useMemo(
     () => totalConServicios(tarifaPax, numComensales, servicios),
     [tarifaPax, numComensales, servicios],
   );
+  const total = base + cargosSrv.total;
   const diasCancel = cancelGratis ? diasParaCancelar(cancelFecha) : null;
 
   useEffect(() => {
@@ -176,7 +182,7 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
       covers: comensales.length || null,
       moneda,
       tarifa_pax: tarifaPax.trim() === '' ? null : Number(tarifaPax),
-      monto: total,
+      monto: base,
       estatus_pago: estatusNota.trim() || null,
       estado_pago: estadoPago,
       pagado_con: pagadoCon.trim() || null,
@@ -185,7 +191,8 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
     };
 
     try {
-      await save.mutateAsync({ id: restauranteId, cabecera, comensales, servicios, pagos });
+      const idGuardado = await save.mutateAsync({ id: restauranteId, cabecera, comensales, servicios, pagos });
+      await cargosSrv.guardar(idGuardado, moneda);
       toast.success(restauranteId ? 'Restaurante actualizado.' : 'Restaurante agregado.');
       onClose();
     } catch (err) {
@@ -410,6 +417,12 @@ export function RestauranteFormModal({ open, viajeId, restauranteId, onClose }: 
               </button>
             </div>
           </Bloque>
+
+          <CargosEditor
+            cargos={cargosSrv.cargos}
+            onChange={cargosSrv.setCargos}
+            moneda={moneda}
+          />
 
           <div
             className="flex items-center justify-between rounded-lg px-5 py-4 text-white"

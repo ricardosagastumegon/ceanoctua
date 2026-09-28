@@ -5,6 +5,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
+import { CargosEditor } from '../cargos/CargosEditor';
+import { useCargosDeServicio } from '../cargos/useCargosDeServicio';
 import { describeError } from '@/modules/admin/hooks';
 import { PaymentMethodSelect } from '../shared/PaymentMethodSelect';
 import { SERVICE_META } from '../constants/serviceMeta';
@@ -16,7 +18,6 @@ import {
   totalEstadia,
   totalHabitacion,
   type AttHotelInsert,
-  type ExtraInput,
   type HabitacionInput,
 } from './full-api';
 import type { Database } from '@/types/database';
@@ -76,7 +77,6 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
   const [checkin, setCheckin] = useState('');
   const [checkout, setCheckout] = useState('');
   const [habitaciones, setHabitaciones] = useState<HabitacionInput[]>([]);
-  const [extras, setExtras] = useState<ExtraInput[]>([]);
   const [earlyCheckin, setEarlyCheckin] = useState('');
   const [cancelacion, setCancelacion] = useState('');
   const [estatusNota, setEstatusNota] = useState('');
@@ -88,9 +88,12 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
   const [moneda, setMoneda] = useState<Currency>('USD');
   const [error, setError] = useState<string | null>(null);
 
+  const cargosSrv = useCargosDeServicio('hotel', hotelId, viajeId, open);
   const noches = useMemo(() => nochesEntre(checkin, checkout), [checkin, checkout]);
-  const total = useMemo(() => totalEstadia(habitaciones, extras), [habitaciones, extras]);
-  const extrasConNombre = extras.filter((e) => e.nombre.trim()).length;
+  // La base es lo que se le cargó a la tarjeta del hotel; los cargos
+  // adicionales se pagan aparte y suman encima.
+  const base = useMemo(() => totalEstadia(habitaciones, []), [habitaciones]);
+  const total = base + cargosSrv.total;
 
   useEffect(() => {
     if (!open) return;
@@ -105,7 +108,6 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
     setCheckin(h?.checkin ?? '');
     setCheckout(h?.checkout ?? '');
     setHabitaciones(d?.habitaciones.length ? d.habitaciones : [habitacionVacia(0)]);
-    setExtras(d?.extras ?? []);
     setEarlyCheckin(h?.early_checkin ?? '');
     setCancelacion(h?.cancel_policy ?? '');
     setEstatusNota(h?.estatus_pago ?? '');
@@ -153,7 +155,9 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
     };
 
     try {
-      await save.mutateAsync({ hotelId, cabecera, habitaciones, extras });
+      const idGuardado = await save.mutateAsync({ hotelId, cabecera, habitaciones, extras: [] });
+      // Después del hotel: uno nuevo no tiene id hasta que la base se lo da.
+      await cargosSrv.guardar(idGuardado, moneda);
       toast.success(hotelId ? 'Hotel actualizado.' : 'Hotel agregado.');
       onClose();
     } catch (err) {
@@ -259,46 +263,13 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
               <TextInput label="Early check-in" value={earlyCheckin} onChange={(e) => setEarlyCheckin(e.target.value)} placeholder="Ej: Sí, desde 12:00" />
               <TextInput label="Cancelación" value={cancelacion} onChange={(e) => setCancelacion(e.target.value)} placeholder="Política de cancelación" />
             </div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">Servicios extras</div>
-              {extras.map((x, i) => (
-                <div key={i} className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[3fr_1fr_auto]">
-                  <input
-                    type="text"
-                    value={x.nombre}
-                    onChange={(e) => setExtras((l) => l.map((y, k) => (k === i ? { ...y, nombre: e.target.value } : y)))}
-                    placeholder="Ej: Spa, traslado, cena…"
-                    className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={x.monto}
-                    onChange={(e) => setExtras((l) => l.map((y, k) => (k === i ? { ...y, monto: e.target.value } : y)))}
-                    placeholder={`${moneda} 0.00`}
-                    className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setExtras((l) => l.filter((_, k) => k !== i))}
-                    className="rounded-md border border-sand px-2 py-2 text-xs text-dark-3 hover:bg-rust-l hover:text-rust"
-                    aria-label="Quitar servicio"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setExtras((l) => [...l, { nombre: '', monto: '' }])}
-                className="mt-2 rounded-md border px-3 py-1.5 text-xs font-semibold hover:opacity-80"
-                style={{ borderColor: META.solid, color: META.dark }}
-              >
-                ＋ Agregar servicio
-              </button>
-            </div>
           </Bloque>
+
+          <CargosEditor
+            cargos={cargosSrv.cargos}
+            onChange={cargosSrv.setCargos}
+            moneda={moneda}
+          />
 
           {/* ── Total de estadía ────────────────────────────────────── */}
           <div
@@ -311,7 +282,9 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
               </div>
               <div className="text-[11px] text-white/60">
                 {habitaciones.length} habitación{habitaciones.length === 1 ? '' : 'es'}
-                {extrasConNombre > 0 ? ` · ${extrasConNombre} extra${extrasConNombre === 1 ? '' : 's'}` : ''}
+                {cargosSrv.cargos.length > 0
+                  ? ` · ${cargosSrv.cargos.length} cargo${cargosSrv.cargos.length === 1 ? '' : 's'}`
+                  : ''}
               </div>
             </div>
             <div className="font-heading text-2xl font-extrabold">

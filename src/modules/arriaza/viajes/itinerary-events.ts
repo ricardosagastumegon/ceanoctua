@@ -42,6 +42,7 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
       const [
         tickets, hoteles, restaurantes, rentas, tours,
         aeronaves, acuaticos, ferries, terrestres, actividades, reuniones,
+        cruceros,
       ] = await Promise.all([
         supabase.from('att_tickets').select('id, aerolinea, titulo').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_hoteles').select('nombre, ciudad, checkin, checkout').eq('viaje_id', id).is('deleted_at', null),
@@ -54,9 +55,10 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         supabase.from('att_terrestres').select('prestador, origen, destino, fecha, etd, ret_fecha, ret_etd').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_actividades').select('evento, ciudad, fecha, inicio, fin').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_reuniones').select('titulo, cita, tipo, lugar, ciudad, fecha, hora, hora_fin').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_cruceros').select('titulo, ship, package_type, salida_fecha, salida_hora, retorno_fecha, retorno_hora').eq('viaje_id', id).is('deleted_at', null),
       ]);
 
-      for (const r of [tickets, hoteles, restaurantes, rentas, tours, aeronaves, acuaticos, ferries, terrestres, actividades, reuniones]) {
+      for (const r of [tickets, hoteles, restaurantes, rentas, tours, aeronaves, acuaticos, ferries, terrestres, actividades, reuniones, cruceros]) {
         if (r.error) throw r.error;
       }
 
@@ -130,6 +132,20 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
           servicio: 'reunion', fecha: r.fecha, hora: hhmm(r.hora),
           titulo: r.titulo || r.cita || 'Reunión',
           detalle: limpio(r.tipo, r.lugar ?? r.ciudad, r.hora_fin ? `hasta ${hhmm(r.hora_fin)}` : null),
+        });
+      }
+
+      for (const c of cruceros.data ?? []) {
+        const barco = c.ship || c.titulo || 'Crucero';
+        if (c.salida_fecha) ev.push({
+          servicio: 'crucero', fecha: c.salida_fecha, hora: hhmm(c.salida_hora),
+          titulo: `Embarque · ${barco}`,
+          detalle: limpio(c.titulo !== barco ? c.titulo : null, c.package_type),
+        });
+        if (c.retorno_fecha) ev.push({
+          servicio: 'crucero', fecha: c.retorno_fecha, hora: hhmm(c.retorno_hora),
+          titulo: `Desembarque · ${barco}`,
+          detalle: limpio(c.titulo !== barco ? c.titulo : null, c.package_type),
         });
       }
 

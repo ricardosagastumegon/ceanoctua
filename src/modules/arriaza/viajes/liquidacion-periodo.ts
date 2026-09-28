@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import type { ServiceKey } from '../constants/serviceMeta';
 import { netoServicio } from '../shared/cancelacion';
 import { COMUNES, MAPEO, fch, soloFecha, txt } from './liquidacion';
+import { movimientosCruceros } from './liquidacion-cruceros';
 
 export type RenglonPeriodo = {
   servicio: ServiceKey;
@@ -115,7 +116,7 @@ export function useLiquidacionPeriodo(desde: string, hasta: string, enabled = tr
       // diez cadenas escritas a mano, cada una una forma de equivocarse en
       // silencio en un reporte de dinero. Con el volumen de esta operación no
       // vale la pena. Si crece, esto se vuelve una función en la base.
-      const [resultados, viajes, tarjetas, cargos] = await Promise.all([
+      const [resultados, viajes, tarjetas, cargos, cruceros] = await Promise.all([
         Promise.all(
           claves.map(async (clave) => {
             const m = MAPEO[clave];
@@ -133,6 +134,9 @@ export function useLiquidacionPeriodo(desde: string, hasta: string, enabled = tr
           .from('att_cargos')
           .select('viaje_id, servicio_tipo, descripcion, monto, reintegro, moneda, pagado_con, pagado_con_id, fecha_cargo')
           .is('deleted_at', null),
+        // El crucero va aparte: su dinero llega a las tarjetas por abonos, y
+        // cada abono cae en el mes en que se cobró.
+        movimientosCruceros(),
       ]);
 
       if (viajes.error) throw viajes.error;
@@ -225,6 +229,33 @@ export function useLiquidacionPeriodo(desde: string, hasta: string, enabled = tr
           pagadoCon: fch(c.pagado_con),
           pagadoConCorto: cortoHistorico(fch(c.pagado_con), fch(c.pagado_con_id)),
           pagadoConId: fch(c.pagado_con_id),
+        });
+      }
+
+      for (const c of cruceros) {
+        if (c.cargo === 0 && c.reintegro === 0) continue;
+        const v = porViaje.get(c.viajeId);
+        const fecha = soloFecha(c.fecha);
+        const fechaCargo = soloFecha(c.fechaCargo);
+        todos.push({
+          servicio: 'crucero',
+          nombre: c.nombre,
+          esCargo: c.esCargo,
+          fecha,
+          fechaCargo,
+          fechaEfectiva: fechaCargo ?? fecha,
+          viajeId: c.viajeId,
+          viajeTitulo: v?.titulo ?? 'Viaje borrado',
+          viajeNo: v?.trip_no ?? null,
+          cargo: c.cargo,
+          reintegro: c.reintegro,
+          neto: netoServicio(c.cargo, c.reintegro),
+          moneda: c.moneda || 'USD',
+          estadoPago: c.estadoPago,
+          canceladoEn: c.canceladoEn,
+          pagadoCon: c.pagadoCon,
+          pagadoConCorto: cortoHistorico(c.pagadoCon, c.pagadoConId),
+          pagadoConId: c.pagadoConId,
         });
       }
 

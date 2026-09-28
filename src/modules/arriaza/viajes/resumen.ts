@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { ServiceKey } from '../constants/serviceMeta';
 import { netoServicio } from '../shared/cancelacion';
-import { MAPEO, fch, soloFecha, txt } from './liquidacion';
+import { MAPEO, dia, fch, soloFecha, txt } from './liquidacion';
 
 export type ServicioResumen = {
   servicio: ServiceKey;
@@ -42,7 +42,7 @@ export function useResumenViaje(viajeId: string | undefined, enabled = true) {
       const id = viajeId as string;
       const claves = Object.keys(MAPEO) as ServiceKey[];
 
-      const [conCosto, reuniones] = await Promise.all([
+      const [conCosto, reuniones, cruceros] = await Promise.all([
         Promise.all(
           claves.map(async (clave) => {
             const m = MAPEO[clave];
@@ -63,9 +63,18 @@ export function useResumenViaje(viajeId: string | undefined, enabled = true) {
           .select('titulo, tipo, lugar, ciudad, fecha, hora')
           .eq('viaje_id', id)
           .is('deleted_at', null),
+        // El crucero va aparte del mapeo, igual que en las liquidaciones. Acá
+        // sí entra completo en una sola línea: este resumen cuenta el viaje,
+        // no reparte el dinero entre tarjetas.
+        supabase
+          .from('att_cruceros')
+          .select('titulo, ship, package_type, noches, salida_fecha, retorno_fecha, monto, moneda, estado_pago, reintegro, cancelado_en')
+          .eq('viaje_id', id)
+          .is('deleted_at', null),
       ]);
 
       if (reuniones.error) throw reuniones.error;
+      if (cruceros.error) throw cruceros.error;
 
       const servicios: ServicioResumen[] = [];
 
@@ -83,6 +92,24 @@ export function useResumenViaje(viajeId: string | undefined, enabled = true) {
             cancelado: !!fch(r.cancelado_en),
           });
         }
+      }
+
+      for (const c of cruceros.data ?? []) {
+        servicios.push({
+          servicio: 'crucero',
+          nombre: c.titulo || c.ship || 'Crucero',
+          sub: [
+            c.titulo ? c.ship : null,
+            c.package_type,
+            [dia(c.salida_fecha), dia(c.retorno_fecha)].filter(Boolean).join(' — '),
+            c.noches ? `${c.noches} noches` : null,
+          ].filter((p) => !!p).join(' · '),
+          fecha: soloFecha(c.salida_fecha),
+          monto: netoServicio(Number(c.monto) || 0, Number(c.reintegro) || 0),
+          moneda: txt(c.moneda) || 'USD',
+          estadoPago: fch(c.estado_pago),
+          cancelado: !!fch(c.cancelado_en),
+        });
       }
 
       for (const r of reuniones.data ?? []) {

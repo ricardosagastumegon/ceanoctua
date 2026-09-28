@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { ServiceKey } from '../constants/serviceMeta';
 import { netoServicio, type TablaServicio } from '../shared/cancelacion';
+import { movimientosCruceros } from './liquidacion-cruceros';
 
 export type RenglonLiquidacion = {
   servicio: ServiceKey;
@@ -110,7 +111,7 @@ export const soloFecha = (v: unknown): string | null => {
 const unir = (partes: (string | null)[], sep = ' · '): string =>
   partes.filter((p) => !!p && p.trim()).join(sep);
 
-const dia = (v: unknown): string => {
+export const dia = (v: unknown): string => {
   const f = soloFecha(v);
   if (!f) return '';
   const [a, m, d] = f.split('-');
@@ -228,6 +229,10 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
 
       // Los cargos adicionales del viaje. Van en una sola consulta gracias a
       // que `att_cargos` lleva el viaje denormalizado.
+      // El crucero no cabe en `MAPEO`: su dinero llega a las tarjetas por
+      // varios abonos en vez de uno. Se descompone aparte.
+      const cruceros = await movimientosCruceros(id);
+
       const cargos = await supabase
         .from('att_cargos')
         .select('servicio_tipo, descripcion, monto, reintegro, moneda, pagado_con, pagado_con_id, fecha_cargo')
@@ -302,6 +307,25 @@ export function useLiquidacion(viajeId: string | undefined, enabled = true) {
           pagadoCon: fch(c.pagado_con),
           pagadoConCorto: cortoHistorico(fch(c.pagado_con), fch(c.pagado_con_id)),
           pagadoConId: fch(c.pagado_con_id),
+        });
+      }
+
+      for (const c of cruceros) {
+        renglones.push({
+          servicio: 'crucero',
+          nombre: c.nombre,
+          esCargo: c.esCargo,
+          fecha: soloFecha(c.fecha),
+          fechaCargo: soloFecha(c.fechaCargo),
+          cargo: c.cargo,
+          reintegro: c.reintegro,
+          neto: netoServicio(c.cargo, c.reintegro),
+          moneda: c.moneda || 'USD',
+          estadoPago: c.estadoPago,
+          canceladoEn: c.canceladoEn,
+          pagadoCon: c.pagadoCon,
+          pagadoConCorto: cortoHistorico(c.pagadoCon, c.pagadoConId),
+          pagadoConId: c.pagadoConId,
         });
       }
 

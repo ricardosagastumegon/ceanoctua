@@ -47,6 +47,9 @@ reference/*
 !reference/finanzas-mockups/**
 # HTML standalone de Control de Caja Chica (mockup + herramienta usable)
 !reference/CajaChica_control.html
+# Mock de la flota de aeronaves, para que lo revisen piloto, admin y duenos
+!reference/aeronaves-mockup/
+!reference/aeronaves-mockup/**
 
 # Playwright
 playwright-report/

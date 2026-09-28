@@ -1,0 +1,1378 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <style>
+    /* Reset equivalente al que la plataforma de artifacts inyecta, para que
+       el archivo suelto se vea igual que publicado. */
+    :root{ color-scheme: light dark; }
+    html,body{ margin:0; }
+    img{ max-width:100%; }
+    [hidden]{ display:none !important; }
+  </style>
+<title>Bitácora de Flota</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+
+<style>
+  :root{
+    --navy:#1e2a4a; --navy-d:#131c31; --steel:#33456e; --steel-l:#e4e8f1;
+    --a:#9e7a1a; --a-l:#f6f1dc; --a-d:#7a5e14;
+    --b:#bf4609; --b-l:#f9e8e0; --b-d:#8f3406;
+    --teal:#077e84; --teal-l:#dcefef; --teal-d:#055a5f;
+    --rojo:#b4231b; --rojo-l:#fbe4e2; --ambar:#a8720c; --ambar-l:#fbf0d9;
+    --verde:#2a6e24; --verde-l:#e4f0e2;
+    --paper:#faf8f3; --card:#ffffff; --sand:#ece7da; --sand-2:#f4f1e8;
+    --ink:#2a2016; --ink-2:#5e5548; --ink-3:#938a7c;
+    --shadow:0 1px 2px rgba(42,32,22,.06), 0 4px 14px rgba(42,32,22,.05);
+    --r:10px;
+    --acento:#1e2a4a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --navy:#8fa6d8; --navy-d:#0b1020; --steel:#7c8fc4; --steel-l:#1b2440;
+      --a:#d9b45a; --a-l:#2a2314; --a-d:#efd08a;
+      --b:#e8845a; --b-l:#2e1a12; --b-d:#f3a888;
+      --teal:#4fc3c9; --teal-l:#10302f; --teal-d:#8fe0e4;
+      --rojo:#f06a60; --rojo-l:#331512; --ambar:#e0b053; --ambar-l:#2d2413;
+      --verde:#7ec46f; --verde-l:#172a15;
+      --paper:#12161f; --card:#1a1f2b; --sand:#2b3140; --sand-2:#222836;
+      --ink:#e9e4da; --ink-2:#b3aca0; --ink-3:#8b8479;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+      --acento:#8fa6d8;
+    }
+  }
+  :root[data-theme="dark"]{
+    --navy:#8fa6d8; --navy-d:#0b1020; --steel:#7c8fc4; --steel-l:#1b2440;
+    --a:#d9b45a; --a-l:#2a2314; --a-d:#efd08a;
+    --b:#e8845a; --b-l:#2e1a12; --b-d:#f3a888;
+    --teal:#4fc3c9; --teal-l:#10302f; --teal-d:#8fe0e4;
+    --rojo:#f06a60; --rojo-l:#331512; --ambar:#e0b053; --ambar-l:#2d2413;
+    --verde:#7ec46f; --verde-l:#172a15;
+    --paper:#12161f; --card:#1a1f2b; --sand:#2b3140; --sand-2:#222836;
+    --ink:#e9e4da; --ink-2:#b3aca0; --ink-3:#8b8479;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+    --acento:#8fa6d8;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:Nunito,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:14px; line-height:1.45}
+  h1,h2,h3,.disp{font-family:Montserrat,-apple-system,"Segoe UI",sans-serif}
+  .num{font-variant-numeric:tabular-nums}
+  .wrap{max-width:1500px; margin:0 auto; padding-inline:16px; padding-block:0 48px}
+
+  .top{position:sticky; top:env(safe-area-inset-top,0px); z-index:30; color:#fff; box-shadow:var(--shadow)}
+  .top-in{max-width:1500px; margin:0 auto; padding-inline:16px; padding-block:12px 15px}
+  .eyebrow{display:inline-block; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+    color:rgba(255,255,255,.62); border:1px solid rgba(255,255,255,.28); border-radius:99px; padding:3px 9px}
+
+  /* selector de aeronave */
+  .flota{display:flex; gap:6px; margin-top:11px; flex-wrap:wrap}
+  .flota button{border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); color:#fff;
+    border-radius:10px; padding:8px 14px; cursor:pointer; text-align:left; min-width:170px}
+  .flota button .m{display:block; font-family:Montserrat; font-weight:800; font-size:17px; letter-spacing:-.01em}
+  .flota button .s{display:block; font-size:10.5px; color:rgba(255,255,255,.65); margin-top:1px}
+  .flota button[aria-selected="true"]{background:#fff; border-color:#fff}
+  .flota button[aria-selected="true"] .m{color:var(--acento)}
+  .flota button[aria-selected="true"] .s{color:#5e5548}
+  .flota button:focus-visible{outline:2px solid #fff; outline-offset:2px}
+
+  .idrow{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin-top:12px}
+  .mat{font-size:26px; font-weight:800; letter-spacing:-.02em; line-height:1}
+  .sub{font-size:12.5px; color:rgba(255,255,255,.72)}
+  .mes{margin-left:auto; display:flex; align-items:center; gap:8px}
+  .mes label{font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.6)}
+  select,input,textarea{font:inherit; color:inherit}
+  .mes select{background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.26); color:#fff;
+    border-radius:8px; padding:6px 10px; font-weight:700}
+  .mes select option{color:#111; background:#fff}
+
+  .kpis{display:grid; gap:10px; margin-top:13px; grid-template-columns:repeat(4,1fr)}
+  .kpis.money{grid-template-columns:repeat(3,1fr)}
+  .tot{background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.18); border-radius:var(--r); padding:9px 12px}
+  .tot .k{font-size:10px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:rgba(255,255,255,.65)}
+  .tot .v{font-family:Montserrat; font-size:20px; font-weight:800; margin-top:2px}
+  .tot .m{font-size:11px; color:rgba(255,255,255,.6)}
+  .tot.dA{border-left:4px solid #d9b45a}
+  .tot.dB{border-left:4px solid #e8845a}
+  .tot.gr{border-left:4px solid rgba(255,255,255,.55)}
+  .tot.al{border-left:4px solid #f06a60}
+  .tot.ok{border-left:4px solid #7ec46f}
+
+  .vistas{display:flex; gap:6px; flex-wrap:wrap; margin-top:16px; background:var(--card);
+    border:1px solid var(--sand); border-radius:12px; padding:5px; box-shadow:var(--shadow)}
+  .vistas button{flex:1 1 150px; border:none; background:none; color:var(--ink-2); border-radius:8px;
+    padding:10px 12px; cursor:pointer; text-align:left; position:relative}
+  .vistas button .t{display:block; font-family:Montserrat; font-weight:800; font-size:13px}
+  .vistas button .d{display:block; font-size:11px; color:var(--ink-3); margin-top:1px}
+  .vistas button[aria-selected="true"]{background:var(--acento); color:#fff}
+  .vistas button[aria-selected="true"] .d{color:rgba(255,255,255,.72)}
+  :root[data-theme="dark"] .vistas button[aria-selected="true"],
+  :root:not([data-theme="light"]) .vistas button[aria-selected="true"]{color:#0b1020}
+  :root[data-theme="dark"] .vistas button[aria-selected="true"] .d,
+  :root:not([data-theme="light"]) .vistas button[aria-selected="true"] .d{color:rgba(11,16,32,.72)}
+  .vistas button:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+  .badge{position:absolute; top:6px; right:8px; background:var(--rojo); color:#fff; font-size:10px;
+    font-weight:800; border-radius:99px; padding:1px 7px; font-variant-numeric:tabular-nums}
+  :root[data-theme="dark"] .badge, :root:not([data-theme="light"]) .badge{color:#2a0d0a}
+
+  .subtabs{display:flex; gap:4px; flex-wrap:wrap; margin-top:14px}
+  .subtabs button{border:1px solid var(--sand); background:var(--card); color:var(--ink-2); border-radius:8px;
+    padding:7px 13px; font-weight:800; font-size:11.5px; cursor:pointer}
+  .subtabs button[aria-selected="true"]{background:var(--steel); color:#fff; border-color:var(--steel)}
+  :root[data-theme="dark"] .subtabs button[aria-selected="true"],
+  :root:not([data-theme="light"]) .subtabs button[aria-selected="true"]{color:#0b1020}
+
+  .card{background:var(--card); border:1px solid var(--sand); border-radius:14px; box-shadow:var(--shadow); margin-top:14px}
+  .card-h{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px 16px 0}
+  .card-h h2{margin:0; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--acento)}
+  .card-h p{margin:2px 0 0; font-size:12px; color:var(--ink-3); flex-basis:100%}
+  .card-b{padding:12px 16px 16px}
+  .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+
+  table{border-collapse:collapse; width:100%; font-size:12.5px}
+  thead th{text-align:left; font-weight:800; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--ink-2); padding:7px 8px; background:var(--sand-2); white-space:nowrap; border-bottom:1px solid var(--sand)}
+  thead tr.grp th{text-align:center; color:#fff; letter-spacing:.14em; border-bottom:none; font-size:10px; background:var(--steel)}
+  :root[data-theme="dark"] thead tr.grp th, :root:not([data-theme="light"]) thead tr.grp th{color:#0b1020}
+  thead tr.grp th.g0{background:var(--acento)}
+  thead tr.grp th.g1{background:var(--teal)}
+  thead tr.grp th.g2{background:var(--a)}
+  tbody td{padding:3px 6px; border-bottom:1px solid var(--sand); white-space:nowrap}
+  tbody tr:hover{background:var(--sand-2)}
+  tfoot td{padding:8px; font-weight:800; border-top:2px solid var(--acento); background:var(--sand-2)}
+  .r{text-align:right} .c{text-align:center}
+
+  .cell{width:100%; border:1px solid transparent; background:transparent; color:var(--ink);
+    border-radius:5px; padding:5px 6px; font-size:12.5px; font-variant-numeric:tabular-nums}
+  .cell:hover{border-color:var(--sand)}
+  .cell:focus{outline:none; border-color:var(--teal); background:var(--card); box-shadow:0 0 0 2px var(--teal-l)}
+  .cell.n{text-align:right}
+  .cell.sm{min-width:58px} .cell.md{min-width:90px}
+  select.cell{appearance:auto; min-width:104px; cursor:pointer}
+  .calc{font-weight:800; padding-right:8px}
+  .calc.tot{color:var(--teal-d)}
+  .pa{color:var(--a-d); font-weight:800}
+  .pb{color:var(--b-d); font-weight:800}
+  .cero{color:var(--ink-3); font-weight:400}
+
+  .chip{display:inline-block; font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    padding:2px 7px; border-radius:99px; white-space:nowrap}
+  .chip.A{background:var(--a-l); color:var(--a-d)}
+  .chip.B{background:var(--b-l); color:var(--b-d)}
+  .chip.AMBOS{background:var(--steel-l); color:var(--steel)}
+  .chip.dueno{background:var(--teal-l); color:var(--teal-d)}
+  .chip.piloto{background:var(--steel-l); color:var(--steel)}
+  .chip.instruccion{background:var(--a-l); color:var(--a-d)}
+  .chip.personal{background:var(--b-l); color:var(--b-d)}
+  .chip.trabajo{background:var(--verde-l); color:var(--verde)}
+
+  .est{display:inline-block; font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+    padding:3px 9px; border-radius:6px; white-space:nowrap}
+  .est.v{background:var(--rojo-l); color:var(--rojo)}
+  .est.p{background:var(--ambar-l); color:var(--ambar)}
+  .est.g{background:var(--verde-l); color:var(--verde)}
+  tr.fv{background:var(--rojo-l)} tr.fv:hover{background:var(--rojo-l)}
+  tr.fp{background:var(--ambar-l)} tr.fp:hover{background:var(--ambar-l)}
+
+  .btn{border:1px solid var(--sand); background:var(--card); color:var(--ink-2); border-radius:8px;
+    padding:7px 12px; font-weight:800; font-size:11.5px; cursor:pointer}
+  .btn:hover{border-color:var(--teal); color:var(--teal-d)}
+  .btn.p{background:var(--acento); border-color:var(--acento); color:#fff}
+  :root[data-theme="dark"] .btn.p, :root:not([data-theme="light"]) .btn.p{color:#0b1020}
+  .btn.sm{padding:5px 10px; font-size:11px}
+  .btn.x{border:none; background:none; color:var(--ink-3); padding:4px 6px; font-size:13px}
+  .btn.x:hover{color:var(--b)}
+  .btn:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+  .push{margin-left:auto}
+
+  .mis{border:1px solid var(--sand); border-radius:12px; margin-bottom:12px; overflow:hidden; background:var(--card)}
+  .mis-h{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:11px 13px; background:var(--sand-2);
+    border-bottom:1px solid var(--sand)}
+  .mis-h .no{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; font-weight:800; color:var(--acento)}
+  .mis-h .ruta{font-family:Montserrat; font-weight:800; font-size:14px}
+  .mis-h .ruta small{font-weight:600; color:var(--ink-3); font-size:11.5px}
+  .mis-b{padding:10px 13px 13px}
+  .ops{display:flex; flex-wrap:wrap; gap:16px; padding:9px 13px; background:var(--teal-l); border-top:1px solid var(--sand)}
+  .ops div{font-size:11.5px; color:var(--ink-2)}
+  .ops b{display:block; font-family:Montserrat; font-size:15px; color:var(--teal-d); font-variant-numeric:tabular-nums}
+
+  .params{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; background:var(--sand-2);
+    border:1px solid var(--sand); border-radius:var(--r); padding:10px 12px}
+  .params .f{display:flex; flex-direction:column; gap:3px}
+  .params label{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+  .params input,.params select{width:106px; border:1px solid var(--sand); background:var(--card); color:var(--ink);
+    border-radius:7px; padding:6px 8px; font-variant-numeric:tabular-nums}
+  .params input:focus,.params select:focus{outline:none; border-color:var(--teal)}
+  .hint{font-size:11.5px; color:var(--ink-3); max-width:68ch}
+
+  .pax{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px}
+  .pax .p{display:inline-flex; align-items:center; gap:6px; background:var(--steel-l); color:var(--steel);
+    border-radius:99px; padding:4px 6px 4px 11px; font-size:12px; font-weight:700}
+  .pax .p button{border:none; background:none; color:inherit; cursor:pointer; opacity:.6; font-size:12px; padding:0 3px}
+  .pax .p button:hover{opacity:1; color:var(--b)}
+  .pax input{border:1px dashed var(--sand); background:transparent; border-radius:99px; padding:4px 12px;
+    min-width:180px; font-size:12px}
+  .pax input:focus{outline:none; border-color:var(--teal); border-style:solid}
+  .paxlbl{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+
+  .rep{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .own{border:1px solid var(--sand); border-radius:14px; overflow:hidden; background:var(--card); box-shadow:var(--shadow)}
+  .own-h{padding:14px 16px; color:#fff}
+  .own.A .own-h{background:linear-gradient(135deg,#3d2f0a,#9e7a1a)}
+  .own.B .own-h{background:linear-gradient(135deg,#3d1503,#bf4609)}
+  .own.T .own-h{background:linear-gradient(135deg,#0d2b2e,#077e84)}
+  .own.C .own-h{background:linear-gradient(135deg,#3d1503,#bf4609)}
+  .own-h .k{font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; opacity:.72}
+  .own-h .n{font-family:Montserrat; font-size:19px; font-weight:800; margin-top:1px}
+  .own-h .v{font-family:Montserrat; font-size:28px; font-weight:800; margin-top:8px}
+  .own-b{padding:4px 16px 16px}
+  .line{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--sand)}
+  .line .l{font-size:12.5px; color:var(--ink-2)}
+  .line .l small{display:block; color:var(--ink-3); font-size:11px}
+  .line .v{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .line.sum{border-top:2px solid var(--ink); border-bottom:none; margin-top:4px; padding-top:10px}
+  .line.sum .l{font-weight:800; font-size:13px; color:var(--ink)}
+  .line.sum .v{font-size:19px; font-family:Montserrat}
+
+  .note{background:var(--steel-l); border-left:4px solid var(--steel); border-radius:var(--r);
+    padding:11px 13px; font-size:12.5px; color:var(--ink-2)}
+  .note b{color:var(--ink)}
+  .note.rojo{background:var(--rojo-l); border-left-color:var(--rojo)}
+  .empty{padding:20px 4px; color:var(--ink-3); font-style:italic; font-size:13px}
+  .stitle{font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--acento); margin:20px 0 8px}
+
+  .estado{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+  .est-c{border:1px solid var(--sand); border-radius:12px; padding:11px 13px; background:var(--sand-2)}
+  .est-c .k{font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3)}
+  .est-c .v{font-family:Montserrat; font-size:22px; font-weight:800; margin-top:2px; font-variant-numeric:tabular-nums}
+  .est-c .m{font-size:11px; color:var(--ink-3)}
+  .est-c.rojo{background:var(--rojo-l); border-color:rgba(180,35,27,.3)} .est-c.rojo .v{color:var(--rojo)}
+  .est-c.ambar{background:var(--ambar-l); border-color:rgba(168,114,12,.3)} .est-c.ambar .v{color:var(--ambar)}
+  .est-c.verde{background:var(--verde-l); border-color:rgba(42,110,36,.3)} .est-c.verde .v{color:var(--verde)}
+
+  @media (max-width:980px){
+    .kpis,.kpis.money{grid-template-columns:1fr 1fr}
+    .estado{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:620px){
+    .kpis,.kpis.money,.estado{grid-template-columns:1fr}
+    .rep{grid-template-columns:1fr}
+    .mat{font-size:21px}
+    .mes{margin-left:0; flex-basis:100%}
+    .flota button{flex:1 1 100%}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+  @media print{
+    .top,.vistas,.subtabs,.no-print{display:none!important}
+    .card,.own,.mis{box-shadow:none; break-inside:avoid}
+    body{background:#fff}
+  }
+</style>
+</head>
+<body>
+<div class="top" id="top">
+  <div class="top-in">
+    <span class="eyebrow">Mock para revisión · datos de ejemplo</span>
+    <div class="flota" role="tablist" id="flota"></div>
+    <div class="idrow">
+      <div>
+        <div class="mat disp" id="matri"></div>
+        <div class="sub" id="desc"></div>
+      </div>
+      <div class="mes">
+        <label for="mes">Período</label>
+        <select id="mes"></select>
+      </div>
+    </div>
+    <div class="kpis money" id="kpis"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="vistas" role="tablist">
+    <button role="tab" aria-selected="false" data-v="pil">
+      <span class="t">Bitácora · Piloto</span><span class="d">Tramos, horómetro, ciclos, combustible</span>
+    </button>
+    <button role="tab" aria-selected="true" data-v="adm">
+      <span class="t">Administración</span><span class="d">Costos y a quién se le carga</span>
+    </button>
+    <button role="tab" aria-selected="false" data-v="man">
+      <span class="t">Mantenimiento</span><span class="d">Plan, alertas e historial</span>
+      <span class="badge" id="badMan" hidden></span>
+    </button>
+    <button role="tab" aria-selected="false" data-v="due">
+      <span class="t" id="tabCierre">Cierre</span><span class="d" id="tabCierreD">Resumen del mes</span>
+    </button>
+  </div>
+
+  <!-- ══ PILOTO ══ -->
+  <section id="v-pil" hidden>
+    <div class="card">
+      <div class="card-h">
+        <h2>Bitácora de vuelo</h2>
+        <button class="btn p push no-print" id="addV">＋ Vuelo</button>
+        <p>Un vuelo puede tener varios tramos: escalas, fincas, paradas técnicas. Cada tramo lleva su horómetro,
+          sus ciclos, los galones a bordo y la carga tal como viene en la boleta: galones por ala y el precio
+          de ese lugar.</p>
+      </div>
+      <div class="card-b" id="misiones"></div>
+    </div>
+  </section>
+
+  <!-- ══ ADMINISTRACIÓN ══ -->
+  <section id="v-adm">
+    <div class="subtabs" role="tablist">
+      <button role="tab" aria-selected="true" data-s="a-vue">Vuelos y costos</button>
+      <button role="tab" aria-selected="false" data-s="a-pax">Pasajeros</button>
+      <button role="tab" aria-selected="false" data-s="a-fij">Costos fijos</button>
+      <button role="tab" aria-selected="false" data-s="a-pil">Pilotos</button>
+      <button role="tab" aria-selected="false" data-s="a-par">Tarifas</button>
+    </div>
+
+    <section id="a-vue">
+      <div class="card">
+        <div class="card-h">
+          <h2>Vuelos del período</h2>
+          <p id="pVue"></p>
+        </div>
+        <div class="card-b">
+          <div class="scroll"><table id="tblA">
+            <thead id="thA"></thead><tbody id="tbA"></tbody><tfoot id="tfA"></tfoot>
+          </table></div>
+          <p class="hint" style="margin-top:10px" id="hVue"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="a-pax" hidden>
+      <div class="card">
+        <div class="card-h">
+          <h2>Pasajeros</h2>
+          <p>Un renglón por pasajero y por vuelo, no todos en una celda: así se puede filtrar, contar y exportar.</p>
+        </div>
+        <div class="card-b"><div class="scroll"><table>
+          <thead><tr><th>Pasajero</th><th>Vuelo</th><th>Fecha</th><th>Ruta</th><th>Al mando</th><th>Piloto</th></tr></thead>
+          <tbody id="tbP"></tbody><tfoot id="tfP"></tfoot>
+        </table></div></div>
+      </div>
+    </section>
+
+    <section id="a-fij" hidden>
+      <div class="card">
+        <div class="card-h">
+          <h2>Costos fijos del mes</h2>
+          <button class="btn p push no-print" id="addF">＋ Concepto</button>
+          <p id="pFij"></p>
+        </div>
+        <div class="card-b"><div class="scroll"><table>
+          <thead id="thF"></thead><tbody id="tbF"></tbody><tfoot id="tfF"></tfoot>
+        </table></div></div>
+      </div>
+    </section>
+
+    <section id="a-pil" hidden>
+      <div class="card">
+        <div class="card-h">
+          <h2>Pilotos</h2>
+          <button class="btn p push no-print" id="addPil">＋ Piloto</button>
+          <p>Se capturan una vez y se escogen en cada vuelo. El vencimiento del médico se vigila igual que
+            un certificado de la aeronave.</p>
+        </div>
+        <div class="card-b"><div class="scroll"><table>
+          <thead><tr><th>Nombre</th><th>No. de licencia</th><th>Tipo</th><th>Médico vence</th>
+            <th class="c">Estado</th><th class="r">Vuelos</th><th class="r">Horas</th><th></th></tr></thead>
+          <tbody id="tbPil"></tbody>
+        </table></div></div>
+      </div>
+    </section>
+
+    <section id="a-par" hidden>
+      <div class="card">
+        <div class="card-b">
+          <div class="params" id="params"></div>
+          <p class="hint" style="margin-top:10px" id="hPar"></p>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ══ MANTENIMIENTO ══ -->
+  <section id="v-man" hidden>
+    <div class="card">
+      <div class="card-h"><h2>Estado de la aeronave</h2></div>
+      <div class="card-b">
+        <div class="estado" id="estado"></div>
+        <div id="avisoMan" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h2>Plan de mantenimiento</h2>
+        <button class="btn p push no-print" id="addT">＋ Tarea</button>
+        <p>Cada tarea vence por <b>lo que ocurra primero</b>: horas, ciclos o calendario. Ordenadas por urgencia.</p>
+      </div>
+      <div class="card-b">
+        <div class="scroll"><table>
+          <thead>
+            <tr class="grp">
+              <th class="g0" colspan="3">Tarea</th><th class="g1" colspan="3">Intervalo</th>
+              <th class="g2" colspan="3">Último cumplimiento</th><th colspan="4">Vencimiento</th>
+            </tr>
+            <tr>
+              <th>Tarea</th><th>Referencia</th><th class="c">Crítica</th>
+              <th class="r">Horas</th><th class="r">Ciclos</th><th class="r">Meses</th>
+              <th>Fecha</th><th class="r">Horómetro</th><th class="r">Ciclos</th>
+              <th>Próximo</th><th class="r">Restante</th><th class="c">Estado</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tbT"></tbody>
+        </table></div>
+        <p class="hint" style="margin-top:10px">
+          Se avisa en ámbar al llegar al último 10 % del intervalo, o a 30 días del vencimiento por calendario.
+          En rojo cuando ya se pasó.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h2>Historial de trabajos</h2>
+        <button class="btn p push no-print" id="addM">＋ Trabajo</button>
+        <p>Lo que de verdad se hizo, con el horómetro y los ciclos del momento.</p>
+      </div>
+      <div class="card-b"><div class="scroll"><table>
+        <thead id="thM"></thead><tbody id="tbM"></tbody><tfoot id="tfM"></tfoot>
+      </table></div></div>
+    </div>
+  </section>
+
+  <!-- ══ CIERRE ══ -->
+  <section id="v-due" hidden>
+    <div class="card">
+      <div class="card-h">
+        <h2 id="hCierre">Cierre del período</h2>
+        <button class="btn push no-print" onclick="window.print()">🖨 Imprimir</button>
+        <p id="repSub"></p>
+      </div>
+      <div class="card-b">
+        <div class="rep" id="repCards"></div>
+        <div class="note" style="margin-top:14px" id="notaRep"></div>
+
+        <h3 class="stitle">Resumen de operación</h3>
+        <div class="scroll"><table>
+          <thead><tr><th>Concepto</th><th class="r">Valor</th><th class="r">Por hora de vuelo</th></tr></thead>
+          <tbody id="tbG"></tbody>
+        </table></div>
+
+        <h3 class="stitle">Detalle de vuelos</h3>
+        <div class="scroll"><table>
+          <thead id="thR"></thead><tbody id="tbR"></tbody><tfoot id="tfR"></tfoot>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="hint" style="margin-top:22px">
+    Mock de revisión. Los números son de ejemplo y se pueden editar para probar las fórmulas; lo que cambies
+    queda guardado solo en este navegador.
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var K = "flota.mock.v5";
+
+  // ── Semilla ──────────────────────────────────────────────
+  var seed = {
+    activa:"FLY",
+    aeronaves:{
+      FLY:{
+        matricula:"TG-FLY", modelo:"Beechcraft King Air 300",
+        desc:"Bimotor turbohélice · compartida entre 2 propietarios",
+        acento:"#1e2a4a", grad:"linear-gradient(135deg,#131c31,#1e2a4a 60%,#33456e)",
+        compartida:true, nA:"Dueño 1", nB:"Dueño 2",
+        tp:75, ti:0, te:35, th:0, cb:1846,
+        pilotos:[
+          {n:"S. Iraheta", lic:"GT-ATP-4821", tipo:"ATP · BE300", med:"2027-03-14"},
+          {n:"R. Morales", lic:"GT-CPL-6390", tipo:"CPL · BE300", med:"2026-11-02"}
+        ],
+        fijos:[
+          {c:"Hangaraje La Aurora", m:1450},
+          {c:"Seguro de casco y responsabilidad", m:2180},
+          {c:"Sueldo base piloto", m:2600},
+          {c:"Bases de datos de navegación", m:185},
+          {c:"Cuota de administración", m:400}
+        ],
+        plan:[
+          {t:"Inspección Fase 1 y 2", ref:"BE300 MM Ch.5", ih:200, ic:0, im:0, uf:"2026-06-02", uh:4042.0, uc:1702, cr:true},
+          {t:"Inspección anual", ref:"DGAC · 12 meses", ih:0, ic:0, im:12, uf:"2026-02-18", uh:3908.5, uc:1631, cr:true},
+          {t:"Sección caliente motor 1", ref:"PT6A-60A HSI", ih:1800, ic:0, im:0, uf:"2024-05-10", uh:2560.0, uc:1042, cr:true},
+          {t:"Sección caliente motor 2", ref:"PT6A-60A HSI", ih:1800, ic:0, im:0, uf:"2024-05-10", uh:2560.0, uc:1042, cr:true},
+          {t:"Overhaul motor 1 (TBO)", ref:"PT6A-60A TBO", ih:3600, ic:0, im:0, uf:"2020-08-01", uh:1120.0, uc:430, cr:true},
+          {t:"Tren de aterrizaje", ref:"Por ciclos", ih:0, ic:1000, im:0, uf:"2025-01-20", uh:3402.0, uc:1380, cr:true},
+          {t:"Pitot-estática y transponder", ref:"IFR · 24 meses", ih:0, ic:0, im:24, uf:"2024-10-05", uh:2890.0, uc:1180, cr:true},
+          {t:"Batería del ELT", ref:"406 MHz", ih:0, ic:0, im:24, uf:"2025-03-11", uh:3455.0, uc:1398, cr:false},
+          {t:"Extintores de cabina", ref:"Anual", ih:0, ic:0, im:12, uf:"2025-11-30", uh:3820.0, uc:1590, cr:false},
+          {t:"Cambio de aceite", ref:"Cada 100 h", ih:100, ic:0, im:0, uf:"2026-09-08", uh:4218.6, uc:1840, cr:false}
+        ],
+        mant:[
+          {f:"2026-09-08", h:4218.6, ci:1840, t:"Aerocentro MGGT", d:"Inspección de 100 horas y cambio de aceite", ti:"Programado", c:3850, r:"50/50"},
+          {f:"2026-09-19", h:4226.3, ci:1849, t:"Aerocentro MGGT", d:"Cambio de llantas tren principal", ti:"Correctivo", c:1240, r:"50/50"}
+        ],
+        vuelos:[
+          {no:"KA-2026-041", f:"2026-09-04", s:"A", pA:100, pil:0, mando:"piloto", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Miguel A. Arriaza","Javier Arriaza","Gerente agrícola","José Ruíz"],
+           viaticos:120, otros:0, nota:"Recorrido de fincas",
+           tramos:[
+             {o:"MGGT", d:"MGRT", hs:"06:40", hl:"07:25", os:4212.4, ol:4213.2, ci:1, gi:520, gf:430, gl:0,   gr:0,   pg:0,    fbo:0,  esp:1.5, n:"Finca San Rafael"},
+             {o:"MGRT", d:"MGQZ", hs:"09:10", hl:"09:50", os:4213.2, ol:4213.9, ci:1, gi:430, gf:355, gl:0,   gr:0,   pg:0,    fbo:0,  esp:2.0, n:"Finca El Quiché"},
+             {o:"MGQZ", d:"MGGT", hs:"12:05", hl:"12:40", os:4213.9, ol:4214.5, ci:1, gi:535, gf:470, gl:90,  gr:90,  pg:6.10, fbo:0,  esp:0,   n:"Cargó antes de salir"}
+           ]},
+          {no:"KA-2026-042", f:"2026-09-09", s:"B", pA:0, pil:0, mando:"piloto", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Socio 2","Ana Pérez","Luis Castillo"], viaticos:120, otros:65, nota:"",
+           tramos:[
+             {o:"MGGT", d:"MSLP", hs:"07:15", hl:"08:05", os:4218.6, ol:4219.4, ci:1, gi:490, gf:405, gl:48, gr:47, pg:6.40, fbo:140, esp:2.0, n:""},
+             {o:"MSLP", d:"MGGT", hs:"16:30", hl:"17:20", os:4219.4, ol:4220.2, ci:1, gi:495, gf:410, gl:45, gr:45, pg:6.40, fbo:100, esp:0,   n:""}
+           ]},
+          {no:"KA-2026-043", f:"2026-09-14", s:"AMBOS", pA:60, pil:0, mando:"piloto", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Miguel A. Arriaza","Socio 2","Javier Arriaza","Ana Pérez","Roberto Díaz","Carla Méndez"],
+           viaticos:280, otros:120, nota:"Viaje a Miami con escala técnica",
+           tramos:[
+             {o:"MGGT", d:"MZBZ", hs:"06:00", hl:"07:05", os:4220.2, ol:4221.3, ci:1, gi:540, gf:425, gl:55,  gr:55,  pg:6.10, fbo:0,   esp:0.5, n:"Escala de combustible"},
+             {o:"MZBZ", d:"KMIA", hs:"07:50", hl:"10:20", os:4221.3, ol:4223.8, ci:1, gi:595, gf:335, gl:85,  gr:85,  pg:7.20, fbo:290, esp:0,   n:""},
+             {o:"KMIA", d:"MGGT", hs:"15:00", hl:"18:40", os:4223.8, ol:4227.4, ci:1, gi:675, gf:290, gl:170, gr:170, pg:7.80, fbo:310, esp:1.0, n:"Directo de regreso"}
+           ]},
+          {no:"KA-2026-044", f:"2026-09-21", s:"A", pA:100, pil:1, mando:"piloto", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Miguel A. Arriaza","Gerente de finca"], viaticos:60, otros:0, nota:"",
+           tramos:[
+             {o:"MGGT", d:"MGCB", hs:"08:00", hl:"08:35", os:4227.4, ol:4228.0, ci:1, gi:400, gf:340, gl:0,  gr:0,  pg:0,    fbo:0, esp:1.0, n:"Cobán"},
+             {o:"MGCB", d:"MGGT", hs:"11:20", hl:"11:55", os:4228.0, ol:4228.6, ci:1, gi:340, gf:280, gl:60, gr:60, pg:6.10, fbo:0, esp:0,  n:""}
+           ]}
+        ]
+      },
+
+      OBI:{
+        matricula:"TG-OBI", modelo:"Cirrus SR22T",
+        desc:"Monomotor de pistón · propia · recorridos de finca",
+        acento:"#077e84", grad:"linear-gradient(135deg,#0d2b2e,#077e84 60%,#00b4c5)",
+        compartida:false, nA:"", nB:"",
+        tp:60, ti:85, te:25, th:350, cb:642,
+        pilotos:[
+          {n:"Miguel A. Arriaza", lic:"GT-PPL-2287", tipo:"PPL · SR22 · dueño", med:"2027-06-20"},
+          {n:"D. Fuentes", lic:"GT-CFI-5512", tipo:"Instructor · SR22", med:"2027-01-09"}
+        ],
+        fijos:[
+          {c:"Hangaraje La Aurora", m:620},
+          {c:"Seguro de casco y responsabilidad", m:840},
+          {c:"Suscripción Cirrus IQ y bases de datos", m:95},
+          {c:"Cuota de administración", m:150}
+        ],
+        plan:[
+          {t:"Cambio de aceite", ref:"Cada 50 h", ih:50, ic:0, im:0, uf:"2026-08-12", uh:1218.4, uc:618, cr:false},
+          {t:"Inspección anual", ref:"DGAC · 12 meses", ih:0, ic:0, im:12, uf:"2026-01-22", uh:1150.0, uc:572, cr:true},
+          {t:"Repack del CAPS", ref:"Paracaídas · 120 meses", ih:0, ic:0, im:120, uf:"2018-04-30", uh:5.0, uc:2, cr:true},
+          {t:"Overhaul motor (TBO)", ref:"TSIO-550-K · 2000 h", ih:2000, ic:0, im:0, uf:"2018-04-30", uh:5.0, uc:2, cr:true},
+          {t:"Hélice · overhaul", ref:"Hartzell · 72 meses", ih:0, ic:0, im:72, uf:"2021-03-15", uh:498.0, uc:246, cr:true},
+          {t:"Pitot-estática y transponder", ref:"IFR · 24 meses", ih:0, ic:0, im:24, uf:"2024-09-30", uh:1012.0, uc:498, cr:true},
+          {t:"Batería del ELT", ref:"406 MHz", ih:0, ic:0, im:24, uf:"2025-02-14", uh:1076.0, uc:530, cr:false},
+          {t:"Baterías 1 y 2", ref:"Capacidad · 24 meses", ih:0, ic:0, im:24, uf:"2025-06-05", uh:1128.0, uc:556, cr:false}
+        ],
+        mant:[
+          {f:"2026-08-12", h:1218.4, ci:618, t:"Aerocentro MGGT", d:"Cambio de aceite y filtro", ti:"Programado", c:420, r:"50/50"},
+          {f:"2026-09-02", h:1224.1, ci:625, t:"Aviónica GT", d:"Revisión de luces de aterrizaje", ti:"Correctivo", c:180, r:"50/50"}
+        ],
+        vuelos:[
+          {no:"OBI-2026-088", f:"2026-09-03", s:"A", pA:100, pil:0, mando:"dueno", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Miguel A. Arriaza","Gerente agrícola"], viaticos:0, otros:0, nota:"Recorrido finca San Rafael",
+           tramos:[
+             {o:"MGGT", d:"MGRT", hs:"07:10", hl:"08:00", os:1224.1, ol:1225.0, ci:1, gi:88, gf:71, gl:0,  gr:0,  pg:0,    fbo:0, esp:2.5, n:""},
+             {o:"MGRT", d:"MGGT", hs:"11:20", hl:"12:10", os:1225.0, ol:1225.9, ci:1, gi:86, gf:69, gl:46, gr:46, pg:7.45, fbo:0, esp:0,   n:"Cargó completo"}
+           ]},
+          {no:"OBI-2026-089", f:"2026-09-10", s:"A", pA:100, pil:0, mando:"dueno", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Miguel A. Arriaza","Javier Arriaza","Ing. agrónomo"], viaticos:0, otros:35, nota:"Tres fincas en un día",
+           tramos:[
+             {o:"MGGT", d:"MGQZ", hs:"06:45", hl:"07:30", os:1225.9, ol:1226.7, ci:1, gi:89, gf:74, gl:0,  gr:0,  pg:0,    fbo:0, esp:1.5, n:"Finca El Quiché"},
+             {o:"MGQZ", d:"MGCB", hs:"09:15", hl:"09:50", os:1226.7, ol:1227.3, ci:1, gi:74, gf:63, gl:0,  gr:0,  pg:0,    fbo:0, esp:2.0, n:"Finca Cobán"},
+             {o:"MGCB", d:"MGGT", hs:"12:10", hl:"13:00", os:1227.3, ol:1228.2, ci:1, gi:63, gf:46, gl:44, gr:44, pg:7.45, fbo:0, esp:0,   n:""}
+           ]},
+          {no:"OBI-2026-090", f:"2026-09-16", s:"A", pA:100, pil:1, mando:"instruccion", uso:"trabajo", cobrarA:"", th:0,
+           pax:["Miguel A. Arriaza","D. Fuentes"], viaticos:0, otros:0, nota:"Vuelo de instrucción · aproximaciones",
+           tramos:[
+             {o:"MGGT", d:"MGGT", hs:"14:00", hl:"15:30", os:1228.2, ol:1229.7, ci:1, gi:80, gf:52, gl:28, gr:28, pg:7.45, fbo:0, esp:0, n:"Local · circuito y aproximaciones"}
+           ]},
+          {no:"OBI-2026-091", f:"2026-09-22", s:"A", pA:100, pil:0, mando:"dueno", uso:"personal", cobrarA:"Javier Arriaza", th:350,
+           pax:["Javier Arriaza","Ana Arriaza","Dos invitados"], viaticos:0, otros:90, nota:"Fin de semana familiar",
+           tramos:[
+             {o:"MGGT", d:"MGSJ", hs:"09:00", hl:"09:35", os:1229.7, ol:1230.3, ci:1, gi:78, gf:67, gl:0,  gr:0,  pg:0,    fbo:0,  esp:0, n:""},
+             {o:"MGSJ", d:"MGGT", hs:"17:40", hl:"18:15", os:1230.3, ol:1230.9, ci:1, gi:67, gf:56, gl:24, gr:24, pg:7.80, fbo:45, esp:0, n:"Cargó en San José"}
+           ]}
+        ]
+      }
+    }
+  };
+
+  var S;
+  try{ S = JSON.parse(localStorage.getItem(K)) || null; }catch(e){ S = null; }
+  if(!S || !S.aeronaves) S = JSON.parse(JSON.stringify(seed));
+  function save(){ try{ localStorage.setItem(K, JSON.stringify(S)); }catch(e){} }
+  function A(){ return S.aeronaves[S.activa]; }
+
+  var $ = function(s){ return document.querySelector(s); };
+  var n = function(v){ var x=parseFloat(v); return isFinite(x)?x:0; };
+  var money = function(v){ return (v<0?"-":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var m0 = function(v){ return "$"+Math.round(v).toLocaleString("en-US"); };
+  var hrs = function(v){ return v.toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1}); };
+  var ent = function(v){ return Math.round(v).toLocaleString("en-US"); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
+  var hoy = function(){ var d=new Date(); d.setHours(0,0,0,0); return d; };
+  var fechaISO = function(d){ return d.toISOString().slice(0,10); };
+  var dias = function(a,b){ return Math.round((a-b)/86400000); };
+
+  var MANDO = {dueno:"El dueño", piloto:"Piloto", instruccion:"Instrucción · ambos"};
+
+  // ── Fórmulas ─────────────────────────────────────────────
+  function calcTramo(t, ac){
+    var horas = Math.max(0, n(t.ol)-n(t.os));
+    var gal = n(t.gl) + n(t.gr);
+    return { horas:horas, gal:gal, combustible:gal*n(t.pg), espera:n(t.esp)*n(ac.te),
+             ciclos:n(t.ci), fbo:n(t.fbo), consumo:Math.max(0, n(t.gi)-n(t.gf)) };
+  }
+  /**
+   * Lo que cuesta quien va al mando.
+   *
+   * Cuando vuela el dueño no hay tarifa: no se paga a sí mismo. Cuando va un
+   * instructor a enseñarle, se paga la tarifa de instrucción, que es más alta
+   * que la de piloto porque es otra cosa.
+   */
+  function costoMando(v, horas, ac){
+    var m = v.mando || "piloto";
+    if(m === "dueno") return 0;
+    if(m === "instruccion") return horas * n(ac.ti || ac.tp);
+    return horas * n(ac.tp);
+  }
+  function calc(v, ac){
+    ac = ac || A();
+    var horas=0,ciclos=0,gal=0,comb=0,esp=0,fbo=0,cons=0;
+    (v.tramos||[]).forEach(function(t){ var c=calcTramo(t, ac);
+      horas+=c.horas; ciclos+=c.ciclos; gal+=c.gal; comb+=c.combustible;
+      esp+=c.espera; fbo+=c.fbo; cons+=c.consumo; });
+    var piloto = costoMando(v, horas, ac);
+    var total = comb+piloto+esp+fbo+n(v.viaticos)+n(v.otros);
+    var pA = v.s==="A"?100 : v.s==="B"?0 : Math.min(100,Math.max(0,n(v.pA)));
+    // Solo la aeronave propia cobra hora de vuelo, y solo en uso personal.
+    var cobro = (!ac.compartida && v.uso==="personal") ? horas * n(v.th || ac.th) : 0;
+    return {horas:horas,ciclos:ciclos,gal:gal,comb:comb,piloto:piloto,espera:esp,fbo:fbo,consumo:cons,
+      total:total,pA:pA,pB:100-pA,mA:total*pA/100,mB:total*(100-pA)/100,cobro:cobro,
+      tramos:(v.tramos||[]).length, pax:(v.pax||[]).length};
+  }
+  function ruta(v){
+    var t=v.tramos||[]; if(!t.length) return "—";
+    var p=[t[0].o]; t.forEach(function(x){ p.push(x.d); }); return p.join(" → ");
+  }
+  function nombrePiloto(v){ var p=A().pilotos[n(v.pil)]; return p?p.n:"—"; }
+  function repartoMant(m, ac){
+    var c=n(m.c);
+    if(!ac.compartida) return {a:c,b:0};
+    if(m.r==="A") return {a:c,b:0};
+    if(m.r==="B") return {a:0,b:c};
+    return {a:c/2,b:c/2};
+  }
+  function totales(){
+    var ac=A();
+    var t={fijos:0,vH:0,vC:0,vG:0,vT:0,vA:0,vB:0,mT:0,mA:0,mB:0,comb:0,piloto:0,espera:0,
+           fbo:0,via:0,otr:0,cons:0,pax:0,cobros:0};
+    ac.fijos.forEach(function(f){ t.fijos+=n(f.m); });
+    ac.vuelos.forEach(function(v){ var c=calc(v,ac);
+      t.vH+=c.horas; t.vC+=c.ciclos; t.vG+=c.gal; t.vT+=c.total; t.vA+=c.mA; t.vB+=c.mB;
+      t.comb+=c.comb; t.piloto+=c.piloto; t.espera+=c.espera; t.fbo+=c.fbo; t.cons+=c.consumo;
+      t.via+=n(v.viaticos); t.otr+=n(v.otros); t.pax+=c.pax; t.cobros+=c.cobro; });
+    ac.mant.forEach(function(m){ var r=repartoMant(m,ac); t.mT+=n(m.c); t.mA+=r.a; t.mB+=r.b; });
+    t.A = t.fijos/2 + t.vA + t.mA;
+    t.B = t.fijos/2 + t.vB + t.mB;
+    t.T = ac.compartida ? t.A+t.B : t.fijos + t.vT + t.mT;
+    return t;
+  }
+
+  function horoActual(){
+    var h=0; A().vuelos.forEach(function(v){ (v.tramos||[]).forEach(function(t){ h=Math.max(h,n(t.ol)); }); });
+    return h;
+  }
+  function ciclosActuales(){ return n(A().cb) + totales().vC; }
+
+  function estadoTarea(t){
+    var hAct=horoActual(), cAct=ciclosActuales(), h=hoy(), cand=[];
+    if(n(t.ih)>0){ var pH=n(t.uh)+n(t.ih);
+      cand.push({tipo:"horas", prox:hrs(pH)+" h", rest:pH-hAct, frac:(pH-hAct)/n(t.ih),
+        txt:(pH-hAct>=0?hrs(pH-hAct):"−"+hrs(Math.abs(pH-hAct)))+" h"}); }
+    if(n(t.ic)>0){ var pC=n(t.uc)+n(t.ic);
+      cand.push({tipo:"ciclos", prox:ent(pC)+" ciclos", rest:pC-cAct, frac:(pC-cAct)/n(t.ic), txt:ent(pC-cAct)+" ciclos"}); }
+    if(n(t.im)>0 && t.uf){ var d=new Date(t.uf+"T00:00:00"); d.setMonth(d.getMonth()+n(t.im));
+      var rd=dias(d,h);
+      cand.push({tipo:"calendario", prox:fechaISO(d), rest:rd, frac:rd/(n(t.im)*30.4), txt:ent(rd)+" días"}); }
+    if(!cand.length) return {estado:"g", prox:"—", txt:"sin intervalo", tipo:"—", rest:Infinity, frac:Infinity};
+    cand.sort(function(a,b){ return a.frac-b.frac; });
+    var m=cand[0];
+    var estado = m.rest<=0 ? "v"
+      : (m.tipo==="calendario" ? (m.rest<=30?"p":"g") : (m.frac<=0.10?"p":"g"));
+    return {estado:estado, prox:m.prox, txt:m.txt, tipo:m.tipo, rest:m.rest, frac:m.frac};
+  }
+  function conteoAlertas(){
+    var v=0,p=0;
+    A().plan.forEach(function(t){ var e=estadoTarea(t); if(e.estado==="v") v++; else if(e.estado==="p") p++; });
+    return {v:v,p:p,ok:A().plan.length-v-p};
+  }
+
+  var vista="adm";
+
+  // ── Encabezado y flota ───────────────────────────────────
+  function tile(k,v,m,cls){
+    return '<div class="tot '+(cls||"")+'"><div class="k">'+esc(k)+'</div>'+
+      '<div class="v num">'+esc(v)+'</div><div class="m">'+esc(m)+'</div></div>';
+  }
+  function pintaFlota(){
+    var f=$("#flota"); f.innerHTML="";
+    Object.keys(S.aeronaves).forEach(function(k){
+      var a=S.aeronaves[k];
+      var b=document.createElement("button");
+      b.setAttribute("role","tab");
+      b.setAttribute("aria-selected", String(k===S.activa));
+      b.dataset.ac=k;
+      b.innerHTML='<span class="m">'+esc(a.matricula)+'</span><span class="s">'+esc(a.modelo)+
+        ' · '+(a.compartida?"compartida":"propia")+'</span>';
+      f.appendChild(b);
+    });
+    var ac=A();
+    document.documentElement.style.setProperty("--acento", ac.acento);
+    $("#top").style.background = ac.grad;
+    $("#matri").textContent = ac.matricula;
+    $("#desc").textContent = ac.modelo + " · " + ac.desc;
+    $("#tabCierre").textContent = ac.compartida ? "Propietarios" : "Costos y cobros";
+    $("#tabCierreD").textContent = ac.compartida ? "Cierre del mes y lo que paga cada uno" : "Costo de operación y uso personal";
+  }
+  function pintaTop(){
+    var t=totales(), k=$("#kpis"), al=conteoAlertas(), ac=A();
+    if(vista==="pil"){
+      k.className="kpis";
+      k.innerHTML =
+        tile("Horas voladas", hrs(t.vH)+" h", ac.vuelos.length+" vuelos") +
+        tile("Ciclos del mes", String(t.vC), "acumulado "+ent(ciclosActuales())) +
+        tile("Combustible", ent(t.cons)+" gal", t.vH?(t.cons/t.vH).toFixed(0)+" gal/hora":"") +
+        tile("Tramos", String(ac.vuelos.reduce(function(a,v){return a+(v.tramos||[]).length;},0)), t.pax+" pasajeros");
+    } else if(vista==="man"){
+      k.className="kpis";
+      k.innerHTML =
+        tile("Horómetro", hrs(horoActual()), "total de célula") +
+        tile("Ciclos", ent(ciclosActuales()), "acumulados") +
+        tile("Vencidas", String(al.v), al.v?"requieren atención":"ninguna", al.v?"al":"ok") +
+        tile("Por vencer", String(al.p), "dentro del margen de aviso", al.p?"al":"ok");
+    } else if(ac.compartida){
+      k.className="kpis money";
+      var pctA = t.T?Math.round(t.A/t.T*100):50;
+      k.innerHTML =
+        tile(ac.nA, money(t.A), pctA+" % del período","dA") +
+        tile(ac.nB, money(t.B), (100-pctA)+" % del período","dB") +
+        tile("Total del mes", money(t.T),
+          ac.vuelos.length+" vuelos · "+hrs(t.vH)+" h"+(t.vH?" · "+m0(t.T/t.vH)+"/h":""),"gr");
+    } else {
+      k.className="kpis";
+      k.innerHTML =
+        tile("Costo del mes", money(t.T), ac.vuelos.length+" vuelos · "+hrs(t.vH)+" h","gr") +
+        tile("Costo por hora", t.vH?money(t.T/t.vH):"—", "operación completa") +
+        tile("Cobros por uso personal", money(t.cobros),
+          ac.vuelos.filter(function(v){return v.uso==="personal";}).length+" vuelos personales","dA") +
+        tile("Horas del dueño", hrs(ac.vuelos.filter(function(v){return v.mando==="dueno";})
+          .reduce(function(a,v){return a+calc(v).horas;},0)), "sin costo de piloto","ok");
+    }
+    var b=$("#badMan");
+    if(al.v){ b.hidden=false; b.textContent=al.v; } else { b.hidden=true; }
+  }
+
+  // ── Vista piloto ─────────────────────────────────────────
+  function pintaPiloto(){
+    var cont=$("#misiones"); cont.innerHTML=""; var ac=A();
+    if(!ac.vuelos.length){ cont.innerHTML='<p class="empty">Sin vuelos en el período.</p>'; return; }
+
+    ac.vuelos.forEach(function(v,i){
+      var c=calc(v,ac);
+      var filas=(v.tramos||[]).map(function(t,j){
+        var ct=calcTramo(t,ac);
+        return '<tr>'+
+          '<td class="c" style="color:var(--ink-3);font-weight:800">'+(j+1)+'</td>'+
+          '<td><input class="cell sm" data-vi="'+i+'" data-ti="'+j+'" data-k="o" value="'+esc(t.o)+'"></td>'+
+          '<td><input class="cell sm" data-vi="'+i+'" data-ti="'+j+'" data-k="d" value="'+esc(t.d)+'"></td>'+
+          '<td><input class="cell sm" type="time" data-vi="'+i+'" data-ti="'+j+'" data-k="hs" value="'+esc(t.hs)+'"></td>'+
+          '<td><input class="cell sm" type="time" data-vi="'+i+'" data-ti="'+j+'" data-k="hl" value="'+esc(t.hl)+'"></td>'+
+          '<td><input class="cell n sm" type="number" step="0.1" data-vi="'+i+'" data-ti="'+j+'" data-k="os" value="'+t.os+'"></td>'+
+          '<td><input class="cell n sm" type="number" step="0.1" data-vi="'+i+'" data-ti="'+j+'" data-k="ol" value="'+t.ol+'"></td>'+
+          '<td class="r calc num">'+hrs(ct.horas)+'</td>'+
+          '<td><input class="cell n" style="min-width:46px" type="number" step="1" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="ci" value="'+t.ci+'"></td>'+
+          '<td><input class="cell n sm" type="number" step="1" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="gi" value="'+(t.gi||0)+'"></td>'+
+          '<td><input class="cell n sm" type="number" step="1" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="gf" value="'+(t.gf||0)+'"></td>'+
+          '<td class="r calc num" style="color:var(--teal-d)">'+ent(ct.consumo)+'</td>'+
+          '<td><input class="cell n sm" type="number" step="1" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="gl" value="'+(t.gl||0)+'"></td>'+
+          '<td><input class="cell n sm" type="number" step="1" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="gr" value="'+(t.gr||0)+'"></td>'+
+          '<td class="r calc num">'+(ct.gal?ent(ct.gal):"—")+'</td>'+
+          '<td><input class="cell n sm" type="number" step="0.01" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="pg" value="'+t.pg+'"></td>'+
+          '<td class="r calc num" style="font-weight:800">'+(ct.combustible?money(ct.combustible):"—")+'</td>'+
+          '<td><input class="cell n sm" type="number" step="1" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="fbo" value="'+t.fbo+'"></td>'+
+          '<td><input class="cell n" style="min-width:50px" type="number" step="0.5" min="0" data-vi="'+i+'" data-ti="'+j+'" data-k="esp" value="'+t.esp+'"></td>'+
+          '<td><input class="cell" style="min-width:160px" data-vi="'+i+'" data-ti="'+j+'" data-k="n" value="'+esc(t.n)+'"></td>'+
+          '<td class="c no-print"><button class="btn x" data-delt="'+i+'" data-j="'+j+'" title="Quitar tramo">✕</button></td>'+
+        '</tr>';
+      }).join("");
+
+      var chips=(v.pax||[]).map(function(p,j){
+        return '<span class="p">'+esc(p)+'<button data-delp="'+i+'" data-j="'+j+'" title="Quitar">✕</button></span>';
+      }).join("");
+
+      var d=document.createElement("div"); d.className="mis";
+      d.innerHTML=
+        '<div class="mis-h">'+
+          '<span class="no">'+esc(v.no)+'</span>'+
+          '<span class="ruta">'+esc(ruta(v))+' <small>· '+c.tramos+' tramo'+(c.tramos===1?'':'s')+'</small></span>'+
+          '<span class="chip '+(v.mando||"piloto")+'">'+esc(MANDO[v.mando||"piloto"])+'</span>'+
+          (ac.compartida ? '<span class="chip '+v.s+'">'+esc(v.s==="A"?ac.nA:v.s==="B"?ac.nB:"Ambos")+'</span>'
+                         : '<span class="chip '+(v.uso||"trabajo")+'">'+esc(v.uso==="personal"?"Personal":"Trabajo")+'</span>')+
+          '<button class="btn sm push no-print" data-addt="'+i+'">＋ Tramo</button>'+
+          '<button class="btn x no-print" data-delv="'+i+'" title="Quitar vuelo">✕</button>'+
+        '</div>'+
+        '<div class="mis-b">'+
+          '<div class="params" style="margin-bottom:10px">'+
+            '<div class="f"><label>No. de vuelo</label><input style="width:130px" data-i="'+i+'" data-k="no" value="'+esc(v.no)+'"></div>'+
+            '<div class="f"><label>Fecha</label><input type="date" style="width:145px" data-i="'+i+'" data-k="f" value="'+esc(v.f)+'"></div>'+
+            '<div class="f"><label>Al mando</label><select style="width:160px" data-i="'+i+'" data-k="mando">'+
+              Object.keys(MANDO).map(function(m){
+                return '<option value="'+m+'"'+((v.mando||"piloto")===m?' selected':'')+'>'+esc(MANDO[m])+'</option>'; }).join("")+
+            '</select></div>'+
+            '<div class="f"><label>Piloto / instructor</label><select style="width:165px" data-i="'+i+'" data-k="pil">'+
+              ac.pilotos.map(function(p,k){ return '<option value="'+k+'"'+(n(v.pil)===k?' selected':'')+'>'+esc(p.n)+'</option>'; }).join("")+
+            '</select></div>'+
+            '<div class="f"><label>Licencia</label><input style="width:130px" value="'+esc((ac.pilotos[n(v.pil)]||{}).lic||"")+'" readonly></div>'+
+            '<div class="f" style="flex:1"><label>Observaciones</label><input style="width:100%;min-width:200px" data-i="'+i+'" data-k="nota" value="'+esc(v.nota)+'"></div>'+
+          '</div>'+
+          '<div class="paxlbl">Pasajeros · '+c.pax+'</div>'+
+          '<div class="pax">'+chips+'<input data-addp="'+i+'" placeholder="Escribe un nombre y Enter…"></div>'+
+          '<div class="scroll" style="margin-top:12px"><table>'+
+            '<thead><tr class="grp">'+
+              '<th class="g0" colspan="9">Tramo</th>'+
+              '<th class="g1" colspan="3">A bordo</th>'+
+              '<th class="g2" colspan="5">Carga de combustible</th>'+
+              '<th colspan="3">Gastos y nota</th><th></th>'+
+            '</tr><tr>'+
+              '<th class="c">#</th><th>Origen</th><th>Destino</th><th>Salida</th><th>Llegada</th>'+
+              '<th class="r">Horo. sal.</th><th class="r">Horo. lleg.</th><th class="r">Horas</th><th class="r">Ciclos</th>'+
+              '<th class="r">Inicio</th><th class="r">Final</th><th class="r">Consumo</th>'+
+              '<th class="r">Ala izq.</th><th class="r">Ala der.</th><th class="r">Galones</th>'+
+              '<th class="r">$ / gal</th><th class="r">Total boleta</th>'+
+              '<th class="r">FBO</th><th class="r">Espera h</th><th>Nota</th><th></th>'+
+            '</tr></thead><tbody>'+(filas||'<tr><td colspan="21" class="empty">Sin tramos.</td></tr>')+'</tbody></table></div>'+
+        '</div>'+
+        '<div class="ops">'+
+          '<div>Horas<b>'+hrs(c.horas)+'</b></div>'+
+          '<div>Ciclos<b>'+c.ciclos+'</b></div>'+
+          '<div>Consumo<b>'+ent(c.consumo)+' gal</b></div>'+
+          '<div>Gal/hora<b>'+(c.horas?(c.consumo/c.horas).toFixed(0):"—")+'</b></div>'+
+          '<div>Combustible<b>'+m0(c.comb)+'</b></div>'+
+          '<div>Al mando<b>'+(c.piloto?m0(c.piloto):"sin costo")+'</b></div>'+
+          '<div>Espera<b>'+m0(c.espera)+'</b></div>'+
+        '</div>';
+      cont.appendChild(d);
+    });
+  }
+
+  // ── Administración ───────────────────────────────────────
+  function pintaAdm(){
+    var ac=A(), t=totales();
+
+    $("#pVue").textContent = ac.compartida
+      ? "Lo que el piloto reportó, ya valorizado. Aquí se completan viáticos y otros gastos, y se define a quién se le carga cada vuelo."
+      : "Lo que el piloto reportó, ya valorizado. Si el vuelo fue de uso personal, aquí se define a quién se le cobra la hora.";
+    $("#hVue").innerHTML = ac.compartida
+      ? "Combustible, espera y FBO se suman de los tramos que llenó el piloto, por eso no se editan aquí. Con <b>Ambos</b> se habilita el porcentaje del vuelo."
+      : "Cuando vuela el dueño no hay costo de piloto. En <b>instrucción</b> se paga la tarifa del instructor. La <b>tarifa de hora</b> se guarda en el vuelo: si mañana sube, lo ya cobrado no se recalcula.";
+
+    $("#thA").innerHTML = ac.compartida ?
+      '<tr class="grp"><th class="g0" colspan="7">Vuelo</th><th class="g1" colspan="7">Costos variables</th>'+
+      '<th class="g2" colspan="2">Reparto</th></tr>'+
+      '<tr><th>No.</th><th>Fecha</th><th>Ruta</th><th>Piloto</th><th>Solicitante</th>'+
+      '<th class="r">Horas</th><th class="r">Ciclos</th>'+
+      '<th class="r">Combustible</th><th class="r">Al mando</th><th class="r">Espera</th><th class="r">FBO</th>'+
+      '<th class="r">Viáticos</th><th class="r">Otros</th><th class="r">Total</th>'+
+      '<th class="r">% / '+esc(ac.nA)+'</th><th class="r">'+esc(ac.nB)+'</th></tr>'
+      :
+      '<tr class="grp"><th class="g0" colspan="7">Vuelo</th><th class="g1" colspan="7">Costos variables</th>'+
+      '<th class="g2" colspan="3">Uso personal</th></tr>'+
+      '<tr><th>No.</th><th>Fecha</th><th>Ruta</th><th>Al mando</th><th>Piloto</th>'+
+      '<th class="r">Horas</th><th class="r">Ciclos</th>'+
+      '<th class="r">Combustible</th><th class="r">Al mando</th><th class="r">Espera</th><th class="r">FBO</th>'+
+      '<th class="r">Viáticos</th><th class="r">Otros</th><th class="r">Total</th>'+
+      '<th>Uso</th><th>Se le cobra a</th><th class="r">Cobro</th></tr>';
+
+    var tb=$("#tbA"); tb.innerHTML="";
+    if(!ac.vuelos.length) tb.innerHTML='<tr><td colspan="17" class="empty">Sin vuelos.</td></tr>';
+    ac.vuelos.forEach(function(v,i){
+      var c=calc(v,ac);
+      var comun =
+        '<td style="font-family:ui-monospace,monospace;font-size:11.5px;font-weight:800">'+esc(v.no)+'</td>'+
+        '<td>'+esc(v.f)+'</td>'+
+        '<td style="white-space:normal;min-width:170px">'+esc(ruta(v))+
+          '<div style="font-size:10.5px;color:var(--ink-3)">'+c.tramos+' tramos · '+c.pax+' pax</div></td>';
+      var medio =
+        '<td class="r calc num">'+hrs(c.horas)+'</td>'+
+        '<td class="r calc num">'+c.ciclos+'</td>'+
+        '<td class="r num" style="color:var(--ink-2)">'+money(c.comb)+'</td>'+
+        '<td class="r num '+(c.piloto?"":"cero")+'">'+(c.piloto?money(c.piloto):"sin costo")+'</td>'+
+        '<td class="r num" style="color:var(--ink-2)">'+money(c.espera)+'</td>'+
+        '<td class="r num" style="color:var(--ink-2)">'+money(c.fbo)+'</td>'+
+        '<td><input class="cell n sm" type="number" step="1" data-i="'+i+'" data-k="viaticos" value="'+v.viaticos+'"></td>'+
+        '<td><input class="cell n sm" type="number" step="1" data-i="'+i+'" data-k="otros" value="'+v.otros+'"></td>'+
+        '<td class="r calc tot num">'+money(c.total)+'</td>';
+      var tr=document.createElement("tr");
+      if(ac.compartida){
+        tr.innerHTML = comun +
+          '<td>'+esc(nombrePiloto(v))+'</td>'+
+          '<td><select class="cell" data-i="'+i+'" data-k="s">'+
+            ['A','B','AMBOS'].map(function(o){
+              var lab=o==='A'?ac.nA:o==='B'?ac.nB:'Ambos';
+              return '<option value="'+o+'"'+(v.s===o?' selected':'')+'>'+esc(lab)+'</option>'; }).join("")+'</select></td>'+
+          medio +
+          '<td class="r"><input class="cell n" style="min-width:52px" type="number" step="5" min="0" max="100" '+
+            'data-i="'+i+'" data-k="pA" value="'+c.pA+'"'+(v.s!=="AMBOS"?" disabled":"")+'>'+
+            '<div class="pa num" style="font-size:11px">'+money(c.mA)+'</div></td>'+
+          '<td class="r"><div class="num" style="font-weight:800;color:var(--ink-3)">'+c.pB+' %</div>'+
+            '<div class="pb num" style="font-size:11px">'+money(c.mB)+'</div></td>';
+      } else {
+        tr.innerHTML = comun +
+          '<td><span class="chip '+(v.mando||"piloto")+'">'+esc(MANDO[v.mando||"piloto"])+'</span></td>'+
+          '<td>'+esc(nombrePiloto(v))+'</td>'+
+          medio +
+          '<td><select class="cell" data-i="'+i+'" data-k="uso">'+
+            [["trabajo","Trabajo"],["personal","Personal"]].map(function(o){
+              return '<option value="'+o[0]+'"'+((v.uso||"trabajo")===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join("")+'</select></td>'+
+          '<td><input class="cell" style="min-width:150px" data-i="'+i+'" data-k="cobrarA" value="'+esc(v.cobrarA||"")+'"'+
+            (v.uso!=="personal"?" disabled placeholder=\"—\"":"")+'></td>'+
+          '<td class="r">'+(v.uso==="personal"
+            ? '<input class="cell n" style="min-width:60px" type="number" step="10" data-i="'+i+'" data-k="th" value="'+(v.th||ac.th)+'">'+
+              '<div class="pa num" style="font-size:11px">'+money(c.cobro)+'</div>'
+            : '<span class="cero">—</span>')+'</td>';
+      }
+      tb.appendChild(tr);
+    });
+
+    $("#tfA").innerHTML = ac.vuelos.length ? (ac.compartida ?
+      '<tr><td colspan="5" class="r">Totales</td><td class="r num">'+hrs(t.vH)+'</td><td class="r num">'+t.vC+'</td>'+
+      '<td class="r num">'+money(t.comb)+'</td><td class="r num">'+money(t.piloto)+'</td>'+
+      '<td class="r num">'+money(t.espera)+'</td><td class="r num">'+money(t.fbo)+'</td>'+
+      '<td class="r num">'+money(t.via)+'</td><td class="r num">'+money(t.otr)+'</td>'+
+      '<td class="r num" style="color:var(--teal-d)">'+money(t.vT)+'</td>'+
+      '<td class="r num pa">'+money(t.vA)+'</td><td class="r num pb">'+money(t.vB)+'</td></tr>'
+      :
+      '<tr><td colspan="5" class="r">Totales</td><td class="r num">'+hrs(t.vH)+'</td><td class="r num">'+t.vC+'</td>'+
+      '<td class="r num">'+money(t.comb)+'</td><td class="r num">'+money(t.piloto)+'</td>'+
+      '<td class="r num">'+money(t.espera)+'</td><td class="r num">'+money(t.fbo)+'</td>'+
+      '<td class="r num">'+money(t.via)+'</td><td class="r num">'+money(t.otr)+'</td>'+
+      '<td class="r num" style="color:var(--teal-d)">'+money(t.vT)+'</td>'+
+      '<td colspan="2"></td><td class="r num pa">'+money(t.cobros)+'</td></tr>') : "";
+
+    // Pasajeros
+    var tbp=$("#tbP"); tbp.innerHTML=""; var filas=0;
+    ac.vuelos.forEach(function(v){
+      (v.pax||[]).forEach(function(p){
+        filas++;
+        var tr=document.createElement("tr");
+        tr.innerHTML='<td style="font-weight:700">'+esc(p)+'</td>'+
+          '<td style="font-family:ui-monospace,monospace;font-size:11.5px">'+esc(v.no)+'</td>'+
+          '<td>'+esc(v.f)+'</td><td style="white-space:normal;min-width:160px">'+esc(ruta(v))+'</td>'+
+          '<td><span class="chip '+(v.mando||"piloto")+'">'+esc(MANDO[v.mando||"piloto"])+'</span></td>'+
+          '<td>'+esc(nombrePiloto(v))+'</td>';
+        tbp.appendChild(tr);
+      });
+    });
+    if(!filas) tbp.innerHTML='<tr><td colspan="6" class="empty">Sin pasajeros registrados.</td></tr>';
+    $("#tfP").innerHTML = filas ? '<tr><td colspan="6">'+filas+' pasajeros transportados en el período</td></tr>' : "";
+
+    // Fijos
+    $("#pFij").textContent = ac.compartida
+      ? "No dependen de cuánto se vuele. Se dividen mitad y mitad."
+      : "No dependen de cuánto se vuele. Se cargan completos a la operación de la aeronave.";
+    $("#thF").innerHTML = ac.compartida ?
+      '<tr><th>Concepto</th><th class="r">Monto</th><th class="r">'+esc(ac.nA)+' · 50 %</th>'+
+      '<th class="r">'+esc(ac.nB)+' · 50 %</th><th></th></tr>'
+      : '<tr><th>Concepto</th><th class="r">Monto</th><th></th></tr>';
+    var tbf=$("#tbF"); tbf.innerHTML="";
+    if(!ac.fijos.length) tbf.innerHTML='<tr><td colspan="5" class="empty">Sin costos fijos.</td></tr>';
+    ac.fijos.forEach(function(f,i){
+      var tr=document.createElement("tr");
+      tr.innerHTML='<td><input class="cell" style="min-width:250px" data-fi="'+i+'" data-k="c" value="'+esc(f.c)+'"></td>'+
+        '<td><input class="cell n md" type="number" step="1" data-fi="'+i+'" data-k="m" value="'+f.m+'"></td>'+
+        (ac.compartida ? '<td class="r calc num pa">'+money(n(f.m)/2)+'</td><td class="r calc num pb">'+money(n(f.m)/2)+'</td>' : '')+
+        '<td class="c no-print"><button class="btn x" data-delf="'+i+'">✕</button></td>';
+      tbf.appendChild(tr);
+    });
+    $("#tfF").innerHTML = ac.fijos.length ? (ac.compartida ?
+      '<tr><td class="r">Total fijo del mes</td><td class="r num">'+money(t.fijos)+'</td>'+
+      '<td class="r num pa">'+money(t.fijos/2)+'</td><td class="r num pb">'+money(t.fijos/2)+'</td><td></td></tr>'
+      : '<tr><td class="r">Total fijo del mes</td><td class="r num">'+money(t.fijos)+'</td><td></td></tr>') : "";
+
+    // Pilotos
+    var tbl=$("#tbPil"); tbl.innerHTML="";
+    ac.pilotos.forEach(function(p,i){
+      var nv=0,h=0;
+      ac.vuelos.forEach(function(x){ if(n(x.pil)===i){ nv++; h+=calc(x,ac).horas; } });
+      var rd = p.med ? dias(new Date(p.med+"T00:00:00"), hoy()) : null;
+      var est = rd===null ? '<span class="est g">sin dato</span>'
+        : rd<0 ? '<span class="est v">vencido</span>'
+        : rd<=60 ? '<span class="est p">vence en '+rd+' d</span>'
+        : '<span class="est g">vigente</span>';
+      var tr=document.createElement("tr");
+      tr.innerHTML=
+        '<td><input class="cell" style="min-width:170px" data-pi="'+i+'" data-k="n" value="'+esc(p.n)+'"></td>'+
+        '<td><input class="cell md" data-pi="'+i+'" data-k="lic" value="'+esc(p.lic)+'"></td>'+
+        '<td><input class="cell" style="min-width:150px" data-pi="'+i+'" data-k="tipo" value="'+esc(p.tipo)+'"></td>'+
+        '<td><input class="cell md" type="date" data-pi="'+i+'" data-k="med" value="'+esc(p.med)+'"></td>'+
+        '<td class="c">'+est+'</td><td class="r num">'+nv+'</td><td class="r num">'+hrs(h)+'</td>'+
+        '<td class="c no-print"><button class="btn x" data-delpil="'+i+'">✕</button></td>';
+      tbl.appendChild(tr);
+    });
+
+    // Tarifas
+    var campos = ac.compartida
+      ? [["nA","Propietario 1","text",160],["nB","Propietario 2","text",160],
+         ["tp","Piloto / hora","number",106],["te","Espera / hora","number",106],["cb","Ciclos acumulados","number",120]]
+      : [["tp","Piloto / hora","number",106],["ti","Instructor / hora","number",112],
+         ["te","Espera / hora","number",106],["th","Hora de vuelo a cobrar","number",140],
+         ["cb","Ciclos acumulados","number",120]];
+    $("#params").innerHTML = campos.map(function(c){
+      return '<div class="f"><label for="cfg-'+c[0]+'">'+esc(c[1])+'</label>'+
+        '<input id="cfg-'+c[0]+'" data-cfg="'+c[0]+'" type="'+c[2]+'" style="width:'+c[3]+'px" '+
+        (c[2]==="number"?'step="1" min="0" ':'')+'value="'+esc(ac[c[0]])+'"></div>';
+    }).join("");
+    $("#hPar").innerHTML = ac.compartida
+      ? "<b>Ciclos acumulados</b> son los que traía la aeronave antes de este período. El precio del combustible no se configura aquí: lo pone el piloto en cada carga, porque no es una tarifa fija."
+      : "<b>Hora de vuelo a cobrar</b> es la tarifa que se le carga a quien usa la aeronave de forma personal. Es solo la propuesta: cada vuelo guarda la que se le aplicó, para que subirla no recalcule lo ya cobrado.";
+  }
+
+  // ── Mantenimiento ────────────────────────────────────────
+  function pintaMan(){
+    var ac=A(), al=conteoAlertas(), t=totales();
+    $("#estado").innerHTML =
+      '<div class="est-c"><div class="k">Horómetro</div><div class="v">'+hrs(horoActual())+'</div><div class="m">horas de célula</div></div>'+
+      '<div class="est-c"><div class="k">Ciclos</div><div class="v">'+ent(ciclosActuales())+'</div><div class="m">acumulados</div></div>'+
+      '<div class="est-c '+(al.v?"rojo":"verde")+'"><div class="k">Tareas vencidas</div><div class="v">'+al.v+'</div>'+
+        '<div class="m">'+(al.v?"la aeronave no debería volar":"ninguna pendiente")+'</div></div>'+
+      '<div class="est-c '+(al.p?"ambar":"verde")+'"><div class="k">Por vencer</div><div class="v">'+al.p+'</div>'+
+        '<div class="m">dentro del margen de aviso</div></div>';
+
+    var venc = ac.plan.filter(function(x){ return estadoTarea(x).estado==="v"; });
+    $("#avisoMan").innerHTML = venc.length ?
+      '<div class="note rojo"><b>Atención.</b> '+venc.length+' tarea'+(venc.length===1?'':'s')+
+      ' con el límite cumplido: '+venc.map(function(x){ return esc(x.t); }).join(", ")+
+      '. Revisar con el taller antes del próximo vuelo.</div>' :
+      '<div class="note"><b>Sin vencimientos.</b> Todas las tareas del plan están dentro de su intervalo.</div>';
+
+    var tb=$("#tbT"); tb.innerHTML="";
+    var orden = ac.plan.map(function(x,i){ return {x:x,i:i,e:estadoTarea(x)}; })
+      .sort(function(a,b){ return a.e.frac-b.e.frac; });
+    if(!orden.length) tb.innerHTML='<tr><td colspan="13" class="empty">Sin tareas.</td></tr>';
+    orden.forEach(function(o){
+      var x=o.x,i=o.i,e=o.e;
+      var tr=document.createElement("tr");
+      tr.className = e.estado==="v"?"fv":e.estado==="p"?"fp":"";
+      tr.innerHTML=
+        '<td><input class="cell" style="min-width:210px;font-weight:700" data-ti2="'+i+'" data-k="t" value="'+esc(x.t)+'"></td>'+
+        '<td><input class="cell" style="min-width:150px" data-ti2="'+i+'" data-k="ref" value="'+esc(x.ref)+'"></td>'+
+        '<td class="c">'+(x.cr?'<span style="color:var(--rojo);font-weight:800;font-size:11px">sí</span>':'<span style="color:var(--ink-3)">—</span>')+'</td>'+
+        '<td><input class="cell n sm" type="number" step="10" min="0" data-ti2="'+i+'" data-k="ih" value="'+x.ih+'"></td>'+
+        '<td><input class="cell n sm" type="number" step="10" min="0" data-ti2="'+i+'" data-k="ic" value="'+x.ic+'"></td>'+
+        '<td><input class="cell n" style="min-width:48px" type="number" step="1" min="0" data-ti2="'+i+'" data-k="im" value="'+x.im+'"></td>'+
+        '<td><input class="cell md" type="date" data-ti2="'+i+'" data-k="uf" value="'+esc(x.uf)+'"></td>'+
+        '<td><input class="cell n sm" type="number" step="0.1" data-ti2="'+i+'" data-k="uh" value="'+x.uh+'"></td>'+
+        '<td><input class="cell n sm" type="number" step="1" data-ti2="'+i+'" data-k="uc" value="'+x.uc+'"></td>'+
+        '<td class="num" style="font-weight:700">'+esc(e.prox)+
+          '<div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">por '+esc(e.tipo)+'</div></td>'+
+        '<td class="r num" style="font-weight:800;color:'+(e.estado==="v"?"var(--rojo)":e.estado==="p"?"var(--ambar)":"var(--ink-2)")+'">'+esc(e.txt)+'</td>'+
+        '<td class="c"><span class="est '+e.estado+'">'+(e.estado==="v"?"Vencida":e.estado==="p"?"Por vencer":"Vigente")+'</span></td>'+
+        '<td class="c no-print"><button class="btn x" data-delt2="'+i+'">✕</button></td>';
+      tb.appendChild(tr);
+    });
+
+    $("#thM").innerHTML = '<tr><th>Fecha</th><th class="r">Horómetro</th><th class="r">Ciclos</th><th>Taller</th>'+
+      '<th>Trabajo</th><th>Tipo</th><th class="r">Costo</th>'+
+      (ac.compartida ? '<th>Reparto</th><th class="r">'+esc(ac.nA)+'</th><th class="r">'+esc(ac.nB)+'</th>' : '')+'<th></th></tr>';
+    var tbm=$("#tbM"); tbm.innerHTML="";
+    if(!ac.mant.length) tbm.innerHTML='<tr><td colspan="11" class="empty">Sin trabajos.</td></tr>';
+    ac.mant.forEach(function(m,i){
+      var r=repartoMant(m,ac);
+      var tr=document.createElement("tr");
+      tr.innerHTML=
+        '<td><input class="cell md" type="date" data-mi="'+i+'" data-k="f" value="'+esc(m.f)+'"></td>'+
+        '<td><input class="cell n sm" type="number" step="0.1" data-mi="'+i+'" data-k="h" value="'+m.h+'"></td>'+
+        '<td><input class="cell n sm" type="number" step="1" data-mi="'+i+'" data-k="ci" value="'+(m.ci||0)+'"></td>'+
+        '<td><input class="cell" style="min-width:150px" data-mi="'+i+'" data-k="t" value="'+esc(m.t)+'"></td>'+
+        '<td><input class="cell" style="min-width:250px" data-mi="'+i+'" data-k="d" value="'+esc(m.d)+'"></td>'+
+        '<td><select class="cell" data-mi="'+i+'" data-k="ti">'+
+          ["Programado","Correctivo","Directiva / boletín"].map(function(o){
+            return '<option'+((m.ti||"Programado")===o?' selected':'')+'>'+o+'</option>'; }).join("")+'</select></td>'+
+        '<td><input class="cell n md" type="number" step="1" data-mi="'+i+'" data-k="c" value="'+m.c+'"></td>'+
+        (ac.compartida ?
+          '<td><select class="cell" data-mi="'+i+'" data-k="r">'+
+            [["50/50","Mitad y mitad"],["A",ac.nA],["B",ac.nB]].map(function(o){
+              return '<option value="'+o[0]+'"'+(m.r===o[0]?' selected':'')+'>'+esc(o[1])+'</option>'; }).join("")+'</select></td>'+
+          '<td class="r calc num pa">'+money(r.a)+'</td><td class="r calc num pb">'+money(r.b)+'</td>' : '')+
+        '<td class="c no-print"><button class="btn x" data-delm="'+i+'">✕</button></td>';
+      tbm.appendChild(tr);
+    });
+    $("#tfM").innerHTML = ac.mant.length ? (ac.compartida ?
+      '<tr><td colspan="6" class="r">Total mantenimiento</td><td class="r num">'+money(t.mT)+'</td><td></td>'+
+      '<td class="r num pa">'+money(t.mA)+'</td><td class="r num pb">'+money(t.mB)+'</td><td></td></tr>'
+      : '<tr><td colspan="6" class="r">Total mantenimiento</td><td class="r num">'+money(t.mT)+'</td><td></td></tr>') : "";
+  }
+
+  // ── Cierre ───────────────────────────────────────────────
+  function row(k,v,ph){
+    return '<tr><td>'+esc(k)+'</td><td class="r num">'+esc(v)+'</td>'+
+      '<td class="r num" style="color:var(--ink-3)">'+esc(ph)+'</td></tr>';
+  }
+  function pintaDue(){
+    var ac=A(), t=totales();
+    $("#hCierre").textContent = ac.compartida ? "Cierre del período" : "Costo de operación del período";
+    $("#repSub").textContent = ac.compartida
+      ? "Lo que le corresponde a cada propietario."
+      : "Lo que costó tener y volar la aeronave, y lo que se recupera por uso personal.";
+
+    function card(cls,rotulo,nombre,total,lineas){
+      return '<div class="own '+cls+'"><div class="own-h"><div class="k">'+esc(rotulo)+'</div>'+
+        '<div class="n">'+esc(nombre)+'</div><div class="v num">'+money(total)+'</div></div><div class="own-b">'+
+        lineas+'<div class="line sum"><div class="l">Total</div><div class="v num">'+money(total)+'</div></div>'+
+        '</div></div>';
+    }
+    function linea(l,s,v){
+      return '<div class="line"><div class="l">'+esc(l)+(s?'<small>'+esc(s)+'</small>':'')+'</div>'+
+        '<div class="v num">'+money(v)+'</div></div>';
+    }
+
+    if(ac.compartida){
+      var cA=0,cB=0;
+      ac.vuelos.forEach(function(v){ var c=calc(v,ac); if(c.mA>0) cA++; if(c.mB>0) cB++; });
+      $("#repCards").innerHTML =
+        card("A","A pagar este período",ac.nA,t.A,
+          linea("Costos fijos","mitad de "+money(t.fijos),t.fijos/2)+
+          linea("Costos variables de vuelo",cA+" de "+ac.vuelos.length+" vuelos",t.vA)+
+          linea("Mantenimiento","según el reparto de cada trabajo",t.mA)) +
+        card("B","A pagar este período",ac.nB,t.B,
+          linea("Costos fijos","mitad de "+money(t.fijos),t.fijos/2)+
+          linea("Costos variables de vuelo",cB+" de "+ac.vuelos.length+" vuelos",t.vB)+
+          linea("Mantenimiento","según el reparto de cada trabajo",t.mB));
+      $("#notaRep").innerHTML = '<b>Cómo se reparte.</b> Los <b>costos fijos</b> van mitad y mitad siempre, '+
+        'se haya volado o no. Los <b>costos variables</b> de cada vuelo los cubre quien lo solicitó; cuando '+
+        'vuelan juntos, el vuelo se divide según el porcentaje asignado a ese vuelo. El <b>mantenimiento</b> '+
+        'se reparte según lo que se marque en cada trabajo.';
+    } else {
+      var personales = ac.vuelos.filter(function(v){ return v.uso==="personal"; });
+      var det = personales.map(function(v){
+        var c=calc(v,ac);
+        return linea(v.cobrarA||"Sin asignar", v.no+" · "+hrs(c.horas)+" h × "+money(n(v.th||ac.th)), c.cobro);
+      }).join("") || '<div class="line"><div class="l">Sin vuelos de uso personal en el período</div><div class="v num">—</div></div>';
+
+      $("#repCards").innerHTML =
+        card("T","Costo de operación",ac.matricula,t.T,
+          linea("Costos fijos",ac.fijos.length+" conceptos",t.fijos)+
+          linea("Costos variables de vuelo",ac.vuelos.length+" vuelos · "+hrs(t.vH)+" h",t.vT)+
+          linea("Mantenimiento",ac.mant.length+" trabajos",t.mT)) +
+        card("C","Por cobrar","Uso personal",t.cobros,det);
+
+      $("#notaRep").innerHTML = '<b>Cómo funciona.</b> El costo de operación es lo que cuesta tener y volar '+
+        'la aeronave. Aparte, cuando alguien la usa de forma <b>personal</b> se le cobra una tarifa por hora, '+
+        'y eso recupera parte del costo. <b>Cuando vuela el dueño no hay costo de piloto</b>; cuando va un '+
+        'instructor a enseñarle, se paga la tarifa de instrucción.';
+    }
+
+    var ph=function(v){ return t.vH?money(v/t.vH):"—"; };
+    $("#tbG").innerHTML =
+      row("Horas voladas", hrs(t.vH)+" h","—") +
+      row("Ciclos", String(t.vC), t.vH?(t.vC/t.vH).toFixed(2)+" ciclos/h":"—") +
+      row("Pasajeros transportados", String(t.pax), t.vH?(t.pax/t.vH).toFixed(1)+" pax/h":"—") +
+      row("Combustible consumido", ent(t.cons)+" gal", t.vH?(t.cons/t.vH).toFixed(0)+" gal/h":"—") +
+      row("Combustible comprado", ent(t.vG)+" gal · "+money(t.comb), ph(t.comb)) +
+      row("Al mando (piloto o instructor)", money(t.piloto), ph(t.piloto)) +
+      row("Espera en tierra", money(t.espera), ph(t.espera)) +
+      row("FBO y handling", money(t.fbo), ph(t.fbo)) +
+      row("Viáticos", money(t.via), ph(t.via)) +
+      row("Otros gastos de viaje", money(t.otr), ph(t.otr)) +
+      row("Mantenimiento", money(t.mT), ph(t.mT)) +
+      row("Costos fijos", money(t.fijos), ph(t.fijos)) +
+      '<tr style="background:var(--sand-2)"><td style="font-weight:800">Costo total del período</td>'+
+      '<td class="r num" style="font-weight:800;color:var(--teal-d)">'+money(t.T)+'</td>'+
+      '<td class="r num" style="font-weight:800;color:var(--teal-d)">'+ph(t.T)+'</td></tr>' +
+      (ac.compartida ? "" :
+        '<tr><td style="font-weight:800;color:var(--a-d)">Menos cobros por uso personal</td>'+
+        '<td class="r num pa">−'+money(t.cobros)+'</td><td class="r num pa">−'+ph(t.cobros)+'</td></tr>'+
+        '<tr style="background:var(--sand-2)"><td style="font-weight:800">Costo neto del período</td>'+
+        '<td class="r num" style="font-weight:800">'+money(t.T-t.cobros)+'</td>'+
+        '<td class="r num" style="font-weight:800">'+ph(t.T-t.cobros)+'</td></tr>');
+
+    $("#thR").innerHTML = ac.compartida ?
+      '<tr><th>No.</th><th>Fecha</th><th>Ruta</th><th>Solicitante</th><th class="r">Tramos</th>'+
+      '<th class="r">Pax</th><th class="r">Horas</th><th class="r">Total vuelo</th>'+
+      '<th class="r">'+esc(ac.nA)+'</th><th class="r">'+esc(ac.nB)+'</th></tr>'
+      :
+      '<tr><th>No.</th><th>Fecha</th><th>Ruta</th><th>Al mando</th><th>Uso</th><th class="r">Tramos</th>'+
+      '<th class="r">Pax</th><th class="r">Horas</th><th class="r">Total vuelo</th><th class="r">Cobro</th></tr>';
+
+    var tb=$("#tbR"); tb.innerHTML="";
+    if(!ac.vuelos.length) tb.innerHTML='<tr><td colspan="10" class="empty">Sin vuelos.</td></tr>';
+    ac.vuelos.forEach(function(v){
+      var c=calc(v,ac);
+      var tr=document.createElement("tr");
+      var ini='<td style="font-family:ui-monospace,monospace;font-size:11.5px">'+esc(v.no)+'</td>'+
+        '<td>'+esc(v.f)+'</td><td style="white-space:normal;min-width:160px">'+esc(ruta(v))+'</td>';
+      if(ac.compartida){
+        var lab=v.s==="A"?ac.nA:v.s==="B"?ac.nB:"Ambos";
+        tr.innerHTML = ini +
+          '<td><span class="chip '+v.s+'">'+esc(lab)+'</span></td>'+
+          '<td class="r num">'+c.tramos+'</td><td class="r num">'+c.pax+'</td>'+
+          '<td class="r num">'+hrs(c.horas)+'</td><td class="r num">'+money(c.total)+'</td>'+
+          '<td class="r num pa">'+(c.pA?money(c.mA)+' <span style="color:var(--ink-3);font-weight:400">('+c.pA+' %)</span>':'—')+'</td>'+
+          '<td class="r num pb">'+(c.pB?money(c.mB)+' <span style="color:var(--ink-3);font-weight:400">('+c.pB+' %)</span>':'—')+'</td>';
+      } else {
+        tr.innerHTML = ini +
+          '<td><span class="chip '+(v.mando||"piloto")+'">'+esc(MANDO[v.mando||"piloto"])+'</span></td>'+
+          '<td><span class="chip '+(v.uso||"trabajo")+'">'+esc(v.uso==="personal"?"Personal":"Trabajo")+'</span></td>'+
+          '<td class="r num">'+c.tramos+'</td><td class="r num">'+c.pax+'</td>'+
+          '<td class="r num">'+hrs(c.horas)+'</td><td class="r num">'+money(c.total)+'</td>'+
+          '<td class="r num pa">'+(c.cobro?money(c.cobro)+'<div style="font-size:10px;color:var(--ink-3);font-weight:400">'+esc(v.cobrarA||"")+'</div>':'—')+'</td>';
+      }
+      tb.appendChild(tr);
+    });
+    var tramos = ac.vuelos.reduce(function(a,v){ return a+(v.tramos||[]).length; },0);
+    $("#tfR").innerHTML = ac.vuelos.length ? (ac.compartida ?
+      '<tr><td colspan="4" class="r">Totales</td><td class="r num">'+tramos+'</td><td class="r num">'+t.pax+'</td>'+
+      '<td class="r num">'+hrs(t.vH)+'</td><td class="r num">'+money(t.vT)+'</td>'+
+      '<td class="r num pa">'+money(t.vA)+'</td><td class="r num pb">'+money(t.vB)+'</td></tr>'
+      :
+      '<tr><td colspan="5" class="r">Totales</td><td class="r num">'+tramos+'</td><td class="r num">'+t.pax+'</td>'+
+      '<td class="r num">'+hrs(t.vH)+'</td><td class="r num">'+money(t.vT)+'</td>'+
+      '<td class="r num pa">'+money(t.cobros)+'</td></tr>') : "";
+  }
+
+  function pinta(){ pintaFlota(); pintaTop(); pintaPiloto(); pintaAdm(); pintaMan(); pintaDue(); save(); }
+
+  // ── Eventos ──────────────────────────────────────────────
+  document.addEventListener("input", function(e){
+    var el=e.target, ds=el.dataset; if(!ds) return;
+    var k=ds.k, ac=A();
+    if(ds.cfg!==undefined){ ac[ds.cfg]=(el.type==="number")?n(el.value):el.value; pinta(); return; }
+    if(ds.vi!==undefined && ds.ti!==undefined){
+      var tr=ac.vuelos[+ds.vi].tramos[+ds.ti]; if(!tr) return;
+      tr[k]=(el.type==="number")?n(el.value):el.value;
+    } else if(ds.i!==undefined && k){
+      var v=ac.vuelos[+ds.i]; if(!v) return;
+      v[k]=(el.type==="number"||k==="pil")?n(el.value):el.value;
+      if(k==="s" && el.value!=="AMBOS") v.pA = el.value==="A"?100:0;
+    } else if(ds.fi!==undefined){ var f=ac.fijos[+ds.fi]; if(!f) return;
+      f[k]=(el.type==="number")?n(el.value):el.value;
+    } else if(ds.mi!==undefined){ var m=ac.mant[+ds.mi]; if(!m) return;
+      m[k]=(el.type==="number")?n(el.value):el.value;
+    } else if(ds.ti2!==undefined){ var x=ac.plan[+ds.ti2]; if(!x) return;
+      x[k]=(el.type==="number")?n(el.value):el.value;
+    } else if(ds.pi!==undefined){ var p=ac.pilotos[+ds.pi]; if(!p) return;
+      p[k]=el.value;
+    } else return;
+    pintaTop(); pintaDue(); save();
+  });
+
+  document.addEventListener("change", function(e){
+    var ds=e.target.dataset; if(!ds) return;
+    if(e.target.tagName==="SELECT" || ds.vi!==undefined || ds.i!==undefined || ds.ti2!==undefined || ds.pi!==undefined) pinta();
+  });
+
+  document.addEventListener("keydown", function(e){
+    if(e.key!=="Enter") return;
+    var ds=e.target.dataset; if(!ds || ds.addp===undefined) return;
+    var val=e.target.value.trim(); if(!val) return;
+    var v=A().vuelos[+ds.addp];
+    if(!v.pax) v.pax=[];
+    v.pax.push(val);
+    e.preventDefault(); pinta();
+    var nuevo=document.querySelector('[data-addp="'+ds.addp+'"]');
+    if(nuevo) nuevo.focus();
+  });
+
+  document.addEventListener("click", function(e){
+    var b=e.target.closest?e.target.closest("button"):null;
+    if(!b || !b.dataset) return;
+    var d=b.dataset, ac=A();
+    if(d.ac!==undefined){ S.activa=d.ac; vista=vista; pinta(); return; }
+    if(d.delv!==undefined){ ac.vuelos.splice(+d.delv,1); pinta(); }
+    else if(d.delt!==undefined){ ac.vuelos[+d.delt].tramos.splice(+d.j,1); pinta(); }
+    else if(d.delp!==undefined){ ac.vuelos[+d.delp].pax.splice(+d.j,1); pinta(); }
+    else if(d.addt!==undefined){
+      var v=ac.vuelos[+d.addt], u=v.tramos[v.tramos.length-1];
+      v.tramos.push({o:u?u.d:"MGGT", d:"", hs:"", hl:"", os:u?u.ol:0, ol:u?u.ol:0,
+        ci:1, gi:u?u.gf:0, gf:0, gl:0, gr:0, pg:0, fbo:0, esp:0, n:""});
+      pinta();
+    }
+    else if(d.delf!==undefined){ ac.fijos.splice(+d.delf,1); pinta(); }
+    else if(d.delm!==undefined){ ac.mant.splice(+d.delm,1); pinta(); }
+    else if(d.delt2!==undefined){ ac.plan.splice(+d.delt2,1); pinta(); }
+    else if(d.delpil!==undefined){ ac.pilotos.splice(+d.delpil,1); pinta(); }
+  });
+
+  $("#addV").addEventListener("click", function(){
+    var ac=A(), u=ac.vuelos[ac.vuelos.length-1];
+    var h=u&&u.tramos.length?u.tramos[u.tramos.length-1].ol:horoActual();
+    var pre = ac.compartida ? "KA-2026-0" : "OBI-2026-0";
+    ac.vuelos.push({no:pre+(41+ac.vuelos.length), f:fechaISO(hoy()), s:"A", pA:100, pil:0,
+      mando: ac.compartida?"piloto":"dueno", uso:"trabajo", cobrarA:"", th:ac.th,
+      pax:[], viaticos:0, otros:0, nota:"",
+      tramos:[{o:"MGGT", d:"", hs:"", hl:"", os:h, ol:h, ci:1, gi:0, gf:0, gl:0, gr:0, pg:0, fbo:0, esp:0, n:""}]});
+    pinta();
+  });
+  $("#addF").addEventListener("click", function(){ A().fijos.push({c:"",m:0}); pinta(); });
+  $("#addM").addEventListener("click", function(){
+    A().mant.push({f:fechaISO(hoy()), h:horoActual(), ci:ciclosActuales(), t:"", d:"", ti:"Programado", c:0, r:"50/50"}); pinta();
+  });
+  $("#addT").addEventListener("click", function(){
+    A().plan.push({t:"", ref:"", ih:100, ic:0, im:0, uf:fechaISO(hoy()), uh:horoActual(), uc:ciclosActuales(), cr:false}); pinta();
+  });
+  $("#addPil").addEventListener("click", function(){ A().pilotos.push({n:"",lic:"",tipo:"",med:""}); pinta(); });
+
+  var vs=Array.prototype.slice.call(document.querySelectorAll('.vistas [role="tab"]'));
+  vs.forEach(function(t){
+    t.addEventListener("click", function(){
+      vista=t.dataset.v;
+      vs.forEach(function(o){
+        o.setAttribute("aria-selected", String(o===t));
+        $("#v-"+o.dataset.v).hidden=(o!==t);
+      });
+      pintaTop();
+    });
+  });
+  var ss=Array.prototype.slice.call(document.querySelectorAll('.subtabs [role="tab"]'));
+  ss.forEach(function(t){
+    t.addEventListener("click", function(){
+      ss.forEach(function(o){
+        o.setAttribute("aria-selected", String(o===t));
+        $("#"+o.dataset.s).hidden=(o!==t);
+      });
+    });
+  });
+
+  var mes=$("#mes");
+  ["Septiembre 2026","Agosto 2026","Julio 2026"].forEach(function(m,i){
+    var o=document.createElement("option"); o.textContent=m; o.value=String(i); mes.appendChild(o);
+  });
+
+  pinta();
+})();
+</script>
+</body>
+</html>

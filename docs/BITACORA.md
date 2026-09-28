@@ -6,6 +6,31 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 30 · 2026-09-28 · T&T · Servicio de Crucero
+
+**Objetivo:** el crucero como servicio del viaje, según el Word que mandó el usuario. Tiene una estructura que ningún otro servicio comparte: **crucero → camarotes → abonos y servicios extra**.
+
+**Cambios de schema:** migración `20260928000002_cruceros.sql`.
+- `att_cruceros` con las columnas comunes de servicio, para que encaje en el itinerario, la liquidación y la cancelación como los otros diez.
+- `att_crucero_camarotes` · el total del camarote es una **columna generada** `tarifa × pax`.
+- `att_crucero_pagos` · abonos y servicios extra en una sola tabla, distinguidos por `clase`. Los dos tienen la misma forma —monto, tarjeta, fecha, comentario— y los dos son dinero que llega a una tarjeta; lo único que cambia es si abonan a la reserva o suman encima.
+- El total del crucero lo mantiene un trigger: camarotes + extras. Los abonos **no** suman, son forma de pago.
+- Se amplió el CHECK de `att_cargos.servicio_tipo` para aceptar `crucero`.
+
+**Cambios de UI:** sección en el viaje, formulario de tres niveles, hoja imprimible, y el crucero en el itinerario general, en el resumen del viaje y en las dos liquidaciones.
+
+**Comentarios:**
+- **La tarifa es por pasajero y por el crucero completo, no por noche.** Un camarote de 2 pasajeros a 1,500 son 3,000 aunque el crucero dure 7 noches. En el hotel es al revés —ahí `tarifa × noches` sí es correcto porque la tarifa es por noche— y está bien que las dos fórmulas no coincidan. Las noches del camarote se guardan porque aparecen en el documento, pero son informativas y la pantalla lo dice.
+- **Es el primer servicio cuyo dinero llega a las tarjetas por varios caminos.** La reserva se paga en abonos, cada uno con su tarjeta y su fecha, y encima los extras traen la suya. Leerlo como los demás —`monto` contra `pagado_con_id`— habría puesto el crucero entero en una sola tarjeta: exactamente el error que se corrigió el mismo día con los cargos adicionales. Por eso no entró en `MAPEO` y vive en `liquidacion-cruceros.ts`, que lo descompone en un renglón por abono, uno por extra y uno por el **saldo** que falta abonar. Los tres suman exactamente el total del trigger; verificado contra la base: 4,500 + 420 + 3,000 = 7,920.
+- **Un abono se fecha el día que se cobró**, no el día que zarpa el barco. Es lo único que lo ubica en un estado de cuenta: un abono de julio no puede aparecer en diciembre.
+- **El estado de pago del crucero no se elige, se calcula** de los abonos. En los otros servicios se escoge a mano, pero acá sería mentirle a la hoja: los abonos ya dicen cuánto se lleva pagado. Lo único que lo pisa es la cancelación, y volver a guardar el formulario no lo resucita.
+- El pendiente de un camarote cuenta **solo la reserva**, no los extras: el documento dice «hasta pagar el 100 % de **la reserva**», y un extra ya trae su propia tarjeta y su propia fecha, o sea que ya está pagado. Meterlo en el pendiente lo cobraría dos veces.
+- El crucero **no lleva el editor de cargos adicionales** de los otros diez: los servicios extra por camarote ya cubren eso con más detalle, y tener las dos cosas sería dos lugares para lo mismo.
+
+**Commits clave:** ver `git log` de 2026-09-28.
+
+---
+
 ## Fase 29 · 2026-09-28 · Cada cargo adicional con su tarjeta y su fecha
 
 **El problema, reportado por el usuario:** al agregar un monto extra a un servicio —asientos, maletas— solo había un campo para el monto. Ningún lugar para decir con qué se pagó ni cuándo, así que el extra se sumaba al `monto` del servicio y al liquidar se le cargaba entero a la tarjeta del servicio. *«El monto por TC está incorrecto porque todo se cargó a la TC con la que se pagó el boleto inicial.»*

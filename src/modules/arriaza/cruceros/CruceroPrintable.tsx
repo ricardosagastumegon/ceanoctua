@@ -29,9 +29,12 @@ function cuando(fecha: string | null, hora: string | null): string {
   return h ? `${fmtDate(fecha)} · ${h}` : fmtDate(fecha);
 }
 
-/** `Camarote 9204`, o el nombre de la reserva si no se anotó el número. */
-const rotulo = (c: CamaroteInput): string =>
-  c.camarote ? `Camarote ${c.camarote}` : c.reserva_nombre || 'Camarote';
+/**
+ * `Camarote 1 · 9204`. El número de orden va primero porque es el orden en
+ * que se agregaron al servicio, que es como el usuario los tiene en la cabeza.
+ */
+const rotulo = (c: CamaroteInput, i: number): string =>
+  `Camarote ${i + 1}${c.camarote ? ` · ${c.camarote}` : ''}`;
 
 /**
  * Hoja imprimible del crucero, en dos hojas.
@@ -86,18 +89,18 @@ export function CruceroPrintable({ open, onClose, crucero, tripNo }: Props) {
       confirmacion={crucero.confirmacion}
       cancelacion={crucero.cancelacion}
       rowsLayout="compacto"
+      // Barco, paquete y noches ya van en el subtítulo del encabezado:
+      // repetirlos acá costaba una fila entera de la hoja limpia. Con estos
+      // tres más el número de confirmación queda una sola fila de cuatro.
       rows={[
-        { label: 'Barco', value: crucero.ship ?? '—' },
-        { label: 'Tipo de paquete', value: crucero.package_type ?? '—' },
         { label: 'Fecha de reserva', value: fmtDate(crucero.fecha_reserva) },
-        { label: 'Noches', value: crucero.noches ?? '—' },
         { label: 'Camarotes', value: camarotes.length || '—' },
         { label: 'Pasajeros', value: pax || '—' },
       ]}
       extras={
         <div>
           {/* ── HOJA 1 · la reserva ──────────────────────────────────── */}
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div className="evitar-corte grid grid-cols-2 gap-4">
               {[
                 { titulo: '⚓ Embarque', fecha: crucero.salida_fecha, hora: crucero.salida_hora },
@@ -121,62 +124,101 @@ export function CruceroPrintable({ open, onClose, crucero, tripNo }: Props) {
               ))}
             </div>
 
-            {/* Lo único que necesita la primera hoja: de quién es cada
-                camarote, quién viaja en él y cuánto se lleva pagado. */}
-            <div className="evitar-corte overflow-hidden rounded-lg border" style={{ borderColor: META.solid }}>
-              <div
-                className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white"
-                style={{ backgroundColor: META.dark }}
-              >
-                🛳 Camarotes · {camarotes.length}
-              </div>
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr style={{ backgroundColor: META.light, color: META.dark }} className="text-left">
-                    <th className="px-4 py-1.5 font-extrabold">Reserva a nombre de</th>
-                    <th className="px-2 py-1.5 font-extrabold">N.º de reserva</th>
-                    <th className="px-2 py-1.5 font-extrabold">Cubierta</th>
-                    <th className="px-2 py-1.5 font-extrabold">Camarote</th>
-                    <th className="px-2 py-1.5 font-extrabold">Tipo de habitación</th>
-                    <th className="px-4 py-1.5 text-right font-extrabold">Monto pagado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {camarotes.map((c, i) => {
-                    const pagado = sumaMovimientos(c.movimientos, 'pago');
-                    const totalCam = totalCamarote(c);
-                    return (
-                      <tr key={i} style={{ backgroundColor: i % 2 ? '#ffffff' : 'rgba(0,0,0,.02)' }}>
-                        <td className="px-4 py-2 align-top">
-                          <div className="font-semibold text-dark">{c.reserva_nombre || '—'}</div>
-                          {/* Quiénes viajan en ESTE camarote. Sin esto la hoja
-                              no dice a quién pertenece cada reserva. */}
-                          {c.pasajeros.length > 0 && (
-                            <div className="mt-0.5 text-[11px] text-dark-3">
-                              {c.pasajeros.join(' · ')}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-2 py-2 align-top font-mono text-dark-2">
-                          {c.reserva_numero || '—'}
-                        </td>
-                        <td className="px-2 py-2 align-top text-dark-2">{c.cubierta || '—'}</td>
-                        <td className="px-2 py-2 align-top font-mono text-dark-2">{c.camarote || '—'}</td>
-                        <td className="px-2 py-2 align-top text-dark-2">{c.tipo_hab || '—'}</td>
-                        <td className="whitespace-nowrap px-4 py-2 text-right align-top">
-                          <div className="font-extrabold" style={{ color: META.dark }}>
-                            {moneda} {money(pagado)}
+            {/* Cada camarote en su propia tarjeta y en el orden en que se
+                agregaron al servicio.
+                Antes iban como filas de una sola tabla con el rótulo
+                «Camarotes · 2» encima, y el usuario lo leyó como si los dos
+                estuvieran dentro de un «camarote 2». Un cuadro por camarote
+                no se puede malinterpretar. */}
+            <div className="space-y-3">
+              {camarotes.map((c, i) => {
+                const pagado = sumaMovimientos(c.movimientos, 'pago');
+                const totalCam = totalCamarote(c);
+                return (
+                  <div
+                    key={i}
+                    className="evitar-corte overflow-hidden rounded-lg border"
+                    style={{ borderColor: META.solid }}
+                  >
+                    <div
+                      className="flex items-center justify-between gap-3 px-4 py-2 text-white"
+                      style={{ backgroundColor: META.dark }}
+                    >
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider">
+                        {rotulo(c, i)}
+                      </span>
+                      <span className="whitespace-nowrap text-right">
+                        <span className="block text-[9px] font-extrabold uppercase tracking-wider text-white/60">
+                          Monto pagado
+                        </span>
+                        <span className="font-heading text-base font-extrabold">
+                          {moneda} {money(pagado)}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-[1.7fr_1.1fr_.7fr_.9fr_1.8fr] gap-x-4 gap-y-2 px-4 py-2.5">
+                      {[
+                        { label: 'Reserva a nombre de', value: c.reserva_nombre },
+                        { label: 'N.º de reserva', value: c.reserva_numero, mono: true },
+                        { label: 'Cubierta', value: c.cubierta },
+                        { label: 'Camarote', value: c.camarote, mono: true },
+                        { label: 'Tipo de habitación', value: c.tipo_hab },
+                      ].map((f) => (
+                        <div key={f.label}>
+                          {/* Sin `nowrap` el rótulo se partía en dos líneas y
+                              el valor de esa columna quedaba desalineado del
+                              resto de la fila. Como las pistas `fr` no bajan
+                              de su min-content, esto además le da a la columna
+                              el ancho que el rótulo necesita. */}
+                          <span
+                            className="inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider"
+                            style={{ backgroundColor: META.light, color: META.dark }}
+                          >
+                            {f.label}
+                          </span>
+                          <div className={`mt-1 text-[12px] leading-snug text-dark ${f.mono ? 'font-mono' : ''}`}>
+                            {f.value || '—'}
                           </div>
-                          {/* Mostrar solo lo pagado escondería una deuda. */}
-                          {Math.abs(totalCam - pagado) > 0.005 && (
-                            <div className="text-[10px] text-dark-3">de {moneda} {money(totalCam)}</div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Quiénes viajan en ESTE camarote. Sin esto la hoja no
+                        dice a quién pertenece cada reserva. */}
+                    {c.pasajeros.length > 0 && (
+                      <div className="border-t px-4 py-1.5" style={{ borderColor: `${META.solid}33` }}>
+                        <span
+                          className="inline-block rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider"
+                          style={{ backgroundColor: META.light, color: META.dark }}
+                        >
+                          Pasajeros · {c.pasajeros.length}
+                        </span>
+                        <div className="mt-1 text-[12px] leading-snug text-dark">
+                          {c.pasajeros.join(' · ')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mostrar solo lo pagado escondería una deuda --o un
+                        sobrepago-- en la hoja que se mira primero. */}
+                    {Math.abs(totalCam - pagado) > 0.005 && (
+                      <div
+                        className="px-4 py-1.5 text-right text-[11px]"
+                        style={{ backgroundColor: 'rgba(0,0,0,.02)' }}
+                      >
+                        <span className="text-dark-3">Reserva {moneda} {money(totalCam)}</span>
+                        <span className="ml-3 font-extrabold"
+                          style={{ color: totalCam > pagado ? AMBAR : TEAL }}>
+                          {totalCam > pagado
+                            ? `Falta ${moneda} ${money(totalCam - pagado)}`
+                            : `Sobrepagado ${moneda} ${money(pagado - totalCam)}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {crucero.itinerario && (
@@ -286,7 +328,7 @@ export function CruceroPrintable({ open, onClose, crucero, tripNo }: Props) {
                     >
                       <span className="text-[11px] font-extrabold uppercase tracking-wider"
                         style={{ color: META.dark }}>
-                        {rotulo(c)}
+                        {rotulo(c, i)}
                       </span>
                       <span className="text-[11px] text-dark-2">
                         {[

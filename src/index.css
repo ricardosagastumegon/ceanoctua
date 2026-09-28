@@ -86,6 +86,13 @@
     break-inside: avoid;
     page-break-inside: avoid;
   }
+
+  /* Arranca en hoja nueva. La hoja del crucero lo usa para dejar la primera
+     limpia y mandar el detalle de pagos a la segunda. */
+  .salto-pagina {
+    break-before: page;
+    page-break-before: always;
+  }
 }
 
 /* Fuera de impresion el espejo estatico no existe. */

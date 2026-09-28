@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { TextInput } from '@/components/ui/TextInput';
@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { describeError, useTarjetas } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { ChipsInput } from '../shared/ChipsInput';
 import { invalidarViaje } from '../viajes/invalidar';
 import {
   camaroteVacio,
@@ -24,6 +25,18 @@ import {
 const META = SERVICE_META.crucero;
 const MONEDAS = ['USD', 'GTQ', 'EUR'] as const;
 
+/**
+ * Un color por tipo de bloque, para que el formulario se lea de un vistazo.
+ *
+ * El usuario reportó que «cuesta mucho identificar visualmente cada segmento»
+ * cuando todo tenía el mismo borde beige. Ahora cada cosa lleva su número y su
+ * color: el crucero y los camarotes en el índigo del servicio, el dinero que
+ * abona a la reserva en verde y el que se suma encima en ámbar.
+ */
+const AZUL = META.dark;
+const TEAL = '#0f766e';
+const AMBAR = '#b4460f';
+
 const money = (v: number) =>
   v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -34,11 +47,60 @@ type Props = {
   onClose: () => void;
 };
 
+/** Una sección del formulario, con su número y su color. */
+function Bloque({ paso, titulo, ayuda, color, children }: {
+  paso: number;
+  titulo: string;
+  ayuda?: string;
+  color: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-lg border" style={{ borderColor: `${color}40` }}>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-3 py-2"
+        style={{ backgroundColor: `${color}12` }}>
+        <span className="flex h-[18px] w-[18px] shrink-0 translate-y-[3px] items-center justify-center rounded-full text-[10px] font-extrabold text-white"
+          style={{ backgroundColor: color }}>{paso}</span>
+        <span className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color }}>
+          {titulo}
+        </span>
+        {ayuda && <span className="text-[11px] text-dark-3">{ayuda}</span>}
+      </div>
+      <div className="space-y-3 p-3">{children}</div>
+    </section>
+  );
+}
+
+/** Un bloque interno del camarote, con su barra de color a la izquierda. */
+function SubBloque({ titulo, ayuda, color, accion, children }: {
+  titulo: string;
+  ayuda?: string;
+  color: string;
+  accion?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-md border-l-[3px] bg-white px-3 py-2.5"
+      style={{ borderLeftColor: color, boxShadow: `inset 0 0 0 1px ${color}22` }}>
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color }}>
+            {titulo}
+          </span>
+          {ayuda && <p className="text-[11px] text-dark-3">{ayuda}</p>}
+        </div>
+        {accion}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 /**
  * Alta y edición de un crucero.
  *
- * Tiene tres niveles —crucero, camarotes, y los movimientos de cada
- * camarote— y dos reglas que no comparte con ningún otro servicio:
+ * Tiene tres niveles —crucero, camarotes, y los pasajeros y movimientos de
+ * cada camarote— y dos reglas que no comparte con ningún otro servicio:
  *
  *  - El total del camarote es **tarifa × pax**. La tarifa del crucero se
  *    cotiza por persona y por el viaje completo; las noches son
@@ -81,6 +143,8 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
   const [moneda, setMoneda] = useState('USD');
   const [notas, setNotas] = useState('');
   const [camarotes, setCamarotes] = useState<CamaroteInput[]>([]);
+  /** Lo que se está escribiendo en el campo de pasajeros de cada camarote. */
+  const [draftPax, setDraftPax] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -102,6 +166,7 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
     setMoneda(c?.moneda ?? 'USD');
     setNotas(c?.notas ?? '');
     setCamarotes(d?.camarotes.length ? d.camarotes : [camaroteVacio()]);
+    setDraftPax({});
     setError(null);
   }, [open, cargado.data]);
 
@@ -207,12 +272,7 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
         <p className="text-sm text-dark-3">Cargando crucero…</p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ── El crucero ─────────────────────────────────────────── */}
-          <div className="rounded-md border border-sand p-3">
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wider"
-              style={{ color: META.dark }}>
-              El crucero
-            </div>
+          <Bloque paso={1} titulo="El crucero" ayuda="barco, paquete y fechas" color={AZUL}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextInput label="Encabezado del servicio" value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
@@ -224,7 +284,7 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
               <TextInput label="Fecha de reserva" type="date" value={fechaReserva}
                 onChange={(e) => setFechaReserva(e.target.value)} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <TextInput label="Salida" type="date" value={salidaFecha}
                 onChange={(e) => setSalidaFecha(e.target.value)} />
               <TextInput label="Hora" type="time" value={salidaHora}
@@ -236,16 +296,15 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
               <TextInput label="No. de noches" type="number" min="0" value={noches}
                 onChange={(e) => setNoches(e.target.value)} />
             </div>
-            <label className="mt-3 block">
+            <label className="block">
               <span className="mb-1 block text-xs font-semibold text-dark-2">Itinerario</span>
               <textarea value={itinerario} onChange={(e) => setItinerario(e.target.value)} rows={2}
                 placeholder="Puertos y días del recorrido"
                 className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark focus:border-teal focus:outline-none" />
             </label>
-          </div>
+          </Bloque>
 
-          {/* ── Camarotes ──────────────────────────────────────────── */}
-          <div className="space-y-3">
+          <Bloque paso={2} titulo="Camarotes" ayuda="cada uno con sus pasajeros y sus pagos" color={AZUL}>
             {camarotes.map((c, i) => {
               const base = totalCamarote(c);
               const extras = sumaMovimientos(c.movimientos, 'extra');
@@ -253,61 +312,92 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
               const pendiente = pendienteCamarote(c);
               // El avance es sobre la reserva; los extras ya vienen pagados.
               const pct = base > 0 ? Math.round((pagos / base) * 100) : 0;
+              const descuadre = c.pasajeros.length > 0 && c.pasajeros.length !== Number(c.pax);
 
               return (
-                <div key={c.id ?? `nuevo-${i}`} className="overflow-hidden rounded-md border border-sand">
+                <div key={c.id ?? `nuevo-${i}`}
+                  className="overflow-hidden rounded-lg border" style={{ borderColor: `${AZUL}33` }}>
                   <div className="flex flex-wrap items-center gap-2 px-3 py-2"
                     style={{ backgroundColor: META.light }}>
                     <span className="text-[11px] font-extrabold uppercase tracking-wider"
-                      style={{ color: META.dark }}>
+                      style={{ color: AZUL }}>
                       Camarote {i + 1}
                       {c.camarote ? ` · ${c.camarote}` : ''}
                     </span>
-                    <span className="ml-auto text-[11px] font-extrabold" style={{ color: META.dark }}>
+                    <span className="ml-auto text-[11px] font-extrabold" style={{ color: AZUL }}>
                       {moneda} {money(base + extras)}
                     </span>
                     <button type="button" onClick={() => setCamarotes((l) => l.filter((_, k) => k !== i))}
                       className="text-dark-3 hover:text-rust" aria-label="Quitar camarote">✕</button>
                   </div>
 
-                  <div className="space-y-3 p-3">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <TextInput label="Reserva a nombre de" value={c.reserva_nombre}
-                        onChange={(e) => updCamarote(i, { reserva_nombre: e.target.value })} />
-                      <TextInput label="Cubierta" value={c.cubierta}
-                        onChange={(e) => updCamarote(i, { cubierta: e.target.value })} />
-                      <TextInput label="Camarote" value={c.camarote}
-                        onChange={(e) => updCamarote(i, { camarote: e.target.value })} />
-                      <TextInput label="Tipo de habitación" value={c.tipo_hab}
-                        onChange={(e) => updCamarote(i, { tipo_hab: e.target.value })} />
-                      <TextInput label="Alimentación" value={c.alimentacion}
-                        onChange={(e) => updCamarote(i, { alimentacion: e.target.value })} />
-                      <TextInput label="Número de noches" type="number" min="0" value={c.noches}
-                        onChange={(e) => updCamarote(i, { noches: e.target.value })}
-                        hint="informativo, no entra en el total" />
-                    </div>
+                  <div className="space-y-2.5 bg-sand-l/40 p-3">
+                    <SubBloque titulo="Datos del camarote" color={AZUL}>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <TextInput label="Reserva a nombre de" value={c.reserva_nombre}
+                          onChange={(e) => updCamarote(i, { reserva_nombre: e.target.value })} />
+                        <TextInput label="No. de reserva" value={c.reserva_numero}
+                          onChange={(e) => updCamarote(i, { reserva_numero: e.target.value })}
+                          placeholder="El que da la naviera" />
+                        <TextInput label="Camarote" value={c.camarote}
+                          onChange={(e) => updCamarote(i, { camarote: e.target.value })} />
+                        <TextInput label="Cubierta" value={c.cubierta}
+                          onChange={(e) => updCamarote(i, { cubierta: e.target.value })} />
+                        <TextInput label="Tipo de habitación" value={c.tipo_hab}
+                          onChange={(e) => updCamarote(i, { tipo_hab: e.target.value })} />
+                        <TextInput label="Alimentación" value={c.alimentacion}
+                          onChange={(e) => updCamarote(i, { alimentacion: e.target.value })} />
+                      </div>
+                    </SubBloque>
 
-                    {/* La fórmula, a la vista */}
-                    <div className="flex flex-wrap items-end gap-3 rounded-md bg-sand-l/60 p-3">
-                      <TextInput label={`Tarifa por pasajero (${moneda})`} type="number" min="0" step="0.01"
-                        value={c.tarifa} onChange={(e) => updCamarote(i, { tarifa: e.target.value })} />
-                      <span className="pb-2 text-dark-3">×</span>
-                      <TextInput label="Cantidad de pax" type="number" min="0" value={c.pax}
-                        onChange={(e) => updCamarote(i, { pax: e.target.value })} />
-                      <div className="ml-auto text-right">
-                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-dark-3">
-                          Total por camarote
-                        </div>
-                        <div className="font-heading text-lg font-extrabold" style={{ color: META.dark }}>
-                          {moneda} {money(base)}
+                    <SubBloque titulo="Pasajeros" color={AZUL}
+                      ayuda="Quiénes viajan en este camarote. Uno por uno, para poder filtrarlos después.">
+                      <ChipsInput
+                        label=""
+                        placeholder="Nombre del pasajero y Enter"
+                        draft={draftPax[i] ?? ''}
+                        onDraft={(v) => setDraftPax((d) => ({ ...d, [i]: v }))}
+                        items={c.pasajeros}
+                        onAdd={(v) => updCamarote(i, { pasajeros: [...c.pasajeros, v] })}
+                        onRemove={(k) => updCamarote(i, { pasajeros: c.pasajeros.filter((_, j) => j !== k) })}
+                        color={{ solid: META.solid, dark: META.dark, light: META.light }}
+                      />
+                      {descuadre && (
+                        <p className="mt-1.5 text-[11px]" style={{ color: AMBAR }}>
+                          Se cobran {c.pax} pax y hay {c.pasajeros.length} pasajero
+                          {c.pasajeros.length === 1 ? '' : 's'} anotado
+                          {c.pasajeros.length === 1 ? '' : 's'}. Si está bien, déjalo así.
+                        </p>
+                      )}
+                    </SubBloque>
+
+                    <SubBloque titulo="Tarifa" color={AZUL}
+                      ayuda="Por pasajero y por el crucero completo. Las noches no entran.">
+                      <div className="flex flex-wrap items-end gap-3">
+                        <TextInput label={`Tarifa por pasajero (${moneda})`} type="number" min="0" step="0.01"
+                          value={c.tarifa} onChange={(e) => updCamarote(i, { tarifa: e.target.value })} />
+                        <span className="pb-2 text-dark-3">×</span>
+                        <TextInput label="Cantidad de pax" type="number" min="0" value={c.pax}
+                          onChange={(e) => updCamarote(i, { pax: e.target.value })} />
+                        <TextInput label="Número de noches" type="number" min="0" value={c.noches}
+                          onChange={(e) => updCamarote(i, { noches: e.target.value })}
+                          hint="informativo" />
+                        <div className="ml-auto text-right">
+                          <div className="text-[10px] font-extrabold uppercase tracking-wider text-dark-3">
+                            Total por camarote
+                          </div>
+                          <div className="font-heading text-lg font-extrabold" style={{ color: AZUL }}>
+                            {moneda} {money(base)}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </SubBloque>
 
                     <MovimientosCamarote
                       clase="pago"
                       titulo="Abonos a la reserva"
                       ayuda="La reserva se puede pagar en varios abonos, cada uno con su tarjeta."
+                      color={TEAL}
                       movimientos={c.movimientos}
                       moneda={moneda}
                       tarjetas={opcionesTarjeta}
@@ -320,6 +410,7 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
                       clase="extra"
                       titulo="Servicios extra"
                       ayuda="Bebidas, excursiones, propinas… suman al total del camarote."
+                      color={AMBAR}
                       movimientos={c.movimientos}
                       moneda={moneda}
                       tarjetas={opcionesTarjeta}
@@ -329,16 +420,16 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
                     />
 
                     {/* Cuánto falta para el 100 % */}
-                    <div className="flex flex-wrap items-baseline justify-end gap-x-4 gap-y-1 border-t border-sand pt-2 text-[11px]">
+                    <div className="flex flex-wrap items-baseline justify-end gap-x-4 gap-y-1 pt-1 text-[11px]">
                       <span className="text-dark-3">
                         Reserva {moneda} {money(base)}
                         {extras > 0 ? ` · extras ${money(extras)} ya pagados` : ''}
                       </span>
-                      <span className="font-extrabold text-teal-d">
+                      <span className="font-extrabold" style={{ color: TEAL }}>
                         Abonado {moneda} {money(pagos)} · {pct} %
                       </span>
-                      <span className={`font-extrabold ${pendiente > 0.005 ? 'text-rust' : 'text-ok'}`}
-                        style={pendiente <= 0.005 ? { color: '#2a6e24' } : undefined}>
+                      <span className="font-extrabold"
+                        style={{ color: pendiente > 0.005 ? AMBAR : '#2a6e24' }}>
                         {pendiente > 0.005
                           ? `Falta ${moneda} ${money(pendiente)}`
                           : pendiente < -0.005
@@ -353,28 +444,29 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
 
             <button type="button" onClick={() => setCamarotes((l) => [...l, camaroteVacio()])}
               className="rounded-md border px-3 py-1.5 text-xs font-extrabold hover:opacity-80"
-              style={{ borderColor: META.solid, color: META.dark }}>
+              style={{ borderColor: META.solid, color: AZUL }}>
               ＋ Agregar camarote
             </button>
-          </div>
+          </Bloque>
 
-          {/* ── Políticas y total ──────────────────────────────────── */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <TextInput label="No. de confirmación" value={confirmacion}
-              onChange={(e) => setConfirmacion(e.target.value)} />
-            <TextInput label="Cancelación" value={cancelacion}
-              onChange={(e) => setCancelacion(e.target.value)}
-              placeholder="Política de cancelación" />
-            <Select label="Moneda" value={moneda} onChange={(e) => setMoneda(e.target.value)}>
-              {MONEDAS.map((m) => <option key={m} value={m}>{m}</option>)}
-            </Select>
-          </div>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-dark-2">Notas</span>
-            <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2}
-              className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark focus:border-teal focus:outline-none" />
-          </label>
+          <Bloque paso={3} titulo="Confirmación y políticas" color={TEAL}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <TextInput label="No. de confirmación" value={confirmacion}
+                onChange={(e) => setConfirmacion(e.target.value)}
+                hint="del crucero completo" />
+              <TextInput label="Cancelación" value={cancelacion}
+                onChange={(e) => setCancelacion(e.target.value)}
+                placeholder="Política de cancelación" />
+              <Select label="Moneda" value={moneda} onChange={(e) => setMoneda(e.target.value)}>
+                {MONEDAS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </Select>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-dark-2">Notas</span>
+              <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2}
+                className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark focus:border-teal focus:outline-none" />
+            </label>
+          </Bloque>
 
           <div className="flex items-center justify-between rounded-lg px-5 py-4 text-white"
             style={{ background: META.grad }}>
@@ -419,16 +511,17 @@ export function CruceroFormModal({ open, viajeId, cruceroId, onClose }: Props) {
 /**
  * Los abonos o los servicios extra de un camarote.
  *
- * Los dos tienen la misma forma —monto, tarjeta, fecha, comentario— y los dos
- * son dinero que llega a una tarjeta. Lo único que cambia es si abonan a la
- * reserva o si suman encima.
+ * Los dos tienen la misma forma —monto, tarjeta, fecha, comentario— así que
+ * es el mismo componente; lo que cambia es el color y los textos, para que no
+ * se confundan entre sí al llenarlos.
  */
 function MovimientosCamarote({
-  clase, titulo, ayuda, movimientos, moneda, tarjetas, onAdd, onUpd, onDel,
+  clase, titulo, ayuda, color, movimientos, moneda, tarjetas, onAdd, onUpd, onDel,
 }: {
   clase: 'pago' | 'extra';
   titulo: string;
   ayuda: string;
+  color: string;
   movimientos: MovimientoInput[];
   moneda: string;
   tarjetas: { id: string; tc_id: string | null; red: string | null; banco: string | null }[];
@@ -441,18 +534,18 @@ function MovimientosCamarote({
     .filter(({ m }) => m.clase === clase);
 
   return (
-    <div className="rounded-md border border-sand bg-sand-l/40 p-2.5">
-      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-dark-2">{titulo}</span>
-          <p className="text-[11px] text-dark-3">{ayuda}</p>
-        </div>
+    <SubBloque
+      titulo={titulo}
+      ayuda={ayuda}
+      color={color}
+      accion={
         <button type="button" onClick={onAdd}
-          className="rounded-md border border-teal/40 px-2 py-1 text-[11px] font-extrabold text-teal-d hover:bg-teal-l">
+          className="rounded-md border px-2 py-1 text-[11px] font-extrabold hover:opacity-80"
+          style={{ borderColor: `${color}66`, color }}>
           ＋ {clase === 'pago' ? 'Abono' : 'Extra'}
         </button>
-      </div>
-
+      }
+    >
       {propios.length === 0 && (
         <p className="py-1 text-[11px] italic text-dark-3">
           {clase === 'pago' ? 'Sin abonos registrados.' : 'Sin servicios extra.'}
@@ -462,15 +555,16 @@ function MovimientosCamarote({
       <div className="space-y-1.5">
         {propios.map(({ m, i }) => (
           <div key={m.id ?? `n-${i}`}
-            className="grid grid-cols-1 gap-2 rounded border border-sand bg-white p-2 sm:grid-cols-[1.5fr_.8fr_1.2fr_1fr_auto]">
+            className="grid grid-cols-1 gap-2 rounded border p-2 sm:grid-cols-[1.5fr_.8fr_1.2fr_1fr_auto]"
+            style={{ borderColor: `${color}33`, backgroundColor: `${color}0a` }}>
             <input type="text" value={m.descripcion}
               onChange={(e) => onUpd(i, { descripcion: e.target.value })}
               placeholder={clase === 'pago' ? 'Ej: Abono 1' : 'Ej: Paquete de bebidas'}
-              className="rounded border border-sand px-2 py-1.5 text-sm focus:border-teal focus:outline-none" />
+              className="rounded border border-sand bg-white px-2 py-1.5 text-sm focus:border-teal focus:outline-none" />
             <input type="number" min="0" step="0.01" value={m.monto}
               onChange={(e) => onUpd(i, { monto: e.target.value })}
               placeholder={`${moneda} 0.00`}
-              className="rounded border border-sand px-2 py-1.5 text-right text-sm focus:border-teal focus:outline-none" />
+              className="rounded border border-sand bg-white px-2 py-1.5 text-right text-sm focus:border-teal focus:outline-none" />
             <select value={m.pagado_con_id} onChange={(e) => onUpd(i, { pagado_con_id: e.target.value })}
               className="rounded border border-sand bg-white px-2 py-1.5 text-sm focus:border-teal focus:outline-none">
               <option value="">Pagado con…</option>
@@ -482,16 +576,16 @@ function MovimientosCamarote({
             </select>
             <input type="date" value={m.fecha_pago}
               onChange={(e) => onUpd(i, { fecha_pago: e.target.value })}
-              className="rounded border border-sand px-2 py-1.5 text-sm focus:border-teal focus:outline-none" />
+              className="rounded border border-sand bg-white px-2 py-1.5 text-sm focus:border-teal focus:outline-none" />
             <button type="button" onClick={() => onDel(i)}
               className="text-dark-3 hover:text-rust" aria-label="Quitar">✕</button>
             <input type="text" value={m.comentario}
               onChange={(e) => onUpd(i, { comentario: e.target.value })}
               placeholder="Comentarios"
-              className="rounded border border-sand px-2 py-1.5 text-sm focus:border-teal focus:outline-none sm:col-span-5" />
+              className="rounded border border-sand bg-white px-2 py-1.5 text-sm focus:border-teal focus:outline-none sm:col-span-5" />
           </div>
         ))}
       </div>
-    </div>
+    </SubBloque>
   );
 }

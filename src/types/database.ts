@@ -1196,6 +1196,7 @@ export type Database = {
           id: string;
           crucero_id: string;
           reserva_nombre: string | null;
+          reserva_numero: string | null;
           cubierta: string | null;
           camarote: string | null;
           pax: number;
@@ -1214,6 +1215,7 @@ export type Database = {
           id?: string;
           crucero_id: string;
           reserva_nombre?: string | null;
+          reserva_numero?: string | null;
           cubierta?: string | null;
           camarote?: string | null;
           pax?: number;
@@ -1227,6 +1229,7 @@ export type Database = {
         };
         Update: {
           reserva_nombre?: string | null;
+          reserva_numero?: string | null;
           cubierta?: string | null;
           camarote?: string | null;
           pax?: number;
@@ -1236,6 +1239,31 @@ export type Database = {
           noches?: number | null;
           orden?: number;
           notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      att_crucero_pax: {
+        Row: {
+          id: string;
+          camarote_id: string;
+          nombre: string | null;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          camarote_id: string;
+          nombre?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          nombre?: string | null;
+          orden?: number;
           deleted_at?: string | null;
         };
         Relationships: [];

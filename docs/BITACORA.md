@@ -6,6 +6,31 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 31 · 2026-09-28 · Crucero · pasajeros por camarote y hoja en dos partes
+
+Tres cosas que salieron al cargar el primer crucero real, reportadas por el usuario.
+
+**1 · No había dónde anotar quién viaja en cada camarote.** El usuario terminó creando un camarote por persona —era lo único que la pantalla permitía— y la hoja quedó diciendo que los dos iban en el mismo. Ahora el camarote tiene sus pasajeros, como el ticket aéreo y las actividades: **una fila por persona** (`att_crucero_pax`), no un texto con nombres separados por coma, para poder filtrarlos y exportarlos después. Se captura con `ChipsInput`, el mismo componente de los participantes de Actividades.
+
+De paso se agregó `reserva_numero`: la naviera da un número por camarote, no uno por crucero, y no había columna para él. El del crucero completo sigue en `att_cruceros.confirmacion`.
+
+**2 · El formulario no se dejaba leer.** *«Me cuesta mucho identificar visualmente cada segmento.»* Todo tenía el mismo borde beige. Ahora cada sección lleva **número y color**: el crucero y los camarotes en el índigo del servicio, los abonos en verde —dinero que entra a la reserva— y los servicios extra en ámbar —dinero que se suma encima—. Dentro del camarote hay cuatro sub-bloques con su barra de color: datos, pasajeros, tarifa, y los dos de dinero.
+
+**3 · El PDF salía saturado.** Se partió en dos hojas:
+- **Hoja 1**, la que se lee: por camarote solo nombre de la reserva, **su número**, cubierta, camarote, tipo de habitación y **monto pagado**, con los pasajeros bajo el nombre. Más embarque/desembarque, itinerario y el total.
+- **Hoja 2**, el detalle del dinero: un bloque por camarote con cada abono y cada extra, **con su tarjeta y su fecha**, y cuánto falta.
+
+**Comentarios:**
+- La columna «Monto pagado» muestra lo abonado, que es lo que pidió el usuario, pero cuando no cubre la reserva agrega un «de USD X» en gris. Mostrar solo lo pagado escondería una deuda en la hoja que se mira primero.
+- El salto de hoja es la clase `.salto-pagina` (`break-before: page`), nueva en `index.css`. En pantalla no existe, así que la vista previa lleva un separador punteado `no-print` que dice «Segunda hoja»: sin él la separación solo se vería al imprimir.
+- El total y el estado se sacaron del pie de `ServicePrintable` y se armaron dentro de la hoja 1. Ese pie va después de los extras, o sea que habría caído hasta el final de la segunda hoja.
+- Si la cantidad de pax cobrados no coincide con los pasajeros anotados, el formulario lo dice pero **no lo corrige**: un camarote puede cobrar 3 y tener 2 nombres conocidos, y bloquearlo sería peor que avisar.
+- Los pasajeros se rehacen en cada guardado en vez de reconciliar como los abonos: un nombre no es dinero y no tiene historial que conservar entre ediciones. El borrado sigue siendo en suave, que para eso está `audit_log`.
+
+**Commits clave:** ver `git log` de 2026-09-28.
+
+---
+
 ## Fase 30 · 2026-09-28 · T&T · Servicio de Crucero
 
 **Objetivo:** el crucero como servicio del viaje, según el Word que mandó el usuario. Tiene una estructura que ningún otro servicio comparte: **crucero → camarotes → abonos y servicios extra**.

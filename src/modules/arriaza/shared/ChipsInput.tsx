@@ -36,7 +36,10 @@ export function ChipsInput({
 
   return (
     <div>
-      <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">{label}</div>
+      {/* Sin rótulo cuando el bloque que lo monta ya lo tiene. */}
+      {label && (
+        <div className="text-xs font-semibold uppercase tracking-wider text-dark-2">{label}</div>
+      )}
       <div className="mt-1 flex gap-2">
         <input
           type="text"

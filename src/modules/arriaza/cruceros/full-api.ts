@@ -20,6 +20,7 @@ export type AttCrucero = Database['public']['Tables']['att_cruceros']['Row'];
 export type AttCruceroInsert = Database['public']['Tables']['att_cruceros']['Insert'];
 export type Camarote = Database['public']['Tables']['att_crucero_camarotes']['Row'];
 export type PagoCamarote = Database['public']['Tables']['att_crucero_pagos']['Row'];
+export type PaxCamarote = Database['public']['Tables']['att_crucero_pax']['Row'];
 
 /** Un abono o un servicio extra, como se captura en pantalla. */
 export type MovimientoInput = {
@@ -34,10 +35,18 @@ export type MovimientoInput = {
   comentario: string;
 };
 
-/** Un camarote con sus movimientos, como se captura en pantalla. */
+/** Un camarote con sus pasajeros y sus movimientos, como se captura en pantalla. */
 export type CamaroteInput = {
   id?: string;
   reserva_nombre: string;
+  /** El número que da la naviera para ESTE camarote. */
+  reserva_numero: string;
+  /**
+   * Quiénes viajan en el camarote. Van como lista de nombres en pantalla pero
+   * como una fila por persona en la base: es lo que permite filtrarlos y
+   * exportarlos después.
+   */
+  pasajeros: string[];
   cubierta: string;
   camarote: string;
   pax: string;
@@ -113,8 +122,9 @@ export function estadoDeReserva(camarotes: CamaroteInput[]): string {
 /** El orden no viaja en el objeto: lo pone el guardado según la posición. */
 export function camaroteVacio(): CamaroteInput {
   return {
-    reserva_nombre: '', cubierta: '', camarote: '', pax: '2', tipo_hab: '',
-    alimentacion: '', tarifa: '', noches: '', notas: '', movimientos: [],
+    reserva_nombre: '', reserva_numero: '', pasajeros: [], cubierta: '', camarote: '',
+    pax: '2', tipo_hab: '', alimentacion: '', tarifa: '', noches: '', notas: '',
+    movimientos: [],
   };
 }
 
@@ -134,15 +144,19 @@ export const cruceroFullApi = {
 
     const camarotes = (cam.data ?? []) as Camarote[];
     let pagos: PagoCamarote[] = [];
+    let pax: PaxCamarote[] = [];
     if (camarotes.length) {
-      const res = await supabase
-        .from('att_crucero_pagos')
-        .select('*')
-        .in('camarote_id', camarotes.map((c) => c.id))
-        .is('deleted_at', null)
-        .order('orden');
-      if (res.error) throw res.error;
-      pagos = res.data ?? [];
+      const ids = camarotes.map((c) => c.id);
+      const [resPagos, resPax] = await Promise.all([
+        supabase.from('att_crucero_pagos').select('*')
+          .in('camarote_id', ids).is('deleted_at', null).order('orden'),
+        supabase.from('att_crucero_pax').select('*')
+          .in('camarote_id', ids).is('deleted_at', null).order('orden'),
+      ]);
+      if (resPagos.error) throw resPagos.error;
+      if (resPax.error) throw resPax.error;
+      pagos = resPagos.data ?? [];
+      pax = resPax.data ?? [];
     }
 
     return {
@@ -150,6 +164,8 @@ export const cruceroFullApi = {
       camarotes: camarotes.map((c) => ({
         id: c.id,
         reserva_nombre: c.reserva_nombre ?? '',
+        reserva_numero: c.reserva_numero ?? '',
+        pasajeros: pax.filter((x) => x.camarote_id === c.id).map((x) => x.nombre ?? ''),
         cubierta: c.cubierta ?? '',
         camarote: c.camarote ?? '',
         pax: String(c.pax ?? ''),
@@ -215,6 +231,7 @@ export const cruceroFullApi = {
     for (const [i, c] of camarotes.entries()) {
       const campos = {
         reserva_nombre: c.reserva_nombre.trim() || null,
+        reserva_numero: c.reserva_numero.trim() || null,
         cubierta: c.cubierta.trim() || null,
         camarote: c.camarote.trim() || null,
         pax: Math.max(0, Math.round(num(c.pax))),
@@ -242,7 +259,10 @@ export const cruceroFullApi = {
         camaroteId = data.id;
       }
 
-      await guardarMovimientos(camaroteId, c.movimientos, tarjetas);
+      await Promise.all([
+        guardarMovimientos(camaroteId, c.movimientos, tarjetas),
+        guardarPasajeros(camaroteId, c.pasajeros),
+      ]);
     }
 
     const quitados = (previos.data ?? []).map((p) => p.id).filter((x) => !vivos.has(x));
@@ -265,6 +285,40 @@ export const cruceroFullApi = {
     if (error) throw error;
   },
 };
+
+/**
+ * Los pasajeros del camarote.
+ *
+ * Acá sí se rehacen en vez de reconciliar: un pasajero es un nombre, no
+ * dinero, y no tiene nada que conservar entre una edición y otra. Igual el
+ * borrado es en suave, porque `audit_log` guarda quién iba en el camarote
+ * antes de que alguien lo cambiara.
+ */
+async function guardarPasajeros(camaroteId: string, nombres: string[]): Promise<void> {
+  const limpios = nombres.map((n) => n.trim()).filter(Boolean);
+
+  const previos = await supabase
+    .from('att_crucero_pax')
+    .select('id')
+    .eq('camarote_id', camaroteId)
+    .is('deleted_at', null);
+  if (previos.error) throw previos.error;
+
+  if (previos.data?.length) {
+    const { error } = await supabase
+      .from('att_crucero_pax')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', previos.data.map((p) => p.id));
+    if (error) throw error;
+  }
+
+  if (limpios.length) {
+    const { error } = await supabase
+      .from('att_crucero_pax')
+      .insert(limpios.map((nombre, orden) => ({ camarote_id: camaroteId, nombre, orden })));
+    if (error) throw error;
+  }
+}
 
 async function guardarMovimientos(
   camaroteId: string,

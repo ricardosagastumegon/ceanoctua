@@ -12,6 +12,7 @@ export type ServiceKey =
   | 'ferry'
   | 'terrestre'
   | 'actividades'
+  | 'crucero'
   | 'tiendas'
   | 'reunion'
   | 'ruta'
@@ -95,6 +96,14 @@ export const SERVICE_META: Record<ServiceKey, ServiceMeta> = {
     solid: '#a83279', dark: '#6b1f52', light: '#f6e0ee',
     hasCost: true, table: 'att_actividades', arrayKey: 'actividades',
   },
+  crucero: {
+    // Indigo profundo: mar abierto. Distinto del ferry (azul acero) y del
+    // acuatico (turquesa), que son los otros dos servicios de agua.
+    label: 'Crucero', icon: '🛳️', css: 'svc-crucero',
+    grad: 'linear-gradient(135deg,#1b1a4a,#4338ca,#6d67e4)',
+    solid: '#4338ca', dark: '#312e81', light: '#e6e5fb',
+    hasCost: true, table: 'att_cruceros', arrayKey: 'cruceros',
+  },
   tiendas: {
     label: 'Tienda', icon: '🛍️', css: 'svc-tiendas',
     grad: 'linear-gradient(135deg,#2e2013,#8a5a2e,#b98a52)',
@@ -126,7 +135,7 @@ export const SERVICE_META: Record<ServiceKey, ServiceMeta> = {
 
 export const SERVICE_KEYS: readonly ServiceKey[] = [
   'tickets', 'hotel', 'restaurantes', 'renta', 'tours', 'aeronave',
-  'acuatico', 'ferry', 'terrestre', 'actividades',
+  'acuatico', 'ferry', 'terrestre', 'actividades', 'crucero',
   'tiendas', 'reunion', 'ruta', 'poi',
 ];
 

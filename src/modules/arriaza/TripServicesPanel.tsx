@@ -17,11 +17,12 @@ import { AcuaticosSection } from './acuaticos/AcuaticosSection';
 import { FerriesSection } from './ferries/FerriesSection';
 import { TerrestresSection } from './terrestres/TerrestresSection';
 import { ActividadesSection } from './actividades/ActividadesSection';
+import { CrucerosSection } from './cruceros/CrucerosSection';
 
 /** Servicios cuya UI ya está construida. Los demás avisan que vienen luego. */
 const READY_SERVICES: ReadonlySet<ServiceKey> = new Set<ServiceKey>([
   'tickets', 'hotel', 'restaurantes', 'renta', 'tours', 'aeronave',
-  'acuatico', 'ferry', 'terrestre', 'actividades', 'reunion',
+  'acuatico', 'ferry', 'terrestre', 'actividades', 'reunion', 'crucero',
   'tiendas', 'ruta', 'poi',
 ]);
 
@@ -151,6 +152,7 @@ export function TripServicesPanel({ viaje, canEdit }: Props) {
         {visibles.has('ferry') && <FerriesSection {...comunes} autoOpenCreate={autoOpenKey === 'ferry'} />}
         {visibles.has('terrestre') && <TerrestresSection {...comunes} autoOpenCreate={autoOpenKey === 'terrestre'} />}
         {visibles.has('actividades') && <ActividadesSection {...comunes} autoOpenCreate={autoOpenKey === 'actividades'} />}
+        {visibles.has('crucero') && <CrucerosSection {...comunes} autoOpenCreate={autoOpenKey === 'crucero'} />}
         {visibles.has('reunion') && <ReunionesSection {...comunes} autoOpenCreate={autoOpenKey === 'reunion'} />}
         {/* Tiendas, Ruta y Puntos de Interés salieron del menú, pero si un
             viaje ya tiene alguno se sigue viendo y editando. */}

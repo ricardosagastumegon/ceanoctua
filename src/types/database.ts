@@ -1098,6 +1098,192 @@ export type Database = {
       // su propia tarjeta y su propia fecha. `viaje_id` va denormalizado
       // para que la liquidacion lea todos los del viaje de un golpe.
       // ====================================================
+      // ====================================================
+      // T&T · Crucero
+      // La tarifa del camarote es POR PASAJERO y por el crucero completo:
+      // `total` = tarifa x pax, columna generada. Las noches son
+      // informativas y NO entran. Distinto del hotel, donde la tarifa si es
+      // por noche.
+      // ====================================================
+      att_cruceros: {
+        Row: {
+          id: string;
+          viaje_id: string;
+          titulo: string | null;
+          ship: string | null;
+          package_type: string | null;
+          fecha_reserva: string | null;
+          salida_fecha: string | null;
+          salida_hora: string | null;
+          retorno_fecha: string | null;
+          retorno_hora: string | null;
+          noches: number | null;
+          itinerario: string | null;
+          cancelacion: string | null;
+          moneda: string;
+          monto: number;
+          estado_pago: string | null;
+          pagado_con: string | null;
+          pagado_con_id: string | null;
+          fecha_cargo: string | null;
+          cancelado_en: string | null;
+          reintegro: number;
+          reintegro_nota: string | null;
+          confirmacion: string | null;
+          confirmacion_path: string | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          viaje_id: string;
+          titulo?: string | null;
+          ship?: string | null;
+          package_type?: string | null;
+          fecha_reserva?: string | null;
+          salida_fecha?: string | null;
+          salida_hora?: string | null;
+          retorno_fecha?: string | null;
+          retorno_hora?: string | null;
+          noches?: number | null;
+          itinerario?: string | null;
+          cancelacion?: string | null;
+          moneda?: string;
+          estado_pago?: string | null;
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha_cargo?: string | null;
+          cancelado_en?: string | null;
+          reintegro?: number;
+          reintegro_nota?: string | null;
+          confirmacion?: string | null;
+          confirmacion_path?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          titulo?: string | null;
+          ship?: string | null;
+          package_type?: string | null;
+          fecha_reserva?: string | null;
+          salida_fecha?: string | null;
+          salida_hora?: string | null;
+          retorno_fecha?: string | null;
+          retorno_hora?: string | null;
+          noches?: number | null;
+          itinerario?: string | null;
+          cancelacion?: string | null;
+          moneda?: string;
+          estado_pago?: string | null;
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha_cargo?: string | null;
+          cancelado_en?: string | null;
+          reintegro?: number;
+          reintegro_nota?: string | null;
+          confirmacion?: string | null;
+          confirmacion_path?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      att_crucero_camarotes: {
+        Row: {
+          id: string;
+          crucero_id: string;
+          reserva_nombre: string | null;
+          cubierta: string | null;
+          camarote: string | null;
+          pax: number;
+          tipo_hab: string | null;
+          alimentacion: string | null;
+          tarifa: number;
+          noches: number | null;
+          total: number;
+          orden: number;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          crucero_id: string;
+          reserva_nombre?: string | null;
+          cubierta?: string | null;
+          camarote?: string | null;
+          pax?: number;
+          tipo_hab?: string | null;
+          alimentacion?: string | null;
+          tarifa?: number;
+          noches?: number | null;
+          orden?: number;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          reserva_nombre?: string | null;
+          cubierta?: string | null;
+          camarote?: string | null;
+          pax?: number;
+          tipo_hab?: string | null;
+          alimentacion?: string | null;
+          tarifa?: number;
+          noches?: number | null;
+          orden?: number;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      att_crucero_pagos: {
+        Row: {
+          id: string;
+          camarote_id: string;
+          clase: string;
+          descripcion: string | null;
+          monto: number;
+          pagado_con: string | null;
+          pagado_con_id: string | null;
+          fecha_pago: string | null;
+          comentario: string | null;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          camarote_id: string;
+          clase?: string;
+          descripcion?: string | null;
+          monto?: number;
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha_pago?: string | null;
+          comentario?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          clase?: string;
+          descripcion?: string | null;
+          monto?: number;
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha_pago?: string | null;
+          comentario?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       att_cargos: {
         Row: {
           id: string;

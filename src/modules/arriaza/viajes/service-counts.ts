@@ -59,6 +59,12 @@ export type ServiceSummary = {
   monedas: string[];
   /** Si hay servicios con registros cuyo monto todavía no se puede sumar. */
   totalParcial: boolean;
+  /**
+   * Los cargos adicionales del viaje. Desde que cada uno lleva su propia
+   * tarjeta y su propia fecha viven aparte del servicio, así que hay que
+   * sumarlos explícitamente: el `monto` del servicio ya no los incluye.
+   */
+  cargos: number;
 };
 
 export function useServiceSummary(viajeId: string | undefined, enabled: boolean) {
@@ -68,6 +74,18 @@ export function useServiceSummary(viajeId: string | undefined, enabled: boolean)
     queryFn: async (): Promise<ServiceSummary> => {
       const entries = Object.entries(TABLA_POR_SERVICIO) as [ServiceKey, string][];
       const conMonto = new Set<string>(CON_MONTO);
+
+      // Los cargos adicionales van en su propia consulta. Antes vivían dentro
+      // del `monto` del servicio; al separarlos para que cada uno pudiera
+      // llevar su tarjeta y su fecha, el total del viaje habría quedado corto
+      // si no se suman aquí.
+      const monedasCargos = new Set<string>();
+      const cargosQ = await supabase
+        .from('att_cargos')
+        .select('monto, reintegro, moneda, servicio_tipo')
+        .eq('viaje_id', viajeId as string)
+        .is('deleted_at', null);
+      if (cargosQ.error) throw cargosQ.error;
 
       const resultados = await Promise.all(
         entries.map(async ([key, tabla]) => {
@@ -104,21 +122,31 @@ export function useServiceSummary(viajeId: string | undefined, enabled: boolean)
 
       const counts: Partial<Record<ServiceKey, number>> = {};
       const montos: Partial<Record<ServiceKey, number>> = {};
-      let total = 0;
+      // El neto del cargo, igual que en los servicios: lo que de verdad costó.
+      const porServicio = new Map<string, number>();
+      let cargos = 0;
+      for (const c of cargosQ.data ?? []) {
+        const neto = (Number(c.monto) || 0) - (Number(c.reintegro) || 0);
+        cargos += neto;
+        porServicio.set(c.servicio_tipo, (porServicio.get(c.servicio_tipo) ?? 0) + neto);
+        if (c.moneda) monedasCargos.add(c.moneda);
+      }
+      let total = cargos;
       let totalParcial = false;
-      const monedas = new Set<string>();
+      const monedas = new Set<string>(monedasCargos);
       for (const r of resultados) {
         if (r.count === 0) continue;
         counts[r.key] = r.count;
         if (r.sumable) {
-          montos[r.key] = r.monto;
+          // El servicio muestra su base más lo que se le cargó aparte.
+          montos[r.key] = r.monto + (porServicio.get(r.key) ?? 0);
           total += r.monto;
           for (const m of r.monedas) monedas.add(m);
         } else {
           totalParcial = true;
         }
       }
-      return { counts, montos, total, monedas: [...monedas], totalParcial };
+      return { counts, montos, total, monedas: [...monedas], totalParcial, cargos };
     },
   });
 }

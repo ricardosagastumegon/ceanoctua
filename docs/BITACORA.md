@@ -6,6 +6,40 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 33 · 2026-09-29 · Aeronaves · Estado de cuenta del proveedor de combustible
+
+**Objetivo:** saber cuánto queda del depósito con Aeroclub de Guatemala Gasolinera sin abrir el Excel que manda el proveedor. Plan en [`PLAN-ESTADO-CUENTA-FUEL.md`](../PLAN-ESTADO-CUENTA-FUEL.md).
+
+**No es crédito, es un depósito.** El límite de crédito del proveedor es 0.00: hay un depósito del que se consume y que se va reponiendo. Agotarlo es quedarse sin fuel, y por eso el aviso de saldo bajo no es decorativo.
+
+**Lo que decidió el alcance:** la cuenta es **exclusiva de TG-OBI** (confirmado con la usuaria). Si se compartiera con vehículos u otras aeronaves, el saldo de CEA jamás cuadraría con el del proveedor y habría que conformarse con conciliar.
+
+**Cambios de schema:** migración `20260929000002_fuel_cuenta.sql` — `avn_fuel_cuentas`, `avn_fuel_movimientos` (la historia importada), `avn_fuel_abonos` (las reposiciones) y `avn_fuel_abono_registros` (qué facturas cubre cada una).
+
+**Comentarios:**
+
+- **El signo se invierte a propósito.** El Excel lleva el saldo en negativo cuando hay dinero a favor —para el proveedor somos un pasivo— y cierra con «Saldo disponible −24,736.20». En CEA el disponible va **en positivo**: nadie lee bien un negativo que significa que tenés plata.
+
+- **El estado de cuenta no se guarda, se calcula**, igual que la liquidación del crucero. Sale de tres fuentes que no se duplican: la historia importada, los registros de combustible de CEA y las reposiciones. Por eso editar una factura corrige el saldo solo. Guardar `S.Anterior` y `S.Final` como los trae el Excel sería guardar la misma verdad tres veces.
+
+- **El comprobante de pago vive en la reposición, no en la solicitud.** La usuaria: *«se hace una solicitud por cada factura con su vale, y la mayoría de las veces contabilidad agrupa solicitudes y hace un solo pago que abarca un grupo de facturas»*. Se verificó contra el Excel con una búsqueda de subconjuntos: **67 de 75 abonos son la suma exacta de un grupo de facturas pendientes** (`2354.10 = FER2033637 + FER2033663`). O sea que un comprobante cubre N solicitudes, y ponerlo en cada una sería el mismo papel en N lugares. El formulario de reposición deja marcar las facturas que cubre y avisa si la suma no cuadra con el monto.
+
+- **`historico_hasta` evita el doble conteo.** Los registros de CEA anteriores al corte de la historia ya están dentro de ella y no vuelven a restar.
+
+- **El mínimo de alerta son Q8,000** porque son cuatro o cinco días de abastecimiento, que es lo que tarda en procesarse un pago. Por debajo de eso hay que iniciar la reposición o se llega a cero antes de que entre el dinero. Está en el comentario de la columna: sin el porqué, el día que alguien lo cambie no va a saber qué está cambiando.
+
+- **La importación se verifica contra el propio Excel.** El script recalcula la cadena `S.Anterior + Cargos − Abonos = S.Final` de las 299 filas y se niega a cargar nada si no cierra o si el disponible no coincide. Resultado: 293 movimientos, **Q24,736.20**, idéntico al estado de cuenta. `S.Anterior`/`S.Final` no se guardan pero sirven justo para esto.
+
+- **El Excel del proveedor trae una fecha corrupta** (`22/02/202` en FER1040281). El script no adivina: deja el movimiento sin fecha, conserva el texto original en el comentario y lo reporta. Una fecha inventada en un estado de cuenta es peor que una vacía.
+
+- **El orden de la historia no es cronológico** —el Excel trae el 21/03/26 antes del 22/02/26— y es el orden, no la fecha, el que sigue la cadena de saldos. Por eso `avn_fuel_movimientos` lleva `orden`.
+
+- De aquí en adelante no hay más importaciones: las facturas las captura CEA y las reposiciones se registran en la pantalla. El Excel de Aeroclub solo sirve para conciliar.
+
+**Commits clave:** ver `git log` de 2026-09-29.
+
+---
+
 ## Fase 32 · 2026-09-29 · Aeronaves · Anular un registro de combustible y verlo completo
 
 Tres cosas del control de fuel, reportadas por el usuario después de probarlo con un registro real.

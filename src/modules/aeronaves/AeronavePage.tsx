@@ -13,6 +13,7 @@ import { type Aeronave, type Documento } from './api';
 import { VisorDocumento, type Visor } from './VisorDocumento';
 import { unirDocumentos } from './documentos-pdf';
 import { CombustibleSection } from './combustible/CombustibleSection';
+import { EstadoCuentaSection } from './cuenta/EstadoCuentaSection';
 
 /**
  * Una aeronave · capa 3 del módulo.
@@ -30,7 +31,7 @@ export function AeronavePage() {
   // Las secciones de la aeronave. Van en pestañas y no una debajo de otra
   // porque conforme entren horas de vuelo, mantenimientos y pagos, la
   // pantalla se volvería un rollo interminable.
-  const [seccion, setSeccion] = useState<'resumen' | 'combustible'>('resumen');
+  const [seccion, setSeccion] = useState<'resumen' | 'combustible' | 'cuenta'>('resumen');
 
   if (q.isLoading) return <p className="text-sm text-dark-3">Cargando…</p>;
 
@@ -115,6 +116,7 @@ export function AeronavePage() {
         {([
           ['resumen', 'Ficha y documentos'],
           ['combustible', 'Combustible'],
+          ['cuenta', 'Estado de cuenta'],
         ] as const).map(([k, rotulo]) => (
           <button
             key={k}
@@ -138,6 +140,8 @@ export function AeronavePage() {
       )}
 
       {seccion === 'combustible' && <CombustibleSection aeronave={a} canEdit={canEdit} />}
+
+      {seccion === 'cuenta' && <EstadoCuentaSection aeronave={a} canEdit={canEdit} />}
 
       <AeronaveFormModal
         open={editando}

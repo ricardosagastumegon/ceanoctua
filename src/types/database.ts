@@ -661,6 +661,144 @@ export type Database = {
       // registro lo mantiene un trigger sumando sus lineas: ninguno de los
       // dos se escribe desde el cliente.
       // ====================================================
+      avn_fuel_cuentas: {
+        Row: {
+          id: string;
+          aeronave_id: string;
+          proveedor: string | null;
+          proveedor_nit: string | null;
+          moneda: string;
+          deposito_objetivo: number | null;
+          alerta_minimo: number;
+          historico_hasta: string | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          aeronave_id: string;
+          proveedor?: string | null;
+          proveedor_nit?: string | null;
+          moneda?: string;
+          deposito_objetivo?: number | null;
+          alerta_minimo?: number;
+          historico_hasta?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          proveedor?: string | null;
+          proveedor_nit?: string | null;
+          moneda?: string;
+          deposito_objetivo?: number | null;
+          alerta_minimo?: number;
+          historico_hasta?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'avn_fuel_cuentas_aeronave_id_fkey'; columns: ['aeronave_id']; referencedRelation: 'avn_aeronaves'; referencedColumns: ['id'] },
+        ];
+      };
+
+      avn_fuel_movimientos: {
+        Row: {
+          id: string;
+          cuenta_id: string;
+          tipo: string;
+          fecha: string | null;
+          documento: string | null;
+          comentario: string | null;
+          monto: number;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          cuenta_id: string;
+          tipo: string;
+          fecha?: string | null;
+          documento?: string | null;
+          comentario?: string | null;
+          monto: number;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          tipo?: string;
+          fecha?: string | null;
+          documento?: string | null;
+          comentario?: string | null;
+          monto?: number;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      avn_fuel_abonos: {
+        Row: {
+          id: string;
+          cuenta_id: string;
+          fecha: string;
+          monto: number;
+          moneda: string;
+          documento: string | null;
+          comprobante_path: string | null;
+          comprobante_nombre: string | null;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          cuenta_id: string;
+          fecha: string;
+          monto?: number;
+          moneda?: string;
+          documento?: string | null;
+          comprobante_path?: string | null;
+          comprobante_nombre?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          fecha?: string;
+          monto?: number;
+          moneda?: string;
+          documento?: string | null;
+          comprobante_path?: string | null;
+          comprobante_nombre?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      avn_fuel_abono_registros: {
+        Row: {
+          id: string;
+          abono_id: string;
+          registro_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          abono_id: string;
+          registro_id: string;
+        };
+        Update: {
+          abono_id?: string;
+          registro_id?: string;
+        };
+        Relationships: [];
+      };
+
       avn_combustible_registros: {
         Row: {
           id: string;

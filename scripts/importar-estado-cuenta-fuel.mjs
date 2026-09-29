@@ -22,9 +22,13 @@ import XLSX from 'xlsx';
 
 const [, , archivo, matricula, ...flags] = process.argv;
 const aplicar = flags.includes('--aplicar');
+// Reemplaza la historia ya cargada por la de este archivo. Es lo que hace
+// falta cuando llega un estado de cuenta más reciente: la cuenta es la
+// misma, la historia se corre hasta la nueva fecha de corte.
+const reemplazar = flags.includes('--reemplazar');
 
 if (!archivo || !matricula) {
-  console.error('uso: node scripts/importar-estado-cuenta-fuel.mjs <archivo.xls> <matricula> [--aplicar]');
+  console.error('uso: node scripts/importar-estado-cuenta-fuel.mjs <archivo.xls> <matricula> [--aplicar] [--reemplazar]');
   process.exit(1);
 }
 
@@ -169,10 +173,21 @@ let cuentaId;
 if (cta.length) {
   cuentaId = cta[0].id;
   const previos = await sql(`select count(*)::int as n from public.avn_fuel_movimientos where cuenta_id = '${cuentaId}' and deleted_at is null`);
-  if (previos[0].n > 0) {
+  if (previos[0].n > 0 && !reemplazar) {
     console.error(`\nLa cuenta ya tiene ${previos[0].n} movimientos cargados. No se duplica nada.`);
+    console.error('Si este archivo es un estado de cuenta más reciente, corré con --reemplazar.');
     process.exit(1);
   }
+  if (previos[0].n > 0) {
+    // Borrado físico y no en suave: esto es una copia de la contabilidad del
+    // proveedor, no historia propia, y dejarla marcada obligaría a filtrarla
+    // en cada consulta del saldo. Lo que pasó queda en `audit_log`.
+    await sql(`delete from public.avn_fuel_movimientos where cuenta_id = '${cuentaId}'`);
+    console.log(`historia anterior reemplazada: ${previos[0].n} movimientos fuera`);
+  }
+  // El corte se corre a la última fecha del archivo nuevo. De eso depende qué
+  // registros de CEA entran al saldo, así que no puede quedar viejo.
+  await sql(`update public.avn_fuel_cuentas set historico_hasta = ${lit(hasta)} where id = '${cuentaId}'`);
 } else {
   const ins = await sql(`
     insert into public.avn_fuel_cuentas (aeronave_id, proveedor, proveedor_nit, moneda, deposito_objetivo, alerta_minimo, historico_hasta)

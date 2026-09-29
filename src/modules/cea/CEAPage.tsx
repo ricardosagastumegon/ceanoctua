@@ -4,12 +4,14 @@ import { CeaTodosSection } from './todos/CeaTodosSection';
 import { LavanderiaSection } from './lavanderia/LavanderiaSection';
 import { DirectorioSection } from './directorio/DirectorioSection';
 import { FirmasSection } from './firmas/FirmasSection';
+import { NotasEntregaSection } from './notas-entrega/NotasEntregaSection';
 
-type SectionKey = 'todos' | 'firmas' | 'lavanderia' | 'directorio';
+type SectionKey = 'todos' | 'firmas' | 'notas-entrega' | 'lavanderia' | 'directorio';
 
 const sections: { key: SectionKey; label: string }[] = [
   { key: 'todos', label: 'To-dos' },
   { key: 'firmas', label: 'Firmas' },
+  { key: 'notas-entrega', label: 'Notas de entrega' },
   { key: 'lavanderia', label: 'Lavandería' },
   { key: 'directorio', label: 'Directorio' },
 ];
@@ -49,6 +51,7 @@ export function CEAPage() {
 
       {tab === 'todos' && <CeaTodosSection canEdit={canEdit} />}
       {tab === 'firmas' && <FirmasSection canEdit={canEdit} />}
+      {tab === 'notas-entrega' && <NotasEntregaSection canEdit={canEdit} />}
       {tab === 'lavanderia' && <LavanderiaSection canEdit={canEdit} />}
       {tab === 'directorio' && <DirectorioSection canEdit={canEdit} />}
     </section>

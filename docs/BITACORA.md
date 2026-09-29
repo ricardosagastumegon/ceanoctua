@@ -6,6 +6,28 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 35 · 2026-09-29 · CEA · Nota de entrega de documentos
+
+**Objetivo:** la constancia de que unos documentos se entregaron —a quién, qué día, quién los entregó y quién los pidió— con correlativo y buscable. Hoy se hace en un Word suelto, sin número y sin forma de encontrar la de hace tres meses.
+
+**Cambios de schema:** migración `20260929000003_cea_notas_entrega.sql` — `cea_notas_entrega` con correlativo `NED-AAAA-####` por sequence + trigger, RLS con el mismo patrón del resto de CEA (lee cualquiera autenticado, escriben admin y asistente).
+
+**Comentarios:**
+
+- **«Recibido por» no es un campo.** En la hoja se imprime el mismo nombre de «Para», porque quien recibe es a quien iba dirigida. Lo dice el documento de la usuaria y además tenerlo dos veces sería invitar a que digan cosas distintas.
+
+- **«Solicitado por» es opcional de verdad**: *«si se escribe aparece en PDF, si no NO»*. El renglón desaparece en vez de imprimirse con una raya. Verificado en las dos variantes.
+
+- El bloque de descripción lleva **alto mínimo** para que la hoja se vea igual aunque el detalle sea corto: es un documento que se firma, no una pantalla.
+
+- El correlativo lo pone la base y el formulario nunca lo manda, igual que los demás seriales del proyecto.
+
+**Queda pendiente** la **Nota de envío**, que la usuaria pidió a continuación: la guía de encomienda para cuando se mandan documentos u objetos a otro punto.
+
+**Commits clave:** ver `git log` de 2026-09-29.
+
+---
+
 ## Fase 34 · 2026-09-29 · Aeronaves · Reporte del estado de cuenta y borrado solo para super
 
 **1 · Reporte por período, en PDF y en Excel.** Dos campos de fecha con atajos (este mes, mes pasado, el año, todo) y un reporte con saldo al inicio, los movimientos y saldo al cierre.

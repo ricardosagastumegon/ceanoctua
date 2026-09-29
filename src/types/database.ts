@@ -398,6 +398,52 @@ export type Database = {
       // ====================================================
       // CEA module (Fase 7)
       // ====================================================
+      cea_notas_entrega: {
+        Row: {
+          id: string;
+          serial: string | null;
+          fecha: string;
+          para: string;
+          departamento: string | null;
+          descripcion: string | null;
+          notas: string | null;
+          entregado_por: string | null;
+          entregado_departamento: string | null;
+          fecha_entrega: string | null;
+          solicitado_por: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          serial?: string | null;
+          fecha?: string;
+          para: string;
+          departamento?: string | null;
+          descripcion?: string | null;
+          notas?: string | null;
+          entregado_por?: string | null;
+          entregado_departamento?: string | null;
+          fecha_entrega?: string | null;
+          solicitado_por?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          fecha?: string;
+          para?: string;
+          departamento?: string | null;
+          descripcion?: string | null;
+          notas?: string | null;
+          entregado_por?: string | null;
+          entregado_departamento?: string | null;
+          fecha_entrega?: string | null;
+          solicitado_por?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       cea_todos: {
         Row: AuditCols & {
           id: string;

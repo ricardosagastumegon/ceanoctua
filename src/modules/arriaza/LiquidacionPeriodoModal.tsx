@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
-import { armarLiquidacionCompleta, type ProgresoExport } from './viajes/liquidacion-pdf';
+import { armarPdfDeHojas, type ProgresoExport } from '@/lib/pdf-hojas';
 import { descargar } from '@/lib/descargar';
 import {
   anioActual,
@@ -66,7 +66,7 @@ export function LiquidacionPeriodoModal({ open, onClose }: Props) {
     if (!hojaRef.current || !d) return;
     setProgreso({ paso: 'Preparando…', hechos: 0, total: 0 });
     try {
-      const { blob } = await armarLiquidacionCompleta([hojaRef.current], setProgreso);
+      const { blob } = await armarPdfDeHojas([hojaRef.current], setProgreso);
       descargar(blob, `Liquidacion ${rango.desde} a ${rango.hasta}.pdf`);
       toast.success('Liquidación descargada.');
     } catch (err) {

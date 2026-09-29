@@ -3,7 +3,7 @@ import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { ItinerarioHojas } from './ItineraryModal';
-import { armarLiquidacionCompleta, type ProgresoExport } from './viajes/liquidacion-pdf';
+import { armarPdfDeHojas, type ProgresoExport } from '@/lib/pdf-hojas';
 import { descargar } from '@/lib/descargar';
 import { SERVICE_META } from './constants/serviceMeta';
 import { fmtDate } from './utils';
@@ -50,7 +50,7 @@ export function LiquidacionModal({ open, onClose, viaje }: Props) {
     setProgreso({ paso: 'Preparando…', hechos: 0, total: 0 });
     try {
       const nodos = [hojaRef.current, itinRef.current].filter(Boolean) as HTMLElement[];
-      const { blob } = await armarLiquidacionCompleta(nodos, setProgreso);
+      const { blob } = await armarPdfDeHojas(nodos, setProgreso);
       descargar(blob, `Liquidacion ${viaje.trip_no ?? viaje.titulo}.pdf`);
       toast.success('Liquidación descargada.');
     } catch (err) {

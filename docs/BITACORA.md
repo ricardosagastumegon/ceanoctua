@@ -6,6 +6,28 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 34 · 2026-09-29 · Aeronaves · Reporte del estado de cuenta y borrado solo para super
+
+**1 · Reporte por período, en PDF y en Excel.** Dos campos de fecha con atajos (este mes, mes pasado, el año, todo) y un reporte con saldo al inicio, los movimientos y saldo al cierre.
+
+**2 · Borrar un registro de combustible quedó en el nivel `super`.** Lo pidió la usuaria: borrar es irreversible y anular ya deja rastro, así que para todos los demás la salida es anular. El nivel `super` ya existía en `puede()` —`{observador: 1, editor: 2, super: 3}`— y el rol `admin` lo pasa siempre; no hubo que inventar nada.
+
+**Comentarios:**
+
+- **El período es un TRAMO del libro, no un filtro por fecha.** Filtrar movimiento por movimiento dejaba fuera los que el proveedor mandó sin fecha —los dos anticipos del cierre, la factura con la fecha corrupta— y entonces las columnas no cerraban: saldo inicial + repuesto − consumido no daba el saldo final. Ahora las fechas marcan dónde empieza y dónde termina el tramo, y lo que va en medio entra completo. Verificado en los cuatro atajos: **todos cuadran al centavo**. El de septiembre es el caso real: 24,736.20 − 1,969.50 = 22,766.70.
+
+- **Un reporte por período necesita el saldo al inicio.** Sin él la columna de saldo no significa nada, porque el depósito no arranca en cero el día que empieza el rango. Y el arrastre se toma del movimiento **anterior por posición**, no comparando fechas: el orden del estado de cuenta no es cronológico.
+
+- **Las hojas se parten por programa y no se dejan fluir.** El mismo corte sirve para las dos salidas: al imprimir cada bloque arranca en hoja nueva con `.salto-pagina`, y al descargar cada bloque es una página del PDF. Si se dejara fluir, el PDF descargado saldría como una sola imagen larguísima aplastada en una página. Verificado: el reporte del año son 2 páginas carta de 612×792 pt.
+
+- **El Excel va plano** —una fila por movimiento, sin celdas combinadas ni sub-encabezados— porque el punto de bajarlo es poder filtrarlo y sumarlo, y eso se rompe con cualquier adorno. Los montos se redondean antes de escribir: el saldo corriente arrastra ruido de punto flotante y un `22766.699999999997` en una celda ensucia cualquier suma que se haga encima.
+
+- **`liquidacion-pdf.ts` se mudó a `src/lib/pdf-hojas.ts`** como `armarPdfDeHojas`. Ya era genérico —recibe nodos del DOM y devuelve un Blob— y ahora lo usan la liquidación de T&T y el reporte de combustible. Mismo motivo por el que `descargar` se había mudado antes.
+
+**Commits clave:** ver `git log` de 2026-09-29.
+
+---
+
 ## Fase 33 · 2026-09-29 · Aeronaves · Estado de cuenta del proveedor de combustible
 
 **Objetivo:** saber cuánto queda del depósito con Aeroclub de Guatemala Gasolinera sin abrir el Excel que manda el proveedor. Plan en [`PLAN-ESTADO-CUENTA-FUEL.md`](../PLAN-ESTADO-CUENTA-FUEL.md).

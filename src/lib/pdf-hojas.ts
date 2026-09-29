@@ -1,17 +1,16 @@
-// La liquidación en un solo PDF: la hoja de liquidación y el itinerario.
+// Varias hojas del DOM en un solo PDF descargable.
 //
-// El usuario guarda la liquidación como respaldo y quiere las dos hojas en un
-// archivo. Los documentos que él sube -- confirmaciones, boletos -- NO van
-// aquí: los pidió fuera explícitamente.
+// Por qué no basta con `window.print()`: el navegador imprime lo que está en
+// pantalla y deja el archivo en manos del usuario. Acá el PDF se arma por
+// programa, capturando cada hoja y poniéndola en su propia página, y sale
+// como un Blob que se puede bajar con nombre propio.
 //
-// Por qué no basta con `window.print()`: el navegador imprime una sola cosa,
-// la que está en pantalla. Aquí el PDF se arma por programa, capturando cada
-// hoja y poniéndolas en páginas del mismo documento.
+// Nació para la liquidación de T&T —la hoja más el itinerario en un archivo—
+// y vive en `lib` porque el estado de cuenta de combustible hace lo mismo con
+// las páginas de su reporte.
 //
 // Tanto `pdf-lib` como `html2canvas` se cargan solo cuando se genera el
 // documento: no engordan el bundle del día a día.
-
-// `descargar` se mudo a `@/lib/descargar`: tambien lo usa Aeronaves.
 
 /** Carta en puntos, que es la unidad de pdf-lib. */
 const ANCHO = 612;
@@ -51,7 +50,7 @@ async function capturarNodo(nodo: HTMLElement): Promise<Uint8Array> {
  *
  * `nodos` son las hojas de la app, en el orden en que van al papel.
  */
-export async function armarLiquidacionCompleta(
+export async function armarPdfDeHojas(
   nodos: HTMLElement[],
   onProgreso?: (p: ProgresoExport) => void,
 ): Promise<{ blob: Blob }> {
@@ -61,7 +60,7 @@ export async function armarLiquidacionCompleta(
   let hechos = 0;
 
   for (const nodo of nodos) {
-    onProgreso?.({ paso: 'Armando las hojas del viaje…', hechos, total });
+    onProgreso?.({ paso: 'Armando las hojas…', hechos, total });
     const png = await capturarNodo(nodo);
     const img = await doc.embedPng(png);
     const util = { w: ANCHO - MARGEN * 2, h: ALTO - MARGEN * 2 };

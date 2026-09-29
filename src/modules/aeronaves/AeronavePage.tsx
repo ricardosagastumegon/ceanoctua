@@ -26,6 +26,9 @@ export function AeronavePage() {
   const { matricula = '' } = useParams();
   const { profile } = useAuth();
   const canEdit = puede(profile, 'aeronaves', 'editor');
+  // Borrar es irreversible; anular deja rastro. Por eso borrar se queda
+  // en el nivel `super` y todos los demás anulan.
+  const canBorrar = puede(profile, 'aeronaves', 'super');
   const q = useAeronave(matricula);
   const [editando, setEditando] = useState(false);
   // Las secciones de la aeronave. Van en pestañas y no una debajo de otra
@@ -139,7 +142,9 @@ export function AeronavePage() {
         </>
       )}
 
-      {seccion === 'combustible' && <CombustibleSection aeronave={a} canEdit={canEdit} />}
+      {seccion === 'combustible' && (
+        <CombustibleSection aeronave={a} canEdit={canEdit} canBorrar={canBorrar} />
+      )}
 
       {seccion === 'cuenta' && <EstadoCuentaSection aeronave={a} canEdit={canEdit} />}
 

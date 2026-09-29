@@ -7,6 +7,7 @@ import { VisorDocumento, type Visor } from '../VisorDocumento';
 import { acento } from '../constants';
 import type { Aeronave } from '../api';
 import { AbonoFormModal } from './AbonoFormModal';
+import { ReporteCuentaModal } from './ReporteCuentaModal';
 import { useBorrarAbono, useEstadoCuenta } from './hooks';
 import type { Abono } from './api';
 
@@ -43,8 +44,17 @@ export function EstadoCuentaSection({
   const [editando, setEditando] = useState<Abono | null>(null);
   const [visor, setVisor] = useState<Visor | null>(null);
   const [verTodo, setVerTodo] = useState(false);
+  // El rango del reporte. Arranca en el mes en curso, que es lo que se saca
+  // casi siempre; el resto se pide cambiando las fechas.
+  const [desde, setDesde] = useState(() => {
+    const h = new Date();
+    return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [hasta, setHasta] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reporte, setReporte] = useState(false);
 
   const d = q.data;
+  const atajos = useMemo(rangosRapidos, []);
   const moneda = d?.cuenta?.moneda ?? 'GTQ';
 
   // La historia son dos años; de entrada solo se muestra lo reciente.
@@ -166,6 +176,50 @@ export function EstadoCuentaSection({
         </div>
       )}
 
+      {/* El reporte por período: es lo que se le manda a contabilidad. */}
+      <div className="rounded-card border border-sand bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-dark-3">
+                Reporte del período
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
+                  className="rounded-md border border-sand px-2 py-1.5 text-sm text-dark focus:border-teal focus:outline-none" />
+                <span className="text-dark-3">→</span>
+                <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
+                  className="rounded-md border border-sand px-2 py-1.5 text-sm text-dark focus:border-teal focus:outline-none" />
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {atajos.map(([rotulo, d, h]) => (
+                <button
+                  key={rotulo}
+                  type="button"
+                  onClick={() => { setDesde(d); setHasta(h); }}
+                  className="rounded-md border border-sand px-2 py-1 text-[11px] font-semibold text-dark-2 hover:bg-sand-l"
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReporte(true)}
+            disabled={!desde || !hasta || desde > hasta}
+            className="rounded-md px-3 py-2 text-xs font-extrabold text-white hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: col.solid }}
+          >
+            Generar reporte
+          </button>
+        </div>
+        {desde > hasta && (
+          <p className="mt-2 text-[11px] text-rust">La fecha inicial es posterior a la final.</p>
+        )}
+      </div>
+
       <div className="rounded-card border border-sand bg-white p-5 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -286,7 +340,32 @@ export function EstadoCuentaSection({
         />
       )}
 
+      {reporte && (
+        <ReporteCuentaModal
+          aeronave={aeronave}
+          estado={d}
+          desde={desde}
+          hasta={hasta}
+          onClose={() => setReporte(false)}
+        />
+      )}
+
       <VisorDocumento visor={visor} onClose={() => setVisor(null)} />
     </div>
   );
+}
+
+/** Los rangos que se piden siempre: este mes, el pasado y el año. */
+function rangosRapidos(): [string, string, string][] {
+  const h = new Date();
+  const iso = (d: Date) => {
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  return [
+    ['Este mes', iso(new Date(h.getFullYear(), h.getMonth(), 1)), iso(new Date(h.getFullYear(), h.getMonth() + 1, 0))],
+    ['Mes pasado', iso(new Date(h.getFullYear(), h.getMonth() - 1, 1)), iso(new Date(h.getFullYear(), h.getMonth(), 0))],
+    [`${h.getFullYear()}`, `${h.getFullYear()}-01-01`, `${h.getFullYear()}-12-31`],
+    ['Todo', '2000-01-01', iso(h)],
+  ];
 }

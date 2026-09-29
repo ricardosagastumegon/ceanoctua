@@ -47,9 +47,12 @@ const money = (n: number) =>
 export function CombustibleSection({
   aeronave,
   canEdit,
+  canBorrar,
 }: {
   aeronave: Aeronave;
   canEdit: boolean;
+  /** Borrar un registro es de super usuario: anular es la salida de todos. */
+  canBorrar: boolean;
 }) {
   const col = acento(aeronave.acento);
   const q = useCombustible(aeronave.id);
@@ -366,8 +369,10 @@ export function CombustibleSection({
                           {/* Borrar solo mientras no haya una solicitud viva: esa
                               quedaría apuntando al vacío. Que el registro HAYA
                               tenido una no cuenta -- si la borraron, el registro
-                              vuelve a estar libre. */}
-                          {!est.conSolicitud && (
+                              vuelve a estar libre.
+                              Y solo para el super usuario: para todos los demás
+                              la salida es anular, que deja rastro. */}
+                          {canBorrar && !est.conSolicitud && (
                             <button
                               type="button"
                               onClick={() => void quitar(r)}

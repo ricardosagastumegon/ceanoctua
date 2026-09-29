@@ -110,12 +110,57 @@ export const combustibleApi = {
     await reemplazarLineas(id, lineas);
   },
 
-  async remove(id: string): Promise<void> {
+  /**
+   * Borra el registro y, si tenía un aviso pendiente en Pagos, lo cierra.
+   *
+   * Solo se llega acá cuando no hay solicitud viva --lo verifica la pantalla--
+   * pero el aviso puede seguir en la bandeja de Pagos pidiendo una solicitud
+   * por un registro que ya no existe. Cerrarlo es parte de borrar.
+   */
+  async remove(id: string, notificacionId?: string | null): Promise<void> {
+    if (notificacionId) await cerrarNotificacion(notificacionId);
     const { error } = await supabase
       .from('avn_combustible_registros')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw error;
+  },
+
+  /**
+   * Anula el registro sin borrarlo.
+   *
+   * Para cuando ya hay una solicitud de pago y borrar no es opción: el
+   * registro se queda en la lista con su historial, pero deja de sumar al
+   * total facturado.
+   */
+  async cancelar(id: string, nota: string): Promise<void> {
+    const { error } = await supabase
+      .from('avn_combustible_registros')
+      .update({
+        cancelado_en: new Date().toISOString().slice(0, 10),
+        cancelacion_nota: nota.trim() || null,
+      })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async reactivar(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('avn_combustible_registros')
+      .update({ cancelado_en: null, cancelacion_nota: null })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  /**
+   * Retira de la bandeja de Pagos un aviso que todavía nadie procesó.
+   *
+   * Un aviso solo existe para pedir una acción; cancelarlo lo cierra igual
+   * que generarla. No se borra: queda con su `procesado_at` para poder
+   * rastrear qué pasó.
+   */
+  async cancelarEnvio(notificacionId: string): Promise<void> {
+    await cerrarNotificacion(notificacionId);
   },
 
   /**
@@ -147,6 +192,14 @@ export const combustibleApi = {
     if (error) throw error;
   },
 };
+
+async function cerrarNotificacion(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('pagos_notificaciones')
+    .update({ procesado: true, procesado_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
 
 /**
  * Las líneas se reescriben enteras en vez de irse comparando una por una.

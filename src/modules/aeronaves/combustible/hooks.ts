@@ -37,8 +37,38 @@ export function useActualizarRegistro(aeronaveId: string) {
 export function useBorrarRegistro(aeronaveId: string) {
   const invalidar = useInvalidar(aeronaveId);
   return useMutation({
-    mutationFn: (id: string) => combustibleApi.remove(id),
+    mutationFn: (v: { id: string; notificacionId?: string | null }) =>
+      combustibleApi.remove(v.id, v.notificacionId),
     onSuccess: () => void invalidar(),
+  });
+}
+
+export function useAnularRegistro(aeronaveId: string) {
+  const invalidar = useInvalidar(aeronaveId);
+  return useMutation({
+    mutationFn: (v: { id: string; nota: string }) => combustibleApi.cancelar(v.id, v.nota),
+    onSuccess: () => void invalidar(),
+  });
+}
+
+export function useReactivarRegistro(aeronaveId: string) {
+  const invalidar = useInvalidar(aeronaveId);
+  return useMutation({
+    mutationFn: (id: string) => combustibleApi.reactivar(id),
+    onSuccess: () => void invalidar(),
+  });
+}
+
+export function useCancelarEnvio(aeronaveId: string) {
+  const qc = useQueryClient();
+  const invalidar = useInvalidar(aeronaveId);
+  return useMutation({
+    mutationFn: (notificacionId: string) => combustibleApi.cancelarEnvio(notificacionId),
+    onSuccess: () => {
+      void invalidar();
+      // La bandeja de Finanzas tiene que dejar de mostrarlo de inmediato.
+      void qc.invalidateQueries({ queryKey: ['pagos_notificaciones'] });
+    },
   });
 }
 

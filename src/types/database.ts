@@ -681,6 +681,8 @@ export type Database = {
           archivo_path: string | null;
           archivo_nombre: string | null;
           notas: string | null;
+          cancelado_en: string | null;
+          cancelacion_nota: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -702,6 +704,8 @@ export type Database = {
           archivo_path?: string | null;
           archivo_nombre?: string | null;
           notas?: string | null;
+          cancelado_en?: string | null;
+          cancelacion_nota?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -719,6 +723,8 @@ export type Database = {
           archivo_path?: string | null;
           archivo_nombre?: string | null;
           notas?: string | null;
+          cancelado_en?: string | null;
+          cancelacion_nota?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];

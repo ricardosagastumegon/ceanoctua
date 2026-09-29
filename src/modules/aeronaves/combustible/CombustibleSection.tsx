@@ -11,8 +11,27 @@ import { VisorDocumento, type Visor } from '../VisorDocumento';
 import { acento } from '../constants';
 import type { Aeronave } from '../api';
 import { RegistroFormModal } from './RegistroFormModal';
-import { useBorrarRegistro, useCombustible, useEnviarAPagos } from './hooks';
+import { RegistroPrintable } from './RegistroPrintable';
+import { AnularModal } from './AnularModal';
+import {
+  useAnularRegistro, useBorrarRegistro, useCancelarEnvio, useCombustible,
+  useEnviarAPagos, useReactivarRegistro,
+} from './hooks';
 import type { RegistroCompleto } from './api';
+
+/**
+ * En qué va la solicitud de pago de un registro.
+ *
+ * `libre` es la parte que importa: un registro cuya solicitud se borró vuelve
+ * a estar libre, aunque su aviso siga en la tabla de notificaciones. Antes el
+ * candado miraba el aviso y no la solicitud, así que un registro cuya SP se
+ * eliminaba quedaba atrapado para siempre --ni se podía borrar ni se podía
+ * volver a enviar.
+ */
+function estadoPago(r: RegistroCompleto) {
+  const pendiente = !!r.notificacion_id && !r.notificacion_procesada && !r.pago_id;
+  return { pendiente, conSolicitud: !!r.pago_id, libre: !r.pago_id && !pendiente };
+}
 
 const money = (n: number) =>
   n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -36,6 +55,9 @@ export function CombustibleSection({
   const q = useCombustible(aeronave.id);
   const enviar = useEnviarAPagos(aeronave.id);
   const borrar = useBorrarRegistro(aeronave.id);
+  const anular = useAnularRegistro(aeronave.id);
+  const reactivar = useReactivarRegistro(aeronave.id);
+  const cancelarEnvio = useCancelarEnvio(aeronave.id);
   const toast = useToast();
   const confirmar = useConfirm();
 
@@ -44,6 +66,8 @@ export function CombustibleSection({
   const [visor, setVisor] = useState<Visor | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
   const [cargandoPago, setCargandoPago] = useState<string | null>(null);
+  const [viendo, setViendo] = useState<RegistroCompleto | null>(null);
+  const [anulando, setAnulando] = useState<RegistroCompleto | null>(null);
 
   async function mandarAPagos(r: RegistroCompleto) {
     const ok = await confirmar({
@@ -86,23 +110,66 @@ export function CombustibleSection({
   }
 
   async function quitar(r: RegistroCompleto) {
+    const { pendiente } = estadoPago(r);
     const ok = await confirmar({
       title: 'Quitar registro',
-      message: `¿Quitar el registro ${r.serial ?? ''} del ${fmtDate(r.fecha)}?`,
+      message: (
+        <>
+          ¿Quitar el registro <b>{r.serial ?? ''}</b> del {fmtDate(r.fecha)}?
+          {pendiente && ' También se retira el aviso que está esperando en Pagos.'}
+        </>
+      ),
       confirmLabel: 'Quitar',
       danger: true,
     });
     if (!ok) return;
     try {
-      await borrar.mutateAsync(r.id);
+      await borrar.mutateAsync({ id: r.id, notificacionId: pendiente ? r.notificacion_id : null });
       toast.success('Registro quitado.');
     } catch (err) {
       toast.error(describeError(err));
     }
   }
 
+  async function reactivarRegistro(r: RegistroCompleto) {
+    try {
+      await reactivar.mutateAsync(r.id);
+      toast.success('Registro reactivado.');
+    } catch (err) {
+      toast.error(describeError(err));
+    }
+  }
+
+  /** Retira de la bandeja de Pagos un aviso que todavía nadie procesó. */
+  async function deshacerEnvio(r: RegistroCompleto) {
+    if (!r.notificacion_id) return;
+    const ok = await confirmar({
+      title: 'Cancelar el envío a Pagos',
+      message: (
+        <>
+          El aviso sale de la bandeja de Finanzas → Pagos y el registro vuelve a quedar libre para
+          enviarse de nuevo o para quitarse. La solicitud todavía no existe, así que no se pierde
+          nada.
+        </>
+      ),
+      confirmLabel: 'Cancelar el envío',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await cancelarEnvio.mutateAsync(r.notificacion_id);
+      toast.success('Envío cancelado.');
+    } catch (err) {
+      toast.error(describeError(err));
+    }
+  }
+
   const registros = q.data ?? [];
-  const totalGeneral = registros.reduce((s, r) => s + Number(r.total), 0);
+  // Un registro anulado sigue en la lista pero no es dinero facturado.
+  const anulados = registros.filter((r) => r.cancelado_en).length;
+  const totalGeneral = registros
+    .filter((r) => !r.cancelado_en)
+    .reduce((s, r) => s + Number(r.total), 0);
 
   return (
     <div className="space-y-4">
@@ -166,10 +233,21 @@ export function CombustibleSection({
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r) => (
-                  <tr key={r.id} className="border-b border-sand">
+                {registros.map((r) => {
+                  const est = estadoPago(r);
+                  const anulado = !!r.cancelado_en;
+                  return (
+                  <tr key={r.id} className="border-b border-sand" style={{ opacity: anulado ? 0.55 : 1 }}>
                     <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] font-extrabold text-dark">
                       {r.serial ?? '—'}
+                      {anulado && (
+                        <span
+                          className="ml-1 rounded bg-rust-l px-1 font-sans text-[9px] font-extrabold uppercase text-rust"
+                          title={r.cancelacion_nota ?? undefined}
+                        >
+                          anulado
+                        </span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-dark-2">{fmtDate(r.fecha)}</td>
                     <td className="px-2 py-2 text-dark-2">{r.vale ?? '—'}</td>
@@ -185,7 +263,7 @@ export function CombustibleSection({
                     {/* El estado de la solicitud: sin enviar, enviada y esperando,
                         o ya generada y se puede ver. */}
                     <td className="whitespace-nowrap px-2 py-2 text-center">
-                      {r.pago_id ? (
+                      {est.conSolicitud ? (
                         <button
                           type="button"
                           onClick={() => void verSolicitud(r)}
@@ -194,9 +272,22 @@ export function CombustibleSection({
                         >
                           {cargandoPago === r.id ? 'Abriendo…' : `👁 Ver ${r.pago_serial ?? 'SP'}`}
                         </button>
-                      ) : r.notificacion_id ? (
-                        <span className="rounded-full bg-gold-light px-2 py-1 text-[10px] font-extrabold uppercase text-gold">
-                          enviada a pagos
+                      ) : est.pendiente ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="rounded-full bg-gold-light px-2 py-1 text-[10px] font-extrabold uppercase text-gold">
+                            enviada a pagos
+                          </span>
+                          {/* Mientras nadie la procese, el envío se puede deshacer. */}
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => void deshacerEnvio(r)}
+                              title="Cancelar el envío a Pagos"
+                              className="text-[11px] text-dark-3 hover:text-rust"
+                            >
+                              ✕
+                            </button>
+                          )}
                         </span>
                       ) : canEdit ? (
                         <button
@@ -230,6 +321,14 @@ export function CombustibleSection({
                           📎
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setViendo(r)}
+                        title="Ver el registro completo"
+                        className="px-1 text-[12px] opacity-50 hover:opacity-100"
+                      >
+                        👁
+                      </button>
                       {canEdit && (
                         <>
                           <button
@@ -243,10 +342,32 @@ export function CombustibleSection({
                           >
                             ✏️
                           </button>
-                          {/* Un registro que ya se envió a pagos no se quita desde
-                              aquí: del otro lado hay una solicitud que quedaría
-                              apuntando al vacío. */}
-                          {!r.notificacion_id && (
+                          {/* Anular es la salida cuando borrar no es opción: el
+                              registro se queda pero deja de sumar. */}
+                          {anulado ? (
+                            <button
+                              type="button"
+                              onClick={() => void reactivarRegistro(r)}
+                              title="Reactivar"
+                              className="px-1 text-[12px] opacity-50 hover:opacity-100"
+                            >
+                              ↺
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setAnulando(r)}
+                              title="Anular"
+                              className="px-1 text-[12px] opacity-50 hover:opacity-100"
+                            >
+                              🚫
+                            </button>
+                          )}
+                          {/* Borrar solo mientras no haya una solicitud viva: esa
+                              quedaría apuntando al vacío. Que el registro HAYA
+                              tenido una no cuenta -- si la borraron, el registro
+                              vuelve a estar libre. */}
+                          {!est.conSolicitud && (
                             <button
                               type="button"
                               onClick={() => void quitar(r)}
@@ -260,12 +381,18 @@ export function CombustibleSection({
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr>
                   <td colSpan={6} className="px-2 py-2 text-right text-[11px] font-extrabold uppercase tracking-wider text-dark-2">
                     Total facturado
+                    {anulados > 0 && (
+                      <span className="ml-1 font-sans normal-case tracking-normal text-dark-3">
+                        (sin {anulados} anulado{anulados === 1 ? '' : 's'})
+                      </span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-2 py-2 text-right font-heading text-sm font-extrabold" style={{ color: col.dark }}>
                     {money(totalGeneral)}
@@ -286,6 +413,39 @@ export function CombustibleSection({
       />
 
       <VisorDocumento visor={visor} onClose={() => setVisor(null)} />
+
+      {viendo && (
+        <RegistroPrintable
+          registro={viendo}
+          aeronave={aeronave}
+          onClose={() => setViendo(null)}
+          onVerArchivo={() =>
+            setVisor({
+              tipo: 'archivo',
+              path: viendo.archivo_path as string,
+              titulo: `${viendo.serial ?? 'Registro'} · ${viendo.factura ?? ''}`,
+              nombre: viendo.archivo_nombre,
+            })
+          }
+          onVerSolicitud={() => void verSolicitud(viendo)}
+          cargandoSolicitud={cargandoPago === viendo.id}
+        />
+      )}
+
+      {anulando && (
+        <AnularModal
+          registro={anulando}
+          onClose={() => setAnulando(null)}
+          onConfirm={async (nota) => {
+            try {
+              await anular.mutateAsync({ id: anulando.id, nota });
+              toast.success('Registro anulado.');
+            } catch (err) {
+              toast.error(describeError(err));
+            }
+          }}
+        />
+      )}
 
       {pago && (
         <PrintableModal

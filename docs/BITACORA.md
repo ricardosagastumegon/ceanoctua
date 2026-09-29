@@ -6,6 +6,29 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 32 · 2026-09-29 · Aeronaves · Anular un registro de combustible y verlo completo
+
+Tres cosas del control de fuel, reportadas por el usuario después de probarlo con un registro real.
+
+**1 · El candado de borrado miraba lo que no era.** Un registro que ya tuvo solicitud de pago no se podía borrar nunca más, aunque la solicitud se hubiera eliminado después. El usuario hizo una prueba de punta a punta, borró la SP porque no era real, y el registro quedó atrapado: ni se podía quitar ni se podía volver a enviar.
+
+La causa: la pantalla preguntaba por `notificacion_id` —el aviso que se le manda a Pagos— y ese aviso no se borra nunca, queda con su `procesado_at` para poder rastrear qué pasó. Lo que importa es si hay una **solicitud viva**, que es `pago_id` (la consulta ya filtra `pagos.deleted_at is null`). Ahora el estado se calcula en `estadoPago()` con tres casos —`conSolicitud`, `pendiente`, `libre`— y borrar depende de `conSolicitud`.
+
+**2 · Faltaba una salida cuando borrar no es opción.** Migración `20260929000001_combustible_cancelado.sql`: `cancelado_en` y `cancelacion_nota`. Anular no es borrar —misma idea que los servicios de T&T—: el registro se queda en la lista con su historial, atenuado y con su etiqueta, pero **deja de sumar al total facturado**, y el pie de la tabla dice cuántos quedaron fuera.
+
+**3 · No había dónde ver el registro completo.** El botón 👁, a la par de editar, abre `RegistroPrintable`: los datos, los productos con su precio unitario, el documento que se adjuntó y la solicitud de pago si existe, los tres en la misma hoja. Antes estaban en tres lugares distintos.
+
+**Comentarios:**
+- **El envío a Pagos ahora se puede deshacer** mientras nadie lo haya procesado: la ✕ junto a «enviada a pagos» cierra el aviso y el registro vuelve a estar libre. Sin esto quedaba el mismo callejón sin salida del punto 1, solo que un paso antes. Y borrar un registro con un aviso pendiente **también cierra el aviso**: si no, Pagos seguiría pidiendo una solicitud por algo que ya no existe.
+- Cerrar un aviso es marcarlo `procesado`, igual que generar la solicitud. Un aviso solo existe para pedir una acción; cancelarlo la cierra. No se borra nunca.
+- Anular pide el motivo en su propio modal y no con `useConfirm`, porque ese devuelve un booleano y no texto. El motivo es lo que después explica por qué el total del mes no cuadra con las facturas.
+- La hoja usa el **acento de la aeronave**, no un logo: el de Arriaza es de T&T y el de Finanzas es del formato oficial FZ-RG-0185. Esta es interna de CEA.
+- Anular el registro **no toca la solicitud de pago**. Son dos documentos de dos módulos; la SP se maneja desde Finanzas y el modal lo dice.
+
+**Commits clave:** ver `git log` de 2026-09-29.
+
+---
+
 ## Fase 31 · 2026-09-28 · Crucero · pasajeros por camarote y hoja en dos partes
 
 Tres cosas que salieron al cargar el primer crucero real, reportadas por el usuario.

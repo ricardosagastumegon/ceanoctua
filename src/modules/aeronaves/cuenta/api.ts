@@ -126,12 +126,23 @@ export const cuentaApi = {
       });
     }
 
-    // 2 · Lo que sigue después del corte de la historia. Un registro anterior
-    //     a esa fecha ya está arriba y contarlo otra vez duplicaría el gasto.
+    // 2 · Lo que sigue después del corte de la historia.
+    //
+    //     El corte vale para TODO lo que capture CEA, no solo para las
+    //     facturas: cuando llega un estado de cuenta más reciente, el
+    //     proveedor ya trae dentro los anticipos que se hicieron, y una
+    //     reposición registrada acá antes de esa fecha se contaría dos veces
+    //     --una como historia y otra como reposición propia--.
+    //
+    //     Le pasa exactamente a una reposición que se registra hoy y que
+    //     aparece en el estado de cuenta del mes siguiente.
     const corte = cuenta.historico_hasta;
+    const despuesDelCorte = (fecha: string | null) => !corte || (!!fecha && fecha > corte);
+
     const propias = (regs.data ?? []).filter(
-      (r) => !r.cancelado_en && (!corte || r.fecha > corte),
+      (r) => !r.cancelado_en && despuesDelCorte(r.fecha),
     );
+    const reposiciones = (abonos.data ?? []).filter((a) => despuesDelCorte(a.fecha));
 
     const posteriores: MovimientoCuenta[] = [
       ...propias.map((r) => ({
@@ -146,7 +157,7 @@ export const cuentaApi = {
         saldo: 0,
         registroId: r.id,
       })),
-      ...(abonos.data ?? []).map((a) => ({
+      ...reposiciones.map((a) => ({
         clave: `a:${a.id}`,
         origen: 'reposicion' as const,
         tipo: 'abono' as const,

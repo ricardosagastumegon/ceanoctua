@@ -94,7 +94,8 @@ if (!hoja) throw new Error(`no encontré la pestaña del estado de cuenta en ${w
 const filas = XLSX.utils.sheet_to_json(wb.Sheets[hoja], { header: 1, raw: false, defval: '' });
 
 const movs = [];
-const sinFecha = [];
+const sinFecha = [];      // la celda traia texto pero no era una fecha
+const vacias = [];        // la celda venia en blanco
 let anterior = null;
 let rotas = 0;
 
@@ -147,6 +148,11 @@ for (const f of filas) {
   if (crudo && !fe) {
     com = [com, `fecha en el origen: ${crudo}`].filter(Boolean).join(' · ');
     sinFecha.push(`${doc || '(sin doc)'}: ${crudo}`);
+  } else if (!crudo && (cargo || abono)) {
+    // La celda venia vacia. No es un error del archivo --el proveedor a veces
+    // no la llena-- pero el movimiento queda sin fecha y hay que decirlo: un
+    // dato que se pierde en silencio es lo peor que puede hacer este script.
+    vacias.push(`${doc || '(sin doc)'}: ${com || (cargo ? 'cargo' : 'abono')} Q${cargo || abono}`);
   }
 
   if (movs.length === 0) {
@@ -174,6 +180,11 @@ console.log(`inconsistencias en la cadena de saldos: ${rotas}`);
 if (sinFecha.length) {
   console.log(`fechas ilegibles en el origen (quedan sin fecha): ${sinFecha.length}`);
   for (const x of sinFecha) console.log(`  ${x}`);
+}
+if (vacias.length) {
+  console.log(`movimientos con la celda de fecha en blanco: ${vacias.length}`);
+  for (const x of vacias.slice(0, 20)) console.log(`  ${x}`);
+  if (vacias.length > 20) console.log(`  … y ${vacias.length - 20} mas`);
 }
 console.log(`última fecha: ${hasta}`);
 console.log(`DISPONIBLE calculado: ${disponible.toFixed(2)}`);

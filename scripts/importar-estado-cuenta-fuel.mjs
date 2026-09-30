@@ -16,6 +16,12 @@
 //
 // `S.Anterior` y `S.Final` no se guardan: son derivables del orden. Sí se usan
 // para VERIFICAR que la lectura sea correcta, que es justo para lo que sirven.
+//
+// Las columnas se ubican POR EL ENCABEZADO y no por posición fija. El segundo
+// archivo que mandó el proveedor traía la misma hoja y los mismos rótulos pero
+// la tabla arrancaba una columna a la izquierda, y con índices fijos el script
+// leyó cero movimientos sin quejarse. De ahí también la verificación de que
+// haya leído al menos uno: cero nunca es éxito.
 
 import { readFileSync } from 'node:fs';
 import XLSX from 'xlsx';
@@ -92,26 +98,51 @@ const sinFecha = [];
 let anterior = null;
 let rotas = 0;
 
+/** Sin acentos, puntos ni mayusculas, para comparar rotulos de encabezado. */
+const clave = (v) => String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z]/g, '');
+
+const QUIERO = {
+  doc: 'documento', fecha: 'fecha', com: 'comentario',
+  sAnt: 'santerior', cargo: 'cargos', abono: 'abonos', sFin: 'sfinal',
+};
+
+// Se busca la fila que trae los siete rotulos y de ahi salen las columnas.
+let COL = null;
 for (const f of filas) {
-  const sAnt = num(f[3]);
-  const sFin = num(f[6]);
-  if (sAnt === null || sFin === null) continue;   // encabezados y pies de página
+  const mapa = {};
+  f.forEach((celda, i) => { const k = clave(celda); if (k) mapa[k] = i; });
+  if (Object.values(QUIERO).every((r) => mapa[r] !== undefined)) {
+    COL = Object.fromEntries(Object.entries(QUIERO).map(([k, r]) => [k, mapa[r]]));
+    break;
+  }
+}
+if (!COL) {
+  console.error(`No encontre el encabezado (${Object.values(QUIERO).join(', ')}) en la hoja "${hoja}".`);
+  process.exit(1);
+}
+console.log(`columnas ubicadas por el encabezado: ${JSON.stringify(COL)}`);
 
-  const cargo = num(f[4]) || 0;
-  const abono = num(f[5]) || 0;
+for (const f of filas) {
+  const sAnt = num(f[COL.sAnt]);
+  const sFin = num(f[COL.sFin]);
+  if (sAnt === null || sFin === null) continue;   // encabezados y pies de pagina
 
-  // La fila tiene que cerrar contra sí misma y contra la anterior. Si algo de
-  // esto falla, la lectura está mal y no tiene caso seguir.
+  const cargo = num(f[COL.cargo]) || 0;
+  const abono = num(f[COL.abono]) || 0;
+
+  // La fila tiene que cerrar contra si misma y contra la anterior. Si algo de
+  // esto falla, la lectura esta mal y no tiene caso seguir.
   if (Math.abs(sAnt + cargo - abono - sFin) > 0.011) rotas++;
   if (anterior !== null && Math.abs(sAnt - anterior) > 0.011) rotas++;
   anterior = sFin;
 
-  const doc = String(f[0]).trim();
-  let com = String(f[2]).trim();
+  const doc = String(f[COL.doc] ?? '').trim();
+  let com = String(f[COL.com] ?? '').trim();
 
   // Fecha ilegible en el origen: se guarda el texto tal cual en el comentario
-  // en vez de perderlo o de inventar un día.
-  const crudo = String(f[1]).trim();
+  // en vez de perderlo o de inventar un dia.
+  const crudo = String(f[COL.fecha] ?? '').trim();
   const fe = fecha(crudo);
   if (crudo && !fe) {
     com = [com, `fecha en el origen: ${crudo}`].filter(Boolean).join(' · ');
@@ -121,7 +152,7 @@ for (const f of filas) {
   if (movs.length === 0) {
     // La primera fila del Excel es el saldo inicial: no tiene cargo ni abono,
     // solo el saldo con que arranca la cuenta. En el Excel va negativo porque
-    // es a favor; acá el disponible va en positivo.
+    // es a favor; aca el disponible va en positivo.
     movs.push({ tipo: 'saldo_inicial', fecha: fe, documento: null, comentario: com || 'Saldo inicial', monto: -sAnt });
   }
   if (cargo) movs.push({ tipo: 'cargo', fecha: fe, documento: doc || null, comentario: com || null, monto: cargo });
@@ -148,6 +179,10 @@ console.log(`última fecha: ${hasta}`);
 console.log(`DISPONIBLE calculado: ${disponible.toFixed(2)}`);
 console.log(`DISPONIBLE del Excel:  ${esperado.toFixed(2)}`);
 
+if (movs.length === 0) {
+  console.error('\nNo lei ni un movimiento. El archivo no tiene la forma esperada.');
+  process.exit(1);
+}
 if (rotas > 0) {
   console.error('\nLa cadena de saldos del Excel no cierra. No se carga nada.');
   process.exit(1);

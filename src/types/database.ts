@@ -993,6 +993,8 @@ export type Database = {
           instructor_id: string | null;
           proposito: string | null;
           notas: string | null;
+          combustible_cantidad: number | null;
+          combustible_unidad: string;
           horas: number;
           created_at: string;
           updated_at: string;
@@ -1009,6 +1011,8 @@ export type Database = {
           instructor_id?: string | null;
           proposito?: string | null;
           notas?: string | null;
+          combustible_cantidad?: number | null;
+          combustible_unidad?: string;
           deleted_at?: string | null;
         };
         Update: {
@@ -1019,6 +1023,8 @@ export type Database = {
           instructor_id?: string | null;
           proposito?: string | null;
           notas?: string | null;
+          combustible_cantidad?: number | null;
+          combustible_unidad?: string;
           deleted_at?: string | null;
         };
         Relationships: [

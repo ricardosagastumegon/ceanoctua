@@ -7,6 +7,7 @@ import { acento } from '../constants';
 import type { Aeronave } from '../api';
 import { PilotosPanel } from './PilotosPanel';
 import { VueloFormModal } from './VueloFormModal';
+import { VueloPrintable } from './VueloPrintable';
 import { useBorrarVuelo, useVuelos } from './hooks';
 import { rotuloMando, type VueloCompleto } from './api';
 
@@ -36,6 +37,7 @@ export function VuelosSection({
 
   const [abierto, setAbierto] = useState(false);
   const [editando, setEditando] = useState<VueloCompleto | null>(null);
+  const [viendo, setViendo] = useState<VueloCompleto | null>(null);
 
   const vuelos = useMemo(() => q.data ?? [], [q.data]);
 
@@ -178,6 +180,9 @@ export function VuelosSection({
                       {h1(Number(v.horas))}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-right">
+                      <button type="button" title="Ver e imprimir la bitácora"
+                        onClick={() => setViendo(v)}
+                        className="px-1 text-[12px] opacity-50 hover:opacity-100">👁</button>
                       {canEdit && (
                         <button type="button" title="Editar"
                           onClick={() => { setEditando(v); setAbierto(true); }}
@@ -207,6 +212,10 @@ export function VuelosSection({
           </div>
         )}
       </div>
+
+      {viendo && (
+        <VueloPrintable aeronave={aeronave} vuelo={viendo} onClose={() => setViendo(null)} />
+      )}
 
       {abierto && (
         <VueloFormModal

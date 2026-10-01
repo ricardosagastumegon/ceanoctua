@@ -70,6 +70,8 @@ export function VueloFormModal({ aeronave, editando, onClose }: Props) {
   const [instructorId, setInstructorId] = useState('');
   const [proposito, setProposito] = useState('');
   const [notas, setNotas] = useState('');
+  const [combustible, setCombustible] = useState('');
+  const [unidad, setUnidad] = useState('galones');
   const [tramos, setTramos] = useState<TramoInput[]>([tramoVacio()]);
   const [pasajeros, setPasajeros] = useState<string[]>([]);
   const [draftPax, setDraftPax] = useState('');
@@ -84,6 +86,10 @@ export function VueloFormModal({ aeronave, editando, onClose }: Props) {
     setInstructorId(editando?.instructor_id ?? '');
     setProposito(editando?.proposito ?? '');
     setNotas(editando?.notas ?? '');
+    setCombustible(
+      editando?.combustible_cantidad != null ? String(editando.combustible_cantidad) : '',
+    );
+    setUnidad(editando?.combustible_unidad ?? 'galones');
     setPasajeros(editando?.pasajeros ?? []);
     setTramos(
       editando?.tramos.length
@@ -155,6 +161,10 @@ export function VueloFormModal({ aeronave, editando, onClose }: Props) {
       instructor_id: mando === 'instruccion' ? instructorId || null : null,
       proposito: proposito.trim() || null,
       notas: notas.trim() || null,
+      // Solo la cantidad: el vale y la factura viven en Combustible y no van
+      // uno a uno con los vuelos.
+      combustible_cantidad: combustible.trim() === '' ? null : Number(combustible),
+      combustible_unidad: unidad,
     };
 
     try {
@@ -209,6 +219,21 @@ export function VueloFormModal({ aeronave, editando, onClose }: Props) {
               onChange={(e) => setProposito(e.target.value)}
               placeholder="Recorrido de fincas, traslado, instrucción…" />
             <TextInput label="Notas" value={notas} onChange={(e) => setNotas(e.target.value)} />
+          </div>
+
+          {/* Solo la cantidad. El vale y la factura llegan después a
+              administración y se capturan en Combustible: una sola carga puede
+              cubrir varios vuelos, así que no van uno a uno. */}
+          <div className="flex flex-wrap items-end gap-3">
+            <TextInput label="Combustible abordado" type="number" min="0" step="0.1"
+              value={combustible} onChange={(e) => setCombustible(e.target.value)} />
+            <Select label="Unidad" value={unidad} onChange={(e) => setUnidad(e.target.value)}>
+              <option value="galones">Galones</option>
+              <option value="libras">Libras</option>
+            </Select>
+            <p className="pb-2 text-[11px] text-dark-3">
+              Solo la cantidad. El vale y la factura se capturan en Combustible.
+            </p>
           </div>
         </Bloque>
 

@@ -14,6 +14,7 @@ import { VisorDocumento, type Visor } from './VisorDocumento';
 import { unirDocumentos } from './documentos-pdf';
 import { CombustibleSection } from './combustible/CombustibleSection';
 import { EstadoCuentaSection } from './cuenta/EstadoCuentaSection';
+import { VuelosSection } from './vuelos/VuelosSection';
 
 /**
  * Una aeronave · capa 3 del módulo.
@@ -34,7 +35,7 @@ export function AeronavePage() {
   // Las secciones de la aeronave. Van en pestañas y no una debajo de otra
   // porque conforme entren horas de vuelo, mantenimientos y pagos, la
   // pantalla se volvería un rollo interminable.
-  const [seccion, setSeccion] = useState<'resumen' | 'combustible' | 'cuenta'>('resumen');
+  const [seccion, setSeccion] = useState<'resumen' | 'vuelos' | 'combustible' | 'cuenta'>('resumen');
 
   if (q.isLoading) return <p className="text-sm text-dark-3">Cargando…</p>;
 
@@ -118,6 +119,7 @@ export function AeronavePage() {
       <nav className="flex gap-1 rounded-card border border-sand bg-white p-1 shadow-sm">
         {([
           ['resumen', 'Ficha y documentos'],
+          ['vuelos', 'Bitácora de vuelo'],
           ['combustible', 'Combustible'],
           ['cuenta', 'Estado de cuenta'],
         ] as const).map(([k, rotulo]) => (
@@ -144,6 +146,10 @@ export function AeronavePage() {
 
       {seccion === 'combustible' && (
         <CombustibleSection aeronave={a} canEdit={canEdit} canBorrar={canBorrar} />
+      )}
+
+      {seccion === 'vuelos' && (
+        <VuelosSection aeronave={a} canEdit={canEdit} canBorrar={canBorrar} />
       )}
 
       {seccion === 'cuenta' && <EstadoCuentaSection aeronave={a} canEdit={canEdit} />}

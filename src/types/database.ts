@@ -943,6 +943,161 @@ export type Database = {
         Relationships: [];
       };
 
+      avn_pilotos: {
+        Row: {
+          id: string;
+          nombre: string;
+          licencia: string | null;
+          tipo: string | null;
+          medico_vence: string | null;
+          telefono: string | null;
+          activo: boolean;
+          notas: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          nombre: string;
+          licencia?: string | null;
+          tipo?: string | null;
+          medico_vence?: string | null;
+          telefono?: string | null;
+          activo?: boolean;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          nombre?: string;
+          licencia?: string | null;
+          tipo?: string | null;
+          medico_vence?: string | null;
+          telefono?: string | null;
+          activo?: boolean;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      avn_vuelos: {
+        Row: {
+          id: string;
+          aeronave_id: string;
+          serial: string | null;
+          fecha: string;
+          numero: string | null;
+          mando: string;
+          piloto_id: string | null;
+          instructor_id: string | null;
+          proposito: string | null;
+          notas: string | null;
+          horas: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          aeronave_id: string;
+          serial?: string | null;
+          fecha: string;
+          numero?: string | null;
+          mando?: string;
+          piloto_id?: string | null;
+          instructor_id?: string | null;
+          proposito?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          fecha?: string;
+          numero?: string | null;
+          mando?: string;
+          piloto_id?: string | null;
+          instructor_id?: string | null;
+          proposito?: string | null;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          { foreignKeyName: 'avn_vuelos_aeronave_id_fkey'; columns: ['aeronave_id']; referencedRelation: 'avn_aeronaves'; referencedColumns: ['id'] },
+        ];
+      };
+
+      avn_vuelo_tramos: {
+        Row: {
+          id: string;
+          vuelo_id: string;
+          origen: string | null;
+          destino: string | null;
+          hora_salida: string | null;
+          hora_llegada: string | null;
+          horometro_salida: number | null;
+          horometro_llegada: number | null;
+          horas: number;
+          espera: number;
+          notas: string | null;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          vuelo_id: string;
+          origen?: string | null;
+          destino?: string | null;
+          hora_salida?: string | null;
+          hora_llegada?: string | null;
+          horometro_salida?: number | null;
+          horometro_llegada?: number | null;
+          espera?: number;
+          notas?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          origen?: string | null;
+          destino?: string | null;
+          hora_salida?: string | null;
+          hora_llegada?: string | null;
+          horometro_salida?: number | null;
+          horometro_llegada?: number | null;
+          espera?: number;
+          notas?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      avn_vuelo_pax: {
+        Row: {
+          id: string;
+          vuelo_id: string;
+          nombre: string | null;
+          orden: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          vuelo_id: string;
+          nombre?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Update: {
+          nombre?: string | null;
+          orden?: number;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       avn_tipos_certificado: {
         Row: {
           id: string;

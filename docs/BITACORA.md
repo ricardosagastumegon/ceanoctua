@@ -6,6 +6,33 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 36 · 2026-09-30 · Aeronaves · Bitácora de vuelo
+
+**Objetivo:** lo que el piloto reporta después de volar. *«Es de donde todo parte»* —de acá salen las horas, y de las horas saldrán después los cobros por uso personal y la cuenta regresiva de los mantenimientos. Plan en [`PLAN-HORAS-DE-VUELO.md`](../PLAN-HORAS-DE-VUELO.md).
+
+**Cambios de schema:** migración `20260930000001_bitacora_vuelo.sql` — `avn_pilotos`, `avn_vuelos` (correlativo `VU-AAAA-####`), `avn_vuelo_tramos` y `avn_vuelo_pax`.
+
+**Comentarios:**
+
+- **Las horas salen del horómetro, no del reloj.** Cada tramo guarda el horómetro al salir y al llegar; la diferencia es una **columna generada** y el total del vuelo lo mantiene un trigger. La hora de reloj se guarda aparte: sirve para el itinerario y para la espera, pero no es lo que cuenta la aeronave. Verificado contra el ejemplo del mock: `0.8 + 0.7 + 0.6 = 2.1 h`.
+
+- **El horómetro no camina para atrás.** Hay un CHECK que lo impide y el formulario lo avisa mientras se escribe. Un dedazo acá no se nota hasta que un mantenimiento sale con la cuenta mal, tres meses después.
+
+- **Al agregar un tramo, su horómetro de salida arranca donde terminó el anterior** y su origen es el destino del anterior: entre dos tramos del mismo vuelo la aeronave no voló sola.
+
+- **Los pilotos son catálogo de flota, no de aeronave**: uno puede volar más de una. No se usa `personas` porque un piloto necesita licencia y vencimiento médico, que esa tabla no tiene ni debería tener —`personas` sigue siendo la fuente de autorizadores y firmantes, que es otra cosa. El vencimiento del médico se vigila como los certificados de la aeronave, con un mes de aviso.
+
+- **Un pasajero por fila**, no todos en una celda: *«si después lo quiero descargar no lo puedo filtrar»*.
+
+- **Lo que deliberadamente NO va todavía**, por decisión de la usuaria:
+  - **Ciclos** — *«mi alcance de información no llegará a los ciclos, nada más a horas»*.
+  - **Galones por tramo** — *«no estoy segura de cómo lo vamos a amarrar»*. El fuel hoy se captura como facturas en la pestaña de Combustible, y meterlo también acá sería tener el mismo número en dos lugares antes de saber cuál manda.
+  - **Tarifas, viáticos y a quién se le cobra** — eso es lo que la administración le agrega después a lo que reportó el piloto, y va en su propia fase.
+
+**Commits clave:** ver `git log` de 2026-09-30.
+
+---
+
 ## Fase 35 · 2026-09-29 · CEA · Nota de entrega de documentos
 
 **Objetivo:** la constancia de que unos documentos se entregaron —a quién, qué día, quién los entregó y quién los pidió— con correlativo y buscable. Hoy se hace en un Word suelto, sin número y sin forma de encontrar la de hace tres meses.

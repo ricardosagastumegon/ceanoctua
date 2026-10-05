@@ -188,9 +188,20 @@ export function AbonoFormModal({
           </div>
 
           {pendientes.length === 0 ? (
-            <p className="px-3 py-3 text-[12px] italic text-dark-3">
-              No hay facturas pendientes de reponer.
-            </p>
+            /* Vacío no siempre quiere decir lo mismo, y adivinar cuál de los
+               dos casos es le costó un rato a la usuaria. La pantalla lo dice. */
+            <div className="px-3 py-3 text-[12px] text-dark-3">
+              <p className="italic">No hay facturas pendientes de reponer.</p>
+              <p className="mt-1">
+                Acá solo aparecen las facturas capturadas en <b>Combustible</b>. Las que vienen
+                del estado de cuenta del proveedor no se pueden marcar: son parte de la historia
+                importada, no registros de CEA.
+              </p>
+              <p className="mt-1">
+                Podés guardar la reposición igual —el monto y el comprobante son lo que mueve el
+                saldo— y anotar en las notas a qué facturas corresponde.
+              </p>
+            </div>
           ) : (
             <div className="max-h-60 overflow-y-auto">
               <table className="w-full text-[12px]">

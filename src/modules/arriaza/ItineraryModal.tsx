@@ -488,9 +488,16 @@ function DiaBloque({
           </p>
         )}
 
-        {/* Agregar actividad · el "rellenar lo que haga falta" del documento. */}
+        {/* Agregar actividad · el "rellenar lo que haga falta" del documento.
+            Lleva rótulo y fondo propio porque sin eso es una franja pálida al
+            final de cada día: la usuaria la tuvo enfrente y no la vio. */}
         {canEdit && (
-          <div className="no-print mt-2 flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: ARENA_LINEA }}>
+          <div className="no-print mt-3 rounded-md border border-dashed px-3 py-2.5"
+            style={{ borderColor: '#9bc9cb', backgroundColor: '#f0f8f8' }}>
+            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: TEAL_OSCURO }}>
+              ＋ Agregar actividad a este día
+            </div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="time"
               value={hora}
@@ -515,10 +522,12 @@ function DiaBloque({
               type="button"
               onClick={() => void agregar()}
               disabled={guardando || !texto.trim()}
-              className="rounded-md border border-teal/40 px-3 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l disabled:opacity-50"
+              className="rounded-md px-3 py-1 text-xs font-extrabold text-white disabled:opacity-40"
+              style={{ backgroundColor: TEAL }}
             >
-              {guardando ? 'Guardando…' : '＋ Agregar'}
+              {guardando ? 'Guardando…' : 'Agregar'}
             </button>
+          </div>
           </div>
         )}
       </div>

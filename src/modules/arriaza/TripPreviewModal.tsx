@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Modal } from '@/components/ui/Modal';
+import { PrintableModal } from '@/components/ui/PrintableModal';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from './constants/serviceMeta';
 import { findCountry } from './constants/countries';
@@ -25,6 +25,10 @@ const TEAL = '#077e84';
  * Es lo que en el HTML original abría el botón «Ver» de la carpeta de viajes
  * realizados. Un viaje archivado se consulta más de lo que se edita, y abrir
  * la pantalla completa para recordar qué se hizo era demasiado.
+ *
+ * Va en `PrintableModal` y no en `Modal`: esta hoja también se imprime y se
+ * manda, igual que el itinerario. Los botones del pie llevan `no-print`
+ * porque son de la pantalla, no del documento.
  */
 export function TripPreviewModal({ open, onClose, viaje, onItinerario }: Props) {
   const q = useResumenViaje(viaje?.id, open);
@@ -45,7 +49,7 @@ export function TripPreviewModal({ open, onClose, viaje, onItinerario }: Props) 
   const monedaUnica = d && d.monedas.length === 1 ? d.monedas[0] : '';
 
   return (
-    <Modal open={open} onClose={onClose} title={`Vista previa · ${viaje.titulo}`} size="xl">
+    <PrintableModal open={open} onClose={onClose} title={`Vista previa · ${viaje.titulo}`}>
       <div className="overflow-hidden rounded-card">
         {/* Portada */}
         <header
@@ -200,7 +204,7 @@ export function TripPreviewModal({ open, onClose, viaje, onItinerario }: Props) 
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
+      <div className="no-print mt-4 flex flex-wrap justify-end gap-2 px-6 pb-6">
         <button
           type="button"
           onClick={onClose}
@@ -224,7 +228,7 @@ export function TripPreviewModal({ open, onClose, viaje, onItinerario }: Props) 
           Abrir viaje
         </Link>
       </div>
-    </Modal>
+    </PrintableModal>
   );
 }
 

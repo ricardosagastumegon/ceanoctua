@@ -16,6 +16,7 @@ import {
 } from './day-plans/hooks';
 import { useAttDayNotes } from './day-notes/hooks';
 import { useItineraryEvents } from './viajes/itinerary-events';
+import { DayNoteModal } from './day-notes/DayNoteModal';
 
 type Props = {
   open: boolean;
@@ -283,6 +284,7 @@ function DiaBloque({
   const [hora, setHora] = useState('');
   const [texto, setTexto] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [notaAbierta, setNotaAbierta] = useState(false);
 
   /**
    * El plan del día se crea la primera vez que se le agrega una actividad. No
@@ -494,8 +496,20 @@ function DiaBloque({
         {canEdit && (
           <div className="no-print mt-3 rounded-md border border-dashed px-3 py-2.5"
             style={{ borderColor: '#9bc9cb', backgroundColor: '#f0f8f8' }}>
-            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: TEAL_OSCURO }}>
-              ＋ Agregar actividad a este día
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: TEAL_OSCURO }}>
+                ＋ Agregar actividad a este día
+              </span>
+              {/* La nota del día vive acá, con lo demás que se edita: el
+                  encabezado del día sí se imprime y no puede llevar botones. */}
+              <button
+                type="button"
+                onClick={() => setNotaAbierta(true)}
+                className="rounded-md border px-2 py-1 text-[11px] font-extrabold hover:opacity-80"
+                style={{ borderColor: '#9e7a1a66', color: '#7a5e14', backgroundColor: '#f5f0d8' }}
+              >
+                📝 {nota ? 'Editar la nota del día' : 'Agregar nota del día'}
+              </button>
             </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -529,6 +543,15 @@ function DiaBloque({
             </button>
           </div>
           </div>
+        )}
+
+        {notaAbierta && (
+          <DayNoteModal
+            open
+            viajeId={viajeId}
+            fecha={fecha}
+            onClose={() => setNotaAbierta(false)}
+          />
         )}
       </div>
     </article>

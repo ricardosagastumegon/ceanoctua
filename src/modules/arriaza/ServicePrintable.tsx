@@ -13,6 +13,12 @@ type Props = {
   /** Correlativo del viaje, para que la hoja se pueda rastrear. */
   tripNo?: string | null;
   total?: number | null;
+  /**
+   * Lo que se le cargó aparte al servicio. Se suma al total y se desglosa en
+   * el pie: un boleto de 881.98 con 85.98 en asientos y maletas se liquida por
+   * 967.96, y la hoja decía 881.98 porque `monto` ya no los incluye.
+   */
+  cargos?: number | null;
   moneda?: string | null;
   estadoPago?: string | null;
   pagadoCon?: string | null;
@@ -68,7 +74,7 @@ const normalizar = (s: string): string =>
  * había incorporado.
  */
 export function ServicePrintable({
-  open, onClose, serviceKey, title, subtitle, tripNo, total, moneda,
+  open, onClose, serviceKey, title, subtitle, tripNo, total, cargos, moneda,
   estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras, band,
   headerRight, titleSize = 'normal', rowsLayout = 'normal',
   pie = 'Arriaza Tour & Travel · Documento de uso interno',
@@ -223,6 +229,11 @@ export function ServicePrintable({
               <div className="text-[10px] font-extrabold uppercase tracking-wider text-white/70">
                 {meta.icon} Total del servicio
               </div>
+              {total != null && !!cargos && (
+                <div className="mt-0.5 text-[10px] text-white/60">
+                  {total.toFixed(2)} del servicio + {cargos.toFixed(2)} en cargos adicionales
+                </div>
+              )}
               {pagadoCon && <div className="mt-0.5 text-[10px] text-white/60">Pagado con: {pagadoCon}</div>}
               {estadoPago && (
                 <div className="mt-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white/70">
@@ -232,7 +243,10 @@ export function ServicePrintable({
             </div>
             {total != null && (
               <div className="font-heading text-2xl font-extrabold text-white">
-                {moneda ? `${moneda} ${total.toFixed(2)}` : fmtMoney(total)}
+                {(() => {
+                  const suma = total + (cargos ?? 0);
+                  return moneda ? `${moneda} ${suma.toFixed(2)}` : fmtMoney(suma);
+                })()}
               </div>
             )}
           </footer>

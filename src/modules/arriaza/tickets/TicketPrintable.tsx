@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { useTicketCompleto } from './full-hooks';
 import type { AttTicket } from './api';
@@ -29,6 +30,8 @@ function diaMes(fecha: string | null | undefined): string {
 
 /** Vista previa imprimible de un ticket aéreo, con su ruta y sus pasajeros. */
 export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('tickets', ticket.id, open);
   const full = useTicketCompleto(open ? ticket.id : undefined);
   const segmentos = full.data?.segmentos ?? [];
   const pax = full.data?.pax ?? [];
@@ -60,6 +63,7 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
         })()
       }
       tripNo={tripNo}
+      cargos={cargos}
       total={ticket.monto != null ? Number(ticket.monto) : null}
       moneda={moneda}
       estadoPago={ticket.estado_pago}

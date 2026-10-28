@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { totalTarifaExtras, type AttAeronave } from './full-api';
 
@@ -16,6 +17,8 @@ const hhmm = (v: string | null | undefined) => (v ? v.slice(0, 5) : null);
 
 /** Hoja imprimible de la renta de aeronave: la nave, la ruta y el costo. */
 export function AeronavePrintable({ open, onClose, aeronave: a, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('aeronave', a.id, open);
   const moneda = a.moneda ?? 'USD';
   const total = totalTarifaExtras(a.tarifa, a.monto_extras);
   const hora = hhmm(a.hora);
@@ -29,6 +32,7 @@ export function AeronavePrintable({ open, onClose, aeronave: a, tripNo }: Props)
       title={a.prestador}
       subtitle={[a.tipo_aeronave, a.ciudad, a.tipo_servicio].filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       headerRight={hora ? <span>{hora}</span> : null}
       total={total}
       moneda={moneda}

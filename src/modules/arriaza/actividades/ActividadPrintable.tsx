@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { Montos } from '../acuaticos/AcuaticoPrintable';
 import { tarifaEfectiva, totalActividad, type AttActividad, type AttEntrada } from './full-api';
@@ -18,6 +19,8 @@ const hhmm = (v: string | null | undefined) => (v ? v.slice(0, 5) : null);
 
 /** Hoja imprimible de la actividad: el evento, quién va y con qué entrada. */
 export function ActividadPrintable({ open, onClose, actividad: a, entradas, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('actividades', a.id, open);
   const moneda = a.moneda ?? 'USD';
   const total = totalActividad(entradas, a.tarifa, a.personas, a.monto_extras);
   const inicio = hhmm(a.inicio);
@@ -34,6 +37,7 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
       title={a.evento}
       subtitle={[a.ciudad, a.duracion].filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       headerRight={
         inicio ? (
           <span>

@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { MontoConCargos, useCargosPorServicio } from '../cargos/MontoConCargos';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useAttFerriesByViaje, useDeleteAttFerry } from './hooks';
@@ -27,6 +28,8 @@ export function FerriesSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
   const remove = useDeleteAttFerry();
   const toast = useToast();
   const confirm = useConfirm();
+  // Lo que se le cargó aparte a cada servicio: la fila suma base + cargos.
+  const cargosPorId = useCargosPorServicio(viajeId, 'ferry');
   const [editing, setEditing] = useState<{ id?: string } | null>(null);
   const [viendo, setViendo] = useState<AttFerry | null>(null);
 
@@ -118,11 +121,12 @@ export function FerriesSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
               ].filter(Boolean).join(' · ')}
             </div>
           </div>
-          <div className="shrink-0 text-right">
-            <div className="font-heading text-sm font-extrabold" style={{ color: META.dark }}>
-              {x.moneda ?? 'USD'} {totalTarifaExtras(x.tarifa, x.monto_extras).toFixed(2)}
-            </div>
-          </div>
+          <MontoConCargos
+            base={totalTarifaExtras(x.tarifa, x.monto_extras)}
+            cargos={cargosPorId.get(x.id) ?? 0}
+            moneda={x.moneda ?? 'USD'}
+            color={META.dark}
+          />
           <div className="flex shrink-0 gap-1">
             <button
               type="button"

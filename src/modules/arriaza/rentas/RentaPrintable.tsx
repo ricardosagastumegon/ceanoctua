@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { leerExtras, type AttRenta } from './full-api';
 
@@ -14,6 +15,8 @@ type Props = {
 
 /** Hoja imprimible de la renta: el vehículo y los dos momentos que importan. */
 export function RentaPrintable({ open, onClose, renta: r, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('renta', r.id, open);
   const moneda = r.moneda ?? 'USD';
   const extras = leerExtras(r.extras);
   const vehiculo = [r.marca, r.modelo, r.tipo_veh].filter(Boolean).join(' ');
@@ -35,6 +38,7 @@ export function RentaPrintable({ open, onClose, renta: r, tripNo }: Props) {
       subtitle={[vehiculo || null, r.ciudad, r.dias ? `${r.dias} día${r.dias === 1 ? '' : 's'}` : null]
         .filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       total={
         (Number(r.tarifa) || 0) * (Number(r.dias) || 0) +
         (Number(r.deposito) || 0) +

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META, type ServiceKey } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { totalTarifaExtras, type AttAcuatico } from './full-api';
 
@@ -17,6 +18,8 @@ const hhmm = (v: string | null | undefined) => (v ? v.slice(0, 5) : null);
 
 /** Hoja imprimible del traslado acuático. */
 export function AcuaticoPrintable({ open, onClose, acuatico: a, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('acuatico', a.id, open);
   const moneda = a.moneda ?? 'USD';
   const total = totalTarifaExtras(a.tarifa, a.monto_extras);
   const esRT = a.tipo === 'RT';
@@ -31,6 +34,7 @@ export function AcuaticoPrintable({ open, onClose, acuatico: a, tripNo }: Props)
       title={a.prestador}
       subtitle={[a.tipo_embarcacion, a.ciudad, tipoServicio].filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       headerRight={<span>{esRT ? 'Ida y vuelta' : 'Solo ida'}</span>}
       total={total}
       moneda={moneda}

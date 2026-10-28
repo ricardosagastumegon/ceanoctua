@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { restauranteFullApi, type AttRestaurante } from './full-api';
 
@@ -15,6 +16,8 @@ type Props = {
 
 /** Hoja imprimible del restaurante: la reserva arriba, comensales y montos abajo. */
 export function RestaurantePrintable({ open, onClose, restaurante: r, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('restaurantes', r.id, open);
   const full = useQuery({
     queryKey: ['att_restaurante_full', r.id],
     queryFn: () => restauranteFullApi.load(r.id),
@@ -47,6 +50,7 @@ export function RestaurantePrintable({ open, onClose, restaurante: r, tripNo }: 
         r.ciudad,
       ].filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       total={r.monto != null ? Number(r.monto) : null}
       moneda={moneda}
       estadoPago={r.estado_pago}

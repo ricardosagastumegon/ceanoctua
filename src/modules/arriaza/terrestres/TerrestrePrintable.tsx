@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 // Terrestre comparte la forma de acuático y ferry: ruta OW/RT y el mismo
 // panel del vehículo. Los bloques viven en el acuático.
@@ -17,6 +18,8 @@ type Props = {
 
 /** Hoja imprimible del traslado terrestre. */
 export function TerrestrePrintable({ open, onClose, terrestre: t, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('terrestre', t.id, open);
   const moneda = t.moneda ?? 'USD';
   const total = totalTerrestre(t.tarifa, t.personas, t.monto_extras);
   const esRT = t.tipo === 'RT';
@@ -31,6 +34,7 @@ export function TerrestrePrintable({ open, onClose, terrestre: t, tripNo }: Prop
       title={t.prestador}
       subtitle={[t.tipo_veh, t.ciudad, tipoServicio].filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       headerRight={
         <span>
           {esRT ? 'Ida y vuelta' : 'Solo ida'}

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { hotelFullApi, totalHabitacion, type AttHotel } from './full-api';
 
@@ -20,6 +21,8 @@ type Props = {
  * es lo que el usuario busca primero al tener la hoja en la mano.
  */
 export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('hotel', hotel.id, open);
   const full = useQuery({
     queryKey: ['att_hotel_full', hotel.id],
     queryFn: () => hotelFullApi.load(hotel.id),
@@ -29,6 +32,7 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
   const extras = full.data?.extras ?? [];
   const moneda = hotel.moneda ?? 'USD';
   const noches = hotel.nights ?? 0;
+  const hhmm = (v: string | null | undefined) => (v ? v.slice(0, 5) : null);
 
   return (
     <ServicePrintable
@@ -47,6 +51,7 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
         .filter(Boolean)
         .join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       total={hotel.monto != null ? Number(hotel.monto) : null}
       moneda={moneda}
       estadoPago={hotel.estado_pago}
@@ -68,8 +73,8 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
           {/* Los dos momentos del hospedaje, lado a lado. */}
           <div className="grid grid-cols-2 gap-4">
             {[
-              { titulo: '🔑 Check-in', fecha: hotel.checkin, nota: hotel.early_checkin },
-              { titulo: '🏁 Check-out', fecha: hotel.checkout, nota: null },
+              { titulo: '🔑 Check-in', fecha: hotel.checkin, hora: hhmm(hotel.checkin_hora), nota: hotel.early_checkin },
+              { titulo: '🏁 Check-out', fecha: hotel.checkout, hora: hhmm(hotel.checkout_hora), nota: null },
             ].map((m) => (
               <div
                 key={m.titulo}
@@ -81,6 +86,7 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
                 </div>
                 <div className="mt-1 font-heading text-base font-extrabold" style={{ color: META.dark }}>
                   {m.fecha ? fmtDate(m.fecha) : '—'}
+                  {m.hora && <span className="ml-1.5 text-[13px]">· {m.hora}</span>}
                 </div>
                 {m.nota && <div className="mt-0.5 text-[12px] text-dark-2">{m.nota}</div>}
               </div>

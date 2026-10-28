@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 // El ferry y el traslado acuático son el mismo servicio con otro casco: misma
 // ruta OW/RT, mismo desglose de montos. Los bloques viven en el acuático.
@@ -17,6 +18,8 @@ type Props = {
 
 /** Hoja imprimible del servicio ferry. */
 export function FerryPrintable({ open, onClose, ferry: f, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('ferry', f.id, open);
   const moneda = f.moneda ?? 'USD';
   const total = totalTarifaExtras(f.tarifa, f.monto_extras);
   const esRT = f.tipo === 'RT';
@@ -31,6 +34,7 @@ export function FerryPrintable({ open, onClose, ferry: f, tripNo }: Props) {
       title={f.prestador}
       subtitle={[f.tipo_embarcacion, f.ciudad, tipoServicio].filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       headerRight={
         <span>
           {esRT ? 'Ida y vuelta' : 'Solo ida'}

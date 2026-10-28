@@ -1,5 +1,6 @@
 import { ServicePrintable } from '../ServicePrintable';
 import { SERVICE_META } from '../constants/serviceMeta';
+import { useTotalCargos } from '../cargos/hooks';
 import { fmtDate } from '../utils';
 import { totalTour, type AttTour } from './full-api';
 
@@ -16,6 +17,8 @@ const hhmm = (v: string | null | undefined) => (v ? v.slice(0, 5) : null);
 
 /** Hoja imprimible del tour: cuándo es, qué incluye y cuánto cuesta. */
 export function TourPrintable({ open, onClose, tour: t, tripNo }: Props) {
+  // El `monto` del servicio no trae los cargos adicionales; el total sí.
+  const cargos = useTotalCargos('tours', t.id, open);
   const moneda = t.moneda ?? 'USD';
   const total = totalTour(t.tarifa, t.personas);
   const inicio = hhmm(t.hora);
@@ -31,6 +34,7 @@ export function TourPrintable({ open, onClose, tour: t, tripNo }: Props) {
       subtitle={[t.nombre ? t.prestador : null, t.ciudad, t.tipo_servicio]
         .filter(Boolean).join(' · ')}
       tripNo={tripNo}
+      cargos={cargos}
       headerRight={
         inicio ? (
           <span>

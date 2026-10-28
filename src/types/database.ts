@@ -451,6 +451,7 @@ export type Database = {
           asunto: string;
           responsable: string | null;
           empleado_id: string | null;
+          persona_id: string | null;
           fecha: string | null;
           prioridad: Database['public']['Enums']['task_priority'] | null;
           estado: Database['public']['Enums']['task_status'];
@@ -465,6 +466,7 @@ export type Database = {
           asunto: string;
           responsable?: string | null;
           empleado_id?: string | null;
+          persona_id?: string | null;
           fecha?: string | null;
           prioridad?: Database['public']['Enums']['task_priority'] | null;
           estado?: Database['public']['Enums']['task_status'];
@@ -477,6 +479,7 @@ export type Database = {
           asunto?: string;
           responsable?: string | null;
           empleado_id?: string | null;
+          persona_id?: string | null;
           fecha?: string | null;
           prioridad?: Database['public']['Enums']['task_priority'] | null;
           estado?: Database['public']['Enums']['task_status'];

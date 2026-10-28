@@ -3,6 +3,7 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import type { CatalogFormProps } from '@/modules/admin/components/CatalogPage';
+import { usePersonas } from '@/modules/admin/hooks';
 import type { CeaTodo, CeaTodoInsert } from './api';
 import { CEA_TODO_ESTADOS, CEA_TODO_PRIORIDADES } from './api';
 
@@ -13,6 +14,7 @@ type FormState = {
   estado_label: string;
   notas: string;
   done: boolean;
+  persona_id: string;
 };
 
 const empty: FormState = {
@@ -22,6 +24,7 @@ const empty: FormState = {
   estado_label: 'Comentado',
   notas: '',
   done: false,
+  persona_id: '',
 };
 
 function fromRow(r: CeaTodo | null | undefined): FormState {
@@ -33,6 +36,7 @@ function fromRow(r: CeaTodo | null | undefined): FormState {
     estado_label: r.estado_label ?? 'Comentado',
     notas: r.notas ?? '',
     done: r.done,
+    persona_id: r.persona_id ?? '',
   };
 }
 
@@ -62,12 +66,20 @@ function toInput(s: FormState): CeaTodoInsert {
     estado_label: s.estado_label,
     notas: s.notas.trim() || null,
     done: s.done,
+    persona_id: s.persona_id || null,
   };
 }
 
 export function CeaTodoForm({ initial, submitting, onSubmit, onCancel }: CatalogFormProps<CeaTodo, CeaTodoInsert>) {
   const [v, setV] = useState<FormState>(fromRow(initial));
   const [error, setError] = useState<string | null>(null);
+  const personas = usePersonas();
+
+  // Los de la JD primero, que son los que casi siempre se eligen; el resto
+  // queda abajo para no esconderlo.
+  const gente = [...(personas.data ?? [])].sort(
+    (a, b) => Number(b.es_jd) - Number(a.es_jd) || a.nombre.localeCompare(b.nombre),
+  );
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -100,6 +112,17 @@ export function CeaTodoForm({ initial, submitting, onSubmit, onCancel }: Catalog
           {CEA_TODO_ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
         </Select>
       </div>
+      <Select name="persona_id" label="Personal de JD" value={v.persona_id}
+        onChange={(e) => upd('persona_id', e.target.value)}
+        hint="Opcional. Si el pendiente es de alguien de la junta, acá se le asigna y después se puede filtrar.">
+        <option value="">— Sin asignar —</option>
+        {gente.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.nombre}{p.es_jd ? '' : ' (fuera de JD)'}
+          </option>
+        ))}
+      </Select>
+
       <TextArea name="notas" label="Notas" value={v.notas} onChange={(e) => upd('notas', e.target.value)} />
       <label className="flex items-center gap-2 text-sm text-dark-2">
         <input type="checkbox" checked={v.done} onChange={(e) => upd('done', e.target.checked)} className="h-4 w-4 rounded border-sand text-teal focus:ring-teal" />

@@ -34,6 +34,19 @@ export function AirportPicker({ value, onChange, label, placeholder, id }: Props
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
+  /**
+   * El código de tres letras que se escribió, cuando no está en el catálogo.
+   *
+   * El catálogo nunca va a tener los ~9,000 códigos IATA del mundo, y antes un
+   * ausente --CLT, Charlotte-- dejaba el boleto sin poder registrarse. Así que
+   * se puede usar el código tal cual y escribir la ciudad al lado.
+   */
+  const codigoSuelto = useMemo(() => {
+    const q = query.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(q)) return null;
+    return AIRPORTS.some((a) => a.code === q) ? null : q;
+  }, [query]);
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -77,8 +90,10 @@ export function AirportPicker({ value, onChange, label, placeholder, id }: Props
       />
       {open && query && (
         <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-sand bg-white shadow-lg">
-          {results.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-dark-3">Sin coincidencias</div>
+          {results.length === 0 && !codigoSuelto ? (
+            <div className="px-3 py-2 text-xs text-dark-3">
+              Sin coincidencias. Escribe el código de tres letras para usarlo igual.
+            </div>
           ) : (
             results.map((a) => (
               <button
@@ -95,6 +110,22 @@ export function AirportPicker({ value, onChange, label, placeholder, id }: Props
                 </span>
               </button>
             ))
+          )}
+          {codigoSuelto && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange(codigoSuelto, null);
+                setQuery(codigoSuelto);
+                setOpen(false);
+              }}
+              className="flex w-full items-center justify-between gap-2 border-t border-sand px-3 py-2 text-left text-sm hover:bg-teal-l"
+            >
+              <span>
+                Usar <span className="font-extrabold text-teal-d">{codigoSuelto}</span> como código
+              </span>
+              <span className="text-xs text-dark-3">no está en la lista</span>
+            </button>
           )}
         </div>
       )}

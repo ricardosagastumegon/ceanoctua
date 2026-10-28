@@ -9,9 +9,26 @@
 // Cada servicio aporta uno o dos eventos: los que tienen ida y vuelta o entrada
 // y salida generan dos, para que el día del regreso no quede vacío.
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { ServiceKey } from '../constants/serviceMeta';
+import { invalidarViaje } from './invalidar';
+
+/**
+ * Dónde vive la hora de un evento, cuando se puede corregir sin salir del
+ * itinerario.
+ *
+ * Hoy solo el hotel: es el único servicio cuyas fechas llegan sin hora --la
+ * reserva trae los días-- y la hora de salida se confirma en recepción, así
+ * que hay que poder escribirla donde se está leyendo.
+ */
+export type HoraEditable = {
+  tabla: 'att_hoteles';
+  id: string;
+  columna: 'checkin_hora' | 'checkout_hora';
+  /** Cómo se le llama a esa hora en pantalla. */
+  rotulo: string;
+};
 
 export type EventoItinerario = {
   servicio: ServiceKey;
@@ -21,6 +38,8 @@ export type EventoItinerario = {
   hora: string;
   titulo: string;
   detalle: string;
+  /** Presente cuando la hora se puede corregir desde el itinerario. */
+  horaEditable?: HoraEditable;
 };
 
 const hhmm = (v: string | null | undefined): string => (v ? v.slice(0, 5) : '');
@@ -45,7 +64,7 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
         cruceros,
       ] = await Promise.all([
         supabase.from('att_tickets').select('id, aerolinea, titulo').eq('viaje_id', id).is('deleted_at', null),
-        supabase.from('att_hoteles').select('nombre, ciudad, checkin, checkout').eq('viaje_id', id).is('deleted_at', null),
+        supabase.from('att_hoteles').select('id, nombre, ciudad, checkin, checkin_hora, checkout, checkout_hora').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_restaurantes').select('nombre, ciudad, fecha, hora').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_rentas').select('nombre, ciudad, recepcion_fecha, recepcion_hora, entrega_fecha, entrega_hora').eq('viaje_id', id).is('deleted_at', null),
         supabase.from('att_tours').select('nombre, prestador, ciudad, fecha, hora, hora_fin').eq('viaje_id', id).is('deleted_at', null),
@@ -88,8 +107,16 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
       }
 
       for (const h of hoteles.data ?? []) {
-        if (h.checkin) ev.push({ servicio: 'hotel', fecha: h.checkin, hora: '', titulo: `Check-in · ${h.nombre ?? 'Hotel'}`, detalle: limpio(h.ciudad) });
-        if (h.checkout) ev.push({ servicio: 'hotel', fecha: h.checkout, hora: '', titulo: `Check-out · ${h.nombre ?? 'Hotel'}`, detalle: limpio(h.ciudad) });
+        if (h.checkin) ev.push({
+          servicio: 'hotel', fecha: h.checkin, hora: hhmm(h.checkin_hora),
+          titulo: `Check-in · ${h.nombre ?? 'Hotel'}`, detalle: limpio(h.ciudad),
+          horaEditable: { tabla: 'att_hoteles', id: h.id, columna: 'checkin_hora', rotulo: 'Hora de check-in' },
+        });
+        if (h.checkout) ev.push({
+          servicio: 'hotel', fecha: h.checkout, hora: hhmm(h.checkout_hora),
+          titulo: `Check-out · ${h.nombre ?? 'Hotel'}`, detalle: limpio(h.ciudad),
+          horaEditable: { tabla: 'att_hoteles', id: h.id, columna: 'checkout_hora', rotulo: 'Hora de check-out' },
+        });
       }
       for (const r of restaurantes.data ?? []) {
         if (r.fecha) ev.push({ servicio: 'restaurantes', fecha: r.fecha, hora: hhmm(r.hora), titulo: r.nombre ?? 'Restaurante', detalle: limpio(r.ciudad) });
@@ -152,6 +179,30 @@ export function useItineraryEvents(viajeId: string | undefined, enabled = true) 
       // Sin hora van primero: son cosas del día, no de un momento.
       ev.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
       return ev;
+    },
+  });
+}
+
+/**
+ * Guarda la hora de un evento desde el itinerario.
+ *
+ * La columna se elige con un condicional y no con una clave calculada: así el
+ * tipo del update sobrevive y TypeScript sigue validando qué se escribe.
+ */
+export function useEditarHoraEvento(viajeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ destino, hora }: { destino: HoraEditable; hora: string }) => {
+      const valor = hora || null;
+      const patch =
+        destino.columna === 'checkin_hora' ? { checkin_hora: valor } : { checkout_hora: valor };
+      const { error } = await supabase.from(destino.tabla).update(patch).eq('id', destino.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['att_hoteles', viajeId] });
+      // El itinerario, el riel y la hoja del hotel se rearman con la hora nueva.
+      invalidarViaje(qc, viajeId);
     },
   });
 }

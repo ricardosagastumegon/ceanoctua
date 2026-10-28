@@ -75,7 +75,9 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
   const [reservadoPor, setReservadoPor] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
   const [checkin, setCheckin] = useState('');
+  const [checkinHora, setCheckinHora] = useState('');
   const [checkout, setCheckout] = useState('');
+  const [checkoutHora, setCheckoutHora] = useState('');
   const [habitaciones, setHabitaciones] = useState<HabitacionInput[]>([]);
   const [earlyCheckin, setEarlyCheckin] = useState('');
   const [cancelacion, setCancelacion] = useState('');
@@ -106,7 +108,9 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
     setReservadoPor(h?.reservado_por ?? h?.ota ?? '');
     setConfirmacion(h?.confirmacion ?? '');
     setCheckin(h?.checkin ?? '');
+    setCheckinHora((h?.checkin_hora ?? '').slice(0, 5));
     setCheckout(h?.checkout ?? '');
+    setCheckoutHora((h?.checkout_hora ?? '').slice(0, 5));
     setHabitaciones(d?.habitaciones.length ? d.habitaciones : [habitacionVacia(0)]);
     setEarlyCheckin(h?.early_checkin ?? '');
     setCancelacion(h?.cancel_policy ?? '');
@@ -141,7 +145,9 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
       reservado_por: reservadoPor.trim() || null,
       confirmacion: confirmacion.trim() || null,
       checkin,
+      checkin_hora: checkinHora || null,
       checkout,
+      checkout_hora: checkoutHora || null,
       nights: noches,
       early_checkin: earlyCheckin.trim() || null,
       cancel_policy: cancelacion.trim() || null,
@@ -188,6 +194,10 @@ export function HotelFormModal({ open, viajeId, hotelId, onClose }: Props) {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextInput label="Reservado a través de" value={reservadoPor} onChange={(e) => setReservadoPor(e.target.value)} placeholder="Agencia / plataforma" />
               <TextInput label="Confirmación No." value={confirmacion} onChange={(e) => setConfirmacion(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextInput label="Hora de check-in" type="time" value={checkinHora} onChange={(e) => setCheckinHora(e.target.value)} hint="Opcional. También se puede corregir desde el Itinerario General." />
+              <TextInput label="Hora de check-out" type="time" value={checkoutHora} onChange={(e) => setCheckoutHora(e.target.value)} hint="Opcional. También se puede corregir desde el Itinerario General." />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <TextInput label="Check-in (in) *" type="date" value={checkin} onChange={(e) => setCheckin(e.target.value)} />

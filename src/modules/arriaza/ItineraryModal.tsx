@@ -15,7 +15,7 @@ import {
   useUpdateAttDayPlanRow,
 } from './day-plans/hooks';
 import { useAttDayNotes } from './day-notes/hooks';
-import { useItineraryEvents } from './viajes/itinerary-events';
+import { useEditarHoraEvento, useItineraryEvents, type HoraEditable } from './viajes/itinerary-events';
 import { DayNoteModal } from './day-notes/DayNoteModal';
 
 type Props = {
@@ -252,7 +252,13 @@ type FilaPlan = {
   es_auto_reunion: boolean | null;
 };
 
-type EventoDia = { servicio: ServiceKey; hora: string; titulo: string; detalle: string };
+type EventoDia = {
+  servicio: ServiceKey;
+  hora: string;
+  titulo: string;
+  detalle: string;
+  horaEditable?: HoraEditable;
+};
 
 function DiaBloque({
   viajeId,
@@ -279,6 +285,7 @@ function DiaBloque({
   const crearFila = useCreateAttDayPlanRow();
   const borrarFila = useDeleteAttDayPlanRow();
   const actualizarFila = useUpdateAttDayPlanRow();
+  const editarHora = useEditarHoraEvento(viajeId);
   const toast = useToast();
 
   const [hora, setHora] = useState('');
@@ -314,6 +321,15 @@ function DiaBloque({
     }
   }
 
+  async function guardarHora(destino: HoraEditable, actual: string, valor: string) {
+    if (actual === valor) return;
+    try {
+      await editarHora.mutateAsync({ destino, hora: valor });
+    } catch (err) {
+      toast.error(describeError(err));
+    }
+  }
+
   async function editar(fila: FilaPlan, campo: 'horario' | 'itinerario', valor: string) {
     if ((fila[campo] ?? '') === valor) return;
     try {
@@ -335,7 +351,7 @@ function DiaBloque({
       ...servicios.map((e, k) => ({
         tipo: 'servicio' as const,
         hora: e.hora,
-        k: `s-${k}`,
+        k: `s-${k}-${e.hora}`,
         evento: e,
       })),
       ...filas.map((f) => ({ tipo: 'fila' as const, hora: f.horario ?? '', k: f.id, fila: f })),
@@ -449,6 +465,26 @@ function DiaBloque({
                     {r.evento.detalle && (
                       <div className="mt-0.5 text-[11px]" style={{ color: TINTA_SUAVE }}>
                         {r.evento.detalle}
+                      </div>
+                    )}
+                    {/* La hora del hotel se escribe acá y no en el formulario:
+                        la reserva trae el día y la hora se confirma en
+                        recepción, a veces con el itinerario ya armado. La
+                        casilla lleva `no-print` — en papel queda la hora de la
+                        columna izquierda, como en los demás servicios. */}
+                    {canEdit && r.evento.horaEditable && (
+                      <div className="no-print mt-1.5 flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: TINTA_SUAVE }}>
+                          {r.evento.horaEditable.rotulo}
+                        </span>
+                        <input
+                          type="time"
+                          defaultValue={r.evento.hora}
+                          onBlur={(ev) => void guardarHora(r.evento.horaEditable as HoraEditable, r.evento.hora, ev.target.value)}
+                          className="rounded border border-sand bg-white px-1.5 py-0.5 text-[11px] font-extrabold"
+                          style={{ color: SERVICE_META[r.evento.servicio].dark }}
+                          aria-label={r.evento.horaEditable.rotulo}
+                        />
                       </div>
                     )}
                   </div>

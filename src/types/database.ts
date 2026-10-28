@@ -1862,7 +1862,9 @@ export type Database = {
           ciudad: string | null;
           pais: string | null;
           checkin: string | null;
+          checkin_hora: string | null;
           checkout: string | null;
+          checkout_hora: string | null;
           nights: number | null;
           confirmacion: string | null;
           room: string | null;
@@ -1900,7 +1902,9 @@ export type Database = {
           ciudad?: string | null;
           pais?: string | null;
           checkin?: string | null;
+          checkin_hora?: string | null;
           checkout?: string | null;
+          checkout_hora?: string | null;
           nights?: number | null;
           confirmacion?: string | null;
           room?: string | null;
@@ -1935,7 +1939,9 @@ export type Database = {
           ciudad?: string | null;
           pais?: string | null;
           checkin?: string | null;
+          checkin_hora?: string | null;
           checkout?: string | null;
+          checkout_hora?: string | null;
           nights?: number | null;
           confirmacion?: string | null;
           room?: string | null;

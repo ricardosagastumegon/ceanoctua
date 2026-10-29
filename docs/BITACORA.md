@@ -6,6 +6,38 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 37 · 2026-10-29 · T&T · Consumos Varios del viaje
+
+**Objetivo:** al cerrar un viaje le entregan a la asistente un reporte de los gastos menudos pagados con tarjeta —propinas, taxis, farmacia, lavandería—. Son decenas de renglones chiquitos que *«NO uno por uno, si no como un total y bajo un concepto»*: «CONSUMOS VARIOS Sra. Arriaza». Hasta hoy ese dinero no tenía dónde ir, así que no aparecía en la liquidación y el consumo por tarjeta salía corto justo cuando hay que pedir el reintegro. Plan en [`PLAN-TT-CONSUMOS-VARIOS.md`](../PLAN-TT-CONSUMOS-VARIOS.md).
+
+**Cambios de schema:** migración `20261029000001_tt_consumos_varios.sql` — tabla `att_consumos_varios` con concepto libre, monto, moneda, tarjeta (id + texto del día), dos fechas, notas y `reporte_path`. RLS `puede('tt', …)`, triggers de `updated_at` y `audit_log`, soft delete.
+
+**Cambios de UI:** módulo `modules/arriaza/consumos-varios/` (api, hooks, formulario, hoja imprimible, sección) y una clave de servicio nueva, `varios`, en `SERVICE_META`.
+
+**Comentarios:**
+
+- **Tabla nueva y no `att_cargos`.** `att_cargos` ya tenía la forma correcta —un cobro con su descripción, su monto, su tarjeta y su fecha— pero está amarrado a un servicio: su CHECK solo acepta los once tipos y `servicio_id` es `not null`. Un consumo varios pertenece al viaje, no a un servicio. Guardar el id del viaje en una columna llamada `servicio_id` habría sido una trampa para quien lea la tabla en un año.
+
+- **Una sola entrada en `MAPEO` lo mete en los tres reportes.** La liquidación pide ocho columnas comunes —`monto`, `reintegro`, `moneda`, `estado_pago`, `cancelado_en`, `pagado_con`, `pagado_con_id`, `fecha_cargo`— y la tabla las lleva todas. Con eso entra solo a la liquidación del viaje, a la liquidación por período y al resumen, sin tocar ninguno de los tres. Entrar como clave de servicio y no como caso especial es lo que hizo barata la fase.
+
+- **Opcional por construcción.** Se ofrece en «+ Agregar Servicios» y la sección solo se monta si el viaje ya tiene uno. Un viaje sin reporte de consumos ni se entera.
+
+- **`reintegro` significa otra cosa de la que ella llama así.** Acá es dinero que *volvió* y resta del neto (`neto = monto − reintegro`); la solicitud de reintegro a la empresa es otra cosa. Si se usara para eso, la tarjeta aparecería en cero en la liquidación justo cuando hay que cobrarla. La columna queda por paridad con los demás servicios, pero la sección no la expone.
+
+- **Sin botón de cancelar.** Este dinero ya se gastó, no hay nada que cancelar. Si el banco reversa el cargo se cambia el estado a CANCELADO desde el formulario. Era además el botón con más riesgo de confusión: dice «reintegro» y no es el reintegro que ella pide.
+
+- **No entra al Itinerario General.** No es un evento, no tiene hora, y ese documento es el que se comparte con la familia.
+
+- **Varios renglones por viaje**, uno por persona o por tarjeta, cada uno con un solo monto. Un reporte que mezcla dos tarjetas se parte en dos: así es como va a aparecer en el estado de cuenta, y cuadrar tarjetas es a lo que va la liquidación.
+
+- **De paso, el respaldo estaba incompleto.** El export de `BackupModal` recorre una lista fija de tablas y ni `att_cruceros` ni `att_cargos` se agregaron cuando se crearon sus fases. Un respaldo que los omite se ve completo y no lo está. Las tres entraron en el mismo commit.
+
+- **Lo que queda para después, por decisión de la usuaria:** el puente a Finanzas (DT-15) y el CHF (DT-16).
+
+**Commits clave:** `5abcb32`, `c4e1feb`.
+
+---
+
 ## Fase 36 · 2026-09-30 · Aeronaves · Bitácora de vuelo
 
 **Objetivo:** lo que el piloto reporta después de volar. *«Es de donde todo parte»* —de acá salen las horas, y de las horas saldrán después los cobros por uso personal y la cuenta regresiva de los mantenimientos. Plan en [`PLAN-HORAS-DE-VUELO.md`](../PLAN-HORAS-DE-VUELO.md).

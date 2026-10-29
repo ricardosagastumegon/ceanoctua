@@ -42,6 +42,20 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
+### DT-15 · El puente de Consumos Varios a Finanzas
+
+- **Origen:** Fase 37 · decisión de la usuaria el 2026-10-29 («después, en otra fase»).
+- **Impacto:** el consumo queda registrado en el viaje y entra en su liquidación, pero para **solicitar el reintegro** hay que volver a teclearlo en Finanzas · Consumos TC. Es el único paso manual que queda del flujo.
+- **Estimado:** botón «Enviar a Consumos TC» que cree la fila en `tc_consumos` desde el registro del viaje. Dos cuidados: esa tabla exige `proveedor` (iría «VARIOS» o el nombre del viaje) y hace falta marcar `origen = 'T&T'` + el id del registro para que el gasto no se cuente dos veces entre la liquidación del viaje y el reporte de Finanzas.
+- **Estado:** Agendado. Hacer cuando ella haya usado la sección un par de veces y sepamos cómo la ocupa de verdad.
+
+### DT-16 · El enum `currency` no tiene CHF
+
+- **Origen:** Fase 37 · los viajes a Zúrich.
+- **Impacto:** `currency` es `USD / GTQ / EUR / GBP`. Un consumo en francos suizos no cabe hoy en **ninguna** tabla del sistema, no solo en Consumos Varios: se tiene que convertir a mano y se pierde el número original. No ha mordido todavía porque los reportes han venido en euros.
+- **Estimado:** 10 min de migración (`alter type public.currency add value 'CHF'`) **más** los 7 formularios de T&T que llevan la lista de monedas escrita a mano (`'USD', 'GTQ', 'EUR', 'GBP'`). Esa repetición es el verdadero costo: conviene sacarla a una constante compartida en el mismo cambio.
+- **Estado:** Pendiente. Hacer cuando aparezca el primer reporte en francos.
+
 ### DT-10 · Las hojas por servicio en el documento único de la liquidación
 
 - **Origen:** [`PLAN-TT-LIQUIDACION.md`](../PLAN-TT-LIQUIDACION.md) · pedido del usuario 2026-09-23

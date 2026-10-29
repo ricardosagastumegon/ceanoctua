@@ -49,18 +49,22 @@ export function TcPanelTT() {
   const tarjetasQ = useTarjetas();
   const periodoQ = useLiquidacionPeriodo(rango.desde, rango.hasta);
 
-  const activas = useMemo(
-    () => (tarjetasQ.data ?? []).filter((t) => t.activo),
-    [tarjetasQ.data],
-  );
-  const presidencia = activas.filter((t) => t.tipo === 'presidencia');
-  const corporativas = activas.filter((t) => t.tipo !== 'presidencia');
-
   const porId = useMemo(() => {
     const m = new Map<string, TarjetaPeriodo>();
     for (const t of periodoQ.data?.tarjetas ?? []) if (t.tarjetaId) m.set(t.tarjetaId, t);
     return m;
   }, [periodoQ.data]);
+
+  // Una tarjeta dada de baja --extraviada, ya repuesta-- no se puede elegir
+  // para cobrar nada nuevo, pero mientras tenga consumos en el período su
+  // ficha se queda: ese dinero hay que pagarlo igual. Cuando el período ya no
+  // la toca, desaparece sola y se consulta en Finanzas.
+  const visibles = useMemo(
+    () => (tarjetasQ.data ?? []).filter((t) => t.activo || porId.has(t.id)),
+    [tarjetasQ.data, porId],
+  );
+  const presidencia = visibles.filter((t) => t.tipo === 'presidencia');
+  const corporativas = visibles.filter((t) => t.tipo !== 'presidencia');
 
   // Lo que se pagó con algo que no quedó amarrado al catálogo. Si no se
   // mostrara, ese dinero desaparecería de la vista sin que nadie se entere.
@@ -288,6 +292,11 @@ function Ficha({
         <p className="mt-1.5 break-words font-mono text-sm font-extrabold leading-tight">
           {tarjeta.tc_id}
         </p>
+        {!tarjeta.activo && (
+          <p className="mt-1 inline-block rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider">
+            Dada de baja
+          </p>
+        )}
       </button>
       <Pie datos={datos} />
     </article>

@@ -36,6 +36,7 @@ type Tarjeta = {
   banco: string | null;
   titular: string | null;
   color: string | null;
+  activo: boolean;
 };
 
 /**
@@ -67,8 +68,7 @@ function useTarjetas() {
     queryFn: async (): Promise<Tarjeta[]> => {
       const { data, error } = await supabase
         .from('tarjetas_credito')
-        .select('id, tc_id, tipo, empresa, red, banco, titular, color')
-        .eq('activo', true);
+        .select('id, tc_id, tipo, empresa, red, banco, titular, color, activo');
       if (error) throw error;
       return ((data ?? []) as Tarjeta[]).sort((a, b) =>
         (a.tc_id ?? '').localeCompare(b.tc_id ?? ''),
@@ -105,10 +105,21 @@ export function PaymentMethodSelect({ value, valueId, onChange, label, id }: Pro
   // El tipo viene del enum `tc_tipo`, que es minúsculo. Compararlo contra
   // 'Presidencia' --como se hacía-- no acertaba nunca, y las siete tarjetas
   // de Presidencia aparecían bajo «Corporativas».
-  const presidencia = useMemo(() => filas.filter((t) => t.tipo === 'presidencia'), [filas]);
-  const corporativas = useMemo(() => filas.filter((t) => t.tipo !== 'presidencia'), [filas]);
+  //
+  // Solo se OFRECEN las activas: una tarjeta extraviada y ya repuesta no
+  // puede volver a cobrarse nada. Pero se leen todas, porque un servicio
+  // guardado con una que acaba de darse de baja tiene que seguir mostrándola.
+  const presidencia = useMemo(
+    () => filas.filter((t) => t.activo && t.tipo === 'presidencia'),
+    [filas],
+  );
+  const corporativas = useMemo(
+    () => filas.filter((t) => t.activo && t.tipo !== 'presidencia'),
+    [filas],
+  );
 
   const elegida = valueId ? filas.find((t) => t.id === valueId) ?? null : null;
+  const elegidaInactiva = !!elegida && !elegida.activo;
 
   // Un registro viejo puede traer un texto que ya no corresponde a ninguna
   // opción. Se muestra igual para no borrarlo en silencio al editar.
@@ -146,7 +157,14 @@ export function PaymentMethodSelect({ value, valueId, onChange, label, id }: Pro
           <>
             <Chip color={elegida.color} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-extrabold text-dark">{elegida.tc_id}</span>
+              <span className="block truncate font-extrabold text-dark">
+                {elegida.tc_id}
+                {elegidaInactiva && (
+                  <span className="ml-1.5 rounded bg-rust-l px-1 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-rust">
+                    inactiva
+                  </span>
+                )}
+              </span>
               <span className="block truncate text-[11px] text-dark-3">{subtitulo(elegida)}</span>
             </span>
           </>
@@ -167,6 +185,13 @@ export function PaymentMethodSelect({ value, valueId, onChange, label, id }: Pro
             seleccionado={!value}
             titulo="— Sin forma de pago —"
           />
+
+          {elegidaInactiva && elegida && (
+            <>
+              <Grupo titulo="Dada de baja · la que ya estaba guardada" />
+              <FilaTarjeta tarjeta={elegida} seleccionado onClick={() => setAbierto(false)} />
+            </>
+          )}
 
           {presidencia.length > 0 && <Grupo titulo="Presidencia" />}
           {presidencia.map((t) => (

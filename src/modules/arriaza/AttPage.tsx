@@ -13,6 +13,7 @@ import { TripPreviewModal } from './TripPreviewModal';
 import { ItineraryModal } from './ItineraryModal';
 import { FinishedFolder } from './FinishedFolder';
 import { CalendarPanel } from './CalendarPanel';
+import { TcPanelTT } from './tarjetas/TcPanelTT';
 import { useAttReuniones } from './reuniones/hooks';
 import {
   useAttViajes,
@@ -189,6 +190,10 @@ export function AttPage() {
           💾 Respaldo
         </button>
       </div>
+
+      {/* Consumo por tarjeta · los numeros de la Liquidacion por periodo, a la
+          vista al entrar en vez de escondidos detras de un boton. */}
+      <TcPanelTT />
 
       {/* GRID: viajes (izq) + mapa (der) */}
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">

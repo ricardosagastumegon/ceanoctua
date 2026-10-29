@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { describeError } from '@/modules/admin/hooks';
 import { formatMoney } from '@/lib/money';
 import { EstadoCuentaPrintable } from './EstadoCuentaPrintable';
+import { hacerResolver } from './resolver';
 import type { Database } from '@/types/database';
 
 type Tarjeta = Database['public']['Tables']['tarjetas_credito']['Row'];
@@ -23,8 +24,9 @@ type Tarjeta = Database['public']['Tables']['tarjetas_credito']['Row'];
 
 type Props = {
   tipo: 'corporativa' | 'presidencia';
+  /** El id de la tarjeta filtrada, no su texto. */
   filterCard: string;
-  onSelectCard: (tcId: string) => void;
+  onSelectCard: (tarjetaId: string) => void;
 };
 
 function fmt(n: number, currency: string): string {
@@ -56,11 +58,18 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
     .filter((t) => t.tipo === tipo)
     .sort((a, b) => Number(b.activo) - Number(a.activo) || a.tc_id.localeCompare(b.tc_id));
 
-  // Stats por tarjeta (count + total por moneda)
+  const resolver = useMemo(() => hacerResolver(tarjetasQ.data ?? []), [tarjetasQ.data]);
+
+  // Stats por tarjeta (count + total por moneda).
+  //
+  // Se agrupa por el id de la tarjeta y no por el texto de `card_id`: ese
+  // texto no siempre dice lo mismo que el catálogo, y emparejarlo a ciegas
+  // dejaba consumos fuera de la ficha --con dinero real adentro--.
   const statsByCardId = useMemo(() => {
     const m = new Map<string, { count: number; totalsByMoneda: Map<string, number> }>();
     for (const c of consumosQ.data ?? []) {
-      const cardId = c.card_id;
+      const cardId = resolver(c);
+      if (!cardId) continue;
       const entry = m.get(cardId) ?? { count: 0, totalsByMoneda: new Map() };
       entry.count += 1;
       entry.totalsByMoneda.set(
@@ -70,13 +79,13 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
       m.set(cardId, entry);
     }
     return m;
-  }, [consumosQ.data]);
+  }, [consumosQ.data, resolver]);
 
   // Lista de consumos para la TC seleccionada (para el PrintableModal).
   const consumosForCard = useMemo(() => {
     if (!estadoCuentaTarjeta) return [];
-    return (consumosQ.data ?? []).filter((c) => c.card_id === estadoCuentaTarjeta.tc_id);
-  }, [estadoCuentaTarjeta, consumosQ.data]);
+    return (consumosQ.data ?? []).filter((c) => resolver(c) === estadoCuentaTarjeta.id);
+  }, [estadoCuentaTarjeta, consumosQ.data, resolver]);
 
   if (corp.length === 0) {
     return (
@@ -106,8 +115,8 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
       </div>
       <div className="flex flex-wrap gap-3">
         {corp.map((t) => {
-          const stats = statsByCardId.get(t.tc_id);
-          const isActive = filterCard === t.tc_id;
+          const stats = statsByCardId.get(t.id);
+          const isActive = filterCard === t.id;
           const tint = tintFromColor(t.color);
           return (
             <article
@@ -118,7 +127,7 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
             >
               <button
                 type="button"
-                onClick={() => onSelectCard(isActive ? '' : t.tc_id)}
+                onClick={() => onSelectCard(isActive ? '' : t.id)}
                 className="p-4 text-left text-white"
                 style={{ background: `linear-gradient(135deg, ${tint}cc, ${tint})` }}
                 title={isActive ? 'Click para quitar el filtro' : 'Click para filtrar a esta TC'}

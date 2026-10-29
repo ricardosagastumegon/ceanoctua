@@ -15,6 +15,7 @@ import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useAutorizadores, useProveedores, useTarjetas } from '@/modules/admin/hooks';
 import type { ConsumoInsert } from './api';
 import { ConsumoPrintable } from './ConsumoPrintable';
+import { claveConsumo, hacerResolver } from './resolver';
 
 function fmt(n: number, currency: string): string {
   if (currency === 'GTQ') return formatMoney(Number(n));
@@ -116,45 +117,50 @@ export function ConsumosSection({ canEdit, tipo }: SectionProps) {
   const [filterCard, setFilterCard] = useState('');
   const [filterText, setFilterText] = useState('');
 
-  // De qué tipo es la tarjeta de cada consumo. Se resuelve por el id cuando
-  // lo hay y por el texto cuando no. Un consumo cuya tarjeta no está en el
-  // catálogo no pertenece a ninguna de las dos pestañas: se queda en la de
-  // corporativas --la de siempre-- para que no desaparezca de la vista.
+  const resolver = useMemo(() => hacerResolver(tarjetasList.data ?? []), [tarjetasList.data]);
+
+  // De qué tipo es la tarjeta de cada consumo. Un consumo cuya tarjeta no está
+  // en el catálogo no pertenece a ninguna de las dos pestañas: se queda en la
+  // de corporativas --la de siempre-- para que no desaparezca de la vista.
   const tipoDeConsumo = useMemo(() => {
     const porId = new Map<string, string>();
-    const porTexto = new Map<string, string>();
-    for (const t of tarjetasList.data ?? []) {
-      porId.set(t.id, t.tipo);
-      if (t.tc_id) porTexto.set(t.tc_id.toLowerCase().trim(), t.tipo);
-    }
-    return (c: Consumo): string =>
-      (c.tarjeta_id ? porId.get(c.tarjeta_id) : undefined) ??
-      porTexto.get((c.card_id ?? '').toLowerCase().trim()) ??
-      'corporativa';
-  }, [tarjetasList.data]);
+    for (const t of tarjetasList.data ?? []) porId.set(t.id, t.tipo);
+    return (c: Consumo): string => {
+      const id = resolver(c);
+      return (id ? porId.get(id) : undefined) ?? 'corporativa';
+    };
+  }, [tarjetasList.data, resolver]);
 
   const all = useMemo(
     () => (query.data ?? []).filter((c) => tipoDeConsumo(c) === tipo),
     [query.data, tipoDeConsumo, tipo],
   );
 
+  // Las opciones del filtro: una por tarjeta que de verdad tenga consumos.
+  // La etiqueta sale del catálogo, no del texto guardado, para que dos filas
+  // que escriben distinto la misma tarjeta no abran dos opciones.
   const cards = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of all) s.add(r.card_id);
-    return Array.from(s).sort();
-  }, [all]);
+    const etiquetas = new Map<string, string>();
+    for (const t of tarjetasList.data ?? []) etiquetas.set(t.id, t.tc_id ?? '—');
+    const m = new Map<string, string>();
+    for (const r of all) {
+      const clave = claveConsumo(r, resolver);
+      m.set(clave, etiquetas.get(clave) ?? r.card_id ?? '—');
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [all, resolver, tarjetasList.data]);
 
   const filtered = useMemo(() => {
     const tx = filterText.trim().toLowerCase();
     return all.filter((r) => {
-      if (filterCard && r.card_id !== filterCard) return false;
+      if (filterCard && claveConsumo(r, resolver) !== filterCard) return false;
       if (tx) {
         const blob = [r.proveedor, r.concepto, r.voucher_num, r.empresa].filter(Boolean).join(' ').toLowerCase();
         if (!blob.includes(tx)) return false;
       }
       return true;
     });
-  }, [all, filterCard, filterText]);
+  }, [all, filterCard, filterText, resolver]);
 
   const totalsByMoneda = useMemo(() => {
     const m = new Map<string, number>();
@@ -244,7 +250,9 @@ export function ConsumosSection({ canEdit, tipo }: SectionProps) {
           className="rounded border border-sand px-2 py-1.5 text-sm"
         >
           <option value="">Todas las tarjetas</option>
-          {cards.map((c) => <option key={c} value={c}>{c}</option>)}
+          {cards.map(([clave, rotulo]) => (
+            <option key={clave} value={clave}>{rotulo}</option>
+          ))}
         </select>
         <input
           type="search"

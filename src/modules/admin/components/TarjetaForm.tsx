@@ -119,12 +119,19 @@ export function TarjetaForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {cambioElId && (consumos.data ?? 0) > 0 && (
         <div className="rounded-md border border-gold bg-gold-light/50 px-3 py-2 text-xs text-dark-2">
-          <b>Ojo:</b> esta tarjeta ya tiene {consumos.data} servicio
-          {consumos.data === 1 ? '' : 's'} de viaje pagados con ella. Si es una tarjeta
-          nueva —por renovación o reposición— conviene <b>crearla aparte</b> y desactivar
-          esta, en vez de cambiarle el identificador: los cargos viejos salieron en el
-          estado de cuenta del plástico anterior y mezclarlos complica la conciliación.
-          Las liquidaciones ya emitidas conservan el nombre con el que se capturaron.
+          <b>Ojo:</b> esta tarjeta ya tiene {consumos.data} registro
+          {consumos.data === 1 ? '' : 's'} amarrado{consumos.data === 1 ? '' : 's'}: servicios
+          de viaje, cargos adicionales y consumos de Finanzas.
+          <div className="mt-1.5">
+            Si solo estás <b>corrigiendo cómo se escribe</b> el nombre de la misma tarjeta,
+            adelante: todo sigue amarrado por su id y no se pierde nada. Lo único que no cambia
+            es el nombre que quedó escrito en las liquidaciones ya emitidas.
+          </div>
+          <div className="mt-1.5">
+            Si en cambio es <b>otra tarjeta</b> —renovación o reposición—, conviene
+            <b> crearla aparte</b> y dar esta de baja: los cargos viejos salieron en el estado
+            de cuenta del plástico anterior y mezclarlos complica la conciliación.
+          </div>
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -252,10 +259,14 @@ function useConsumos(tarjetaId: string | undefined) {
     enabled: !!tarjetaId,
     staleTime: 60 * 1000,
     queryFn: async (): Promise<number> => {
+      // Los cargos adicionales y los consumos varios tambien se pagan con
+      // una tarjeta, y el crucero tambien. Dejarlos fuera hacia que el aviso
+      // dijera "3 servicios" donde habia siete registros amarrados.
       const tablas = [
         'att_tickets', 'att_hoteles', 'att_restaurantes', 'att_rentas',
         'att_tours', 'att_aeronaves', 'att_acuaticos', 'att_ferries',
-        'att_terrestres', 'att_actividades',
+        'att_terrestres', 'att_actividades', 'att_cruceros',
+        'att_cargos', 'att_consumos_varios',
       ] as const;
       const cuentas = await Promise.all(
         tablas.map(async (t) => {
@@ -268,7 +279,14 @@ function useConsumos(tarjetaId: string | undefined) {
           return count ?? 0;
         }),
       );
-      return cuentas.reduce((a, b) => a + b, 0);
+      // Y los consumos de Finanzas, que amarran por otra columna.
+      const fin = await supabase
+        .from('tc_consumos')
+        .select('id', { count: 'exact', head: true })
+        .eq('tarjeta_id', tarjetaId as string)
+        .is('deleted_at', null);
+      if (fin.error) throw fin.error;
+      return cuentas.reduce((a, b) => a + b, 0) + (fin.count ?? 0);
     },
   });
 }

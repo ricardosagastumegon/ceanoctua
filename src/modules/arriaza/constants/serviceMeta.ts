@@ -13,6 +13,7 @@ export type ServiceKey =
   | 'terrestre'
   | 'actividades'
   | 'crucero'
+  | 'varios'
   | 'tiendas'
   | 'reunion'
   | 'ruta'
@@ -104,6 +105,15 @@ export const SERVICE_META: Record<ServiceKey, ServiceMeta> = {
     solid: '#4338ca', dark: '#312e81', light: '#e6e5fb',
     hasCost: true, table: 'att_cruceros', arrayKey: 'cruceros',
   },
+  varios: {
+    // Vino tinto: es el unico "servicio" que no se contrata sino que se
+    // reporta al final. Distinto del rust del restaurante y del magenta de
+    // la actividad, que son los dos mas cercanos.
+    label: 'Consumos Varios', icon: '🧾', css: 'svc-varios',
+    grad: 'linear-gradient(135deg,#2a0c10,#8c2f39,#b55a63)',
+    solid: '#8c2f39', dark: '#6b2029', light: '#f6e3e5',
+    hasCost: true, table: 'att_consumos_varios', arrayKey: 'consumosVarios',
+  },
   tiendas: {
     label: 'Tienda', icon: '🛍️', css: 'svc-tiendas',
     grad: 'linear-gradient(135deg,#2e2013,#8a5a2e,#b98a52)',
@@ -135,12 +145,12 @@ export const SERVICE_META: Record<ServiceKey, ServiceMeta> = {
 
 export const SERVICE_KEYS: readonly ServiceKey[] = [
   'tickets', 'hotel', 'restaurantes', 'renta', 'tours', 'aeronave',
-  'acuatico', 'ferry', 'terrestre', 'actividades', 'crucero',
+  'acuatico', 'ferry', 'terrestre', 'actividades', 'crucero', 'varios',
   'tiendas', 'reunion', 'ruta', 'poi',
 ];
 
 /**
- * Los que se ofrecen en "+ Agregar Servicios". Son 11: el usuario sacó del
+ * Los que se ofrecen en "+ Agregar Servicios". Son 12: el usuario sacó del
  * menú Tiendas, Ruta en Google Maps y Puntos de Interés (2026-09-22, ver
  * PLAN-TT-DASHBOARD.md §2).
  *

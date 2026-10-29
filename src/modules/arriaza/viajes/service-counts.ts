@@ -28,6 +28,7 @@ const TABLA_POR_SERVICIO = {
   actividades: 'att_actividades',
   reunion: 'att_reuniones',
   crucero: 'att_cruceros',
+  varios: 'att_consumos_varios',
   tiendas: 'att_tiendas',
   ruta: 'att_rutas',
   poi: 'att_pois',
@@ -43,7 +44,7 @@ const TABLA_POR_SERVICIO = {
 const CON_MONTO = [
   'tickets', 'hotel', 'restaurantes', 'renta',
   'tours', 'aeronave', 'acuatico', 'ferry',
-  'terrestre', 'actividades', 'crucero',
+  'terrestre', 'actividades', 'crucero', 'varios',
 ] as const;
 
 export type ServiceSummary = {

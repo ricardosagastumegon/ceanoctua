@@ -200,6 +200,13 @@ export const MAPEO: Record<string, Mapeo> = {
     subExtra: 'ciudad, inicio',
     sub: (r) => unir([txt(r.ciudad), dia(r.fecha), hhmm(r.inicio)]),
   },
+  // Los gastos menudos del viaje, en un total bajo su concepto. No es un
+  // servicio contratado, pero es dinero en una tarjeta: tiene que cuadrar.
+  varios: {
+    tabla: 'att_consumos_varios', extra: 'concepto, fecha',
+    nombre: (r) => txt(r.concepto), fecha: (r) => fch(r.fecha),
+    sub: (r) => dia(r.fecha),
+  },
 };
 
 export const COMUNES =

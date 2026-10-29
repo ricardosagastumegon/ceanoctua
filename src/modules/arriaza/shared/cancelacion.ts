@@ -13,7 +13,8 @@ import { supabase } from '@/lib/supabase';
 export type TablaServicio =
   | 'att_tickets' | 'att_hoteles' | 'att_restaurantes' | 'att_rentas'
   | 'att_tours' | 'att_aeronaves' | 'att_acuaticos' | 'att_ferries'
-  | 'att_terrestres' | 'att_actividades' | 'att_cruceros';
+  | 'att_terrestres' | 'att_actividades' | 'att_cruceros'
+  | 'att_consumos_varios';
 
 /** Lo que de verdad costó el servicio. */
 export function netoServicio(

@@ -1719,6 +1719,62 @@ export type Database = {
         Relationships: [];
       };
 
+      att_consumos_varios: {
+        Row: AuditCols & {
+          id: string;
+          viaje_id: string;
+          concepto: string;
+          monto: number;
+          moneda: Database['public']['Enums']['currency'];
+          pagado_con: string | null;
+          pagado_con_id: string | null;
+          fecha: string | null;
+          fecha_cargo: string | null;
+          estado_pago: string;
+          cancelado_en: string | null;
+          reintegro: number;
+          reintegro_nota: string | null;
+          notas: string | null;
+          reporte_path: string | null;
+          deleted_at: string | null;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          viaje_id: string;
+          concepto: string;
+          monto?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha?: string | null;
+          fecha_cargo?: string | null;
+          estado_pago?: string;
+          cancelado_en?: string | null;
+          reintegro?: number;
+          reintegro_nota?: string | null;
+          notas?: string | null;
+          reporte_path?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: AuditUpdate & {
+          concepto?: string;
+          monto?: number;
+          moneda?: Database['public']['Enums']['currency'];
+          pagado_con?: string | null;
+          pagado_con_id?: string | null;
+          fecha?: string | null;
+          fecha_cargo?: string | null;
+          estado_pago?: string;
+          cancelado_en?: string | null;
+          reintegro?: number;
+          reintegro_nota?: string | null;
+          notas?: string | null;
+          reporte_path?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       att_tickets: {
         Row: AuditCols & {
           id: string;

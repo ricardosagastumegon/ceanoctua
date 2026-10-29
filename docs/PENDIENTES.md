@@ -42,6 +42,20 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
+### DT-17 · Cinco catálogos sin trigger de auditoría
+
+- **Origen:** Fase 38 · se descubrió al agregarle el trigger a `tarjetas_credito`.
+- **Impacto:** `entidades`, `personas`, `empleados`, `proveedores` y `tipos_pago` no escriben en `audit_log`. Renombrar un proveedor o cambiar el NIT de una entidad no deja rastro de quién ni cuándo, y esos datos viajan a documentos que se entregan. La Regla 0 dice que toda mutación queda registrada; estas cinco no cumplen. `tc_consumos`, `vehiculos` y ahora `tarjetas_credito` sí.
+- **Estimado:** 15 min · una migración con cinco `create trigger … execute function public.audit_trigger()`. Sin riesgo: el trigger solo escribe, no valida nada que pueda rechazar un insert existente.
+- **Estado:** Pendiente. Vale la pena hacerlo junto con el próximo cambio que toque Admin, para no abrir una fase por esto solo.
+
+### DT-18 · El `card_id` de los consumos es texto libre
+
+- **Origen:** Fase 38 · la galería de TC mostraba menos consumos de los que hay.
+- **Impacto:** `tc_consumos.card_id` guarda el nombre de la tarjeta escrito a mano y no coincide siempre con el catálogo: hay una fila que dice «TC Visa Term. 8694» por «Visa Term. 8694» y otra con la terminación vieja de una tarjeta repuesta («…7274» por «…4771»). La pantalla ya no depende de ese texto —agrupa por `tarjeta_id`—, pero el texto sigue ahí y el importador de CSV lo vuelve a llenar a mano.
+- **Estimado:** el arreglo de fondo es dejar de capturar `card_id` como texto y derivarlo de `tarjeta_id` al mostrar. Son dos formularios y el importador. Medio día.
+- **Estado:** Pendiente, sin urgencia: la lectura ya está corregida. Lo que falta es que no se sigan creando filas desalineadas.
+
 ### DT-15 · El puente de Consumos Varios a Finanzas
 
 - **Origen:** Fase 37 · decisión de la usuaria el 2026-10-29 («después, en otra fase»).

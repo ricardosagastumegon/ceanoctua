@@ -39,6 +39,10 @@ async function buildExport(): Promise<{ generated_at: string; source: string; tr
     'att_terrestres', 'att_tiendas', 'att_actividades', 'att_actividad_entradas',
     'att_reuniones', 'att_rutas', 'att_pois',
     'att_day_plans', 'att_day_plan_rows', 'att_day_notes',
+    // Las tres llevan `viaje_id`, asi que entran por el camino normal. El
+    // crucero y los cargos faltaban desde sus propias fases: un respaldo que
+    // los omite se ve completo y no lo esta.
+    'att_cruceros', 'att_cargos', 'att_consumos_varios',
   ] as const;
   const allChildren: Record<string, Record<string, unknown>[]> = {};
   for (const t of tables) {

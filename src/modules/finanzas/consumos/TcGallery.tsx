@@ -13,11 +13,16 @@ import type { Database } from '@/types/database';
 
 type Tarjeta = Database['public']['Tables']['tarjetas_credito']['Row'];
 
-// F-4 · Gallery de TC corporativas. Una card por cada `tarjetas_credito`
-// con `tipo='corporativa'`. El click filtra la lista de consumos por
-// ese tc_id. Botón "Estado de cuenta" abre el PDF imprimible.
+// F-4 · Gallery de TC. Una card por cada `tarjetas_credito` del tipo que se
+// le pida. El click filtra la lista de consumos por ese tc_id. El botón
+// "Estado de cuenta" abre el PDF imprimible.
+//
+// Acá SÍ se muestran las dadas de baja, marcadas: cuando una tarjeta se
+// extravía deja de ofrecerse en T&T, y Finanzas es donde se siguen
+// consultando sus consumos hasta que terminen de pagarse.
 
 type Props = {
+  tipo: 'corporativa' | 'presidencia';
   filterCard: string;
   onSelectCard: (tcId: string) => void;
 };
@@ -32,7 +37,7 @@ function tintFromColor(hex: string | null | undefined): string {
   return hex;
 }
 
-export function TcGallery({ filterCard, onSelectCard }: Props) {
+export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
   const tarjetasQ = useTarjetas();
   const consumosQ = useConsumos();
   const createTarjeta = useCreateTarjeta();
@@ -42,9 +47,14 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
   const [tcCorpOpen, setTcCorpOpen] = useState(false);
   const [estadoCuentaTarjeta, setEstadoCuentaTarjeta] = useState<Tarjeta | null>(null);
 
-  const corp = (tarjetasQ.data ?? []).filter(
-    (t) => t.tipo === 'corporativa' && t.activo,
-  );
+  const esCorp = tipo === 'corporativa';
+  const rotulo = esCorp ? 'Tarjetas corporativas' : 'Tarjetas de presidencia';
+
+  // Las activas primero; las dadas de baja al final, que es donde estorban
+  // menos sin dejar de estar.
+  const corp = (tarjetasQ.data ?? [])
+    .filter((t) => t.tipo === tipo)
+    .sort((a, b) => Number(b.activo) - Number(a.activo) || a.tc_id.localeCompare(b.tc_id));
 
   // Stats por tarjeta (count + total por moneda)
   const statsByCardId = useMemo(() => {
@@ -71,8 +81,8 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
   if (corp.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-sand bg-sand-l/30 p-4 text-center text-sm text-dark-3">
-        No hay tarjetas corporativas en el catálogo. Ve a <strong>Admin → Tarjetas</strong> para
-        crear una.
+        No hay {esCorp ? 'tarjetas corporativas' : 'tarjetas de presidencia'} en el catálogo. Ve a{' '}
+        <strong>Admin → Tarjetas</strong> para crear una.
       </div>
     );
   }
@@ -81,16 +91,16 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
     <div className="space-y-2">
       <div className="flex items-baseline justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-dark-2">
-          Tarjetas corporativas
+          {rotulo}
         </h3>
         {isAdmin && (
           <button
             type="button"
             onClick={() => setTcCorpOpen(true)}
             className="rounded-md border border-purple/40 bg-purple/10 px-3 py-1 text-xs font-semibold text-purple hover:bg-purple/20"
-            title="Crear nueva tarjeta corporativa"
+            title={esCorp ? 'Crear nueva tarjeta corporativa' : 'Crear nueva tarjeta de presidencia'}
           >
-            + TC CORP
+            {esCorp ? '+ TC CORP' : '+ TC PRES'}
           </button>
         )}
       </div>
@@ -104,7 +114,7 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
               key={t.id}
               className={`group flex w-56 flex-col overflow-hidden rounded-card border shadow-sm transition-transform hover:scale-[1.02] ${
                 isActive ? 'border-teal' : 'border-sand'
-              }`}
+              } ${t.activo ? '' : 'opacity-80'}`}
             >
               <button
                 type="button"
@@ -114,10 +124,15 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
                 title={isActive ? 'Click para quitar el filtro' : 'Click para filtrar a esta TC'}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-80">
-                  {t.empresa ?? 'Corporativa'}
+                  {t.empresa ?? t.titular ?? (esCorp ? 'Corporativa' : 'Presidencia')}
                 </p>
                 <p className="mt-2 font-mono text-sm font-semibold leading-tight">{t.tc_id}</p>
                 {t.banco && <p className="mt-1 text-[10px] opacity-80">{t.banco}</p>}
+                {!t.activo && (
+                  <p className="mt-1.5 inline-block rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider">
+                    Dada de baja
+                  </p>
+                )}
               </button>
               <div className="bg-white px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-3">
@@ -149,7 +164,7 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
       <Modal
         open={tcCorpOpen}
         onClose={() => setTcCorpOpen(false)}
-        title="Nueva tarjeta corporativa"
+        title={esCorp ? 'Nueva tarjeta corporativa' : 'Nueva tarjeta de presidencia'}
         size="lg"
       >
         <TarjetaForm
@@ -157,9 +172,10 @@ export function TcGallery({ filterCard, onSelectCard }: Props) {
           submitting={createTarjeta.isPending}
           onSubmit={async (values) => {
             try {
-              // Forzar tipo='corporativa' aunque el form permita cambiar.
-              await createTarjeta.mutateAsync({ ...values, tipo: 'corporativa' });
-              toast.success('Tarjeta corporativa creada.');
+              // Se fuerza el tipo de la galería donde se creó, aunque el
+              // formulario permita cambiarlo.
+              await createTarjeta.mutateAsync({ ...values, tipo });
+              toast.success(esCorp ? 'Tarjeta corporativa creada.' : 'Tarjeta de presidencia creada.');
               setTcCorpOpen(false);
             } catch (e) {
               toast.error(describeError(e));

@@ -7,7 +7,8 @@ import { useAuth } from '@/lib/auth';
 //   2. Liquidaciones      ← venía de CC Board
 //   3. Reintegros
 //   4. Consumos TC Corp
-//   5. Pagos
+//   5. Consumos TC Pres  ← las de presidencia, que antes no tenian galeria
+//   6. Pagos
 //
 // La sub-sección Vouchers fue eliminada del UI; la tabla `vouchers`
 // queda en la base (deprecada) hasta que F-5 la reemplace por la
@@ -18,13 +19,20 @@ import { ReintegrosSection } from './reintegros/ReintegrosSection';
 import { ConsumosSection } from './consumos/ConsumosSection';
 import { PagosSection } from './pagos/PagosSection';
 
-type SectionKey = 'vales' | 'liquidaciones' | 'reintegros' | 'consumos' | 'pagos';
+type SectionKey =
+  | 'vales'
+  | 'liquidaciones'
+  | 'reintegros'
+  | 'consumos'
+  | 'consumos_pres'
+  | 'pagos';
 
 const sections: { key: SectionKey; label: string }[] = [
   { key: 'vales', label: 'Vales' },
   { key: 'liquidaciones', label: 'Liquidaciones' },
   { key: 'reintegros', label: 'Reintegros' },
   { key: 'consumos', label: 'Consumos TC Corp' },
+  { key: 'consumos_pres', label: 'Consumos TC Pres' },
   { key: 'pagos', label: 'Pagos' },
 ];
 
@@ -60,7 +68,7 @@ export function FinanzasPage() {
       <header>
         <h1 className="font-heading text-2xl font-semibold text-dark">Finanzas</h1>
         <p className="mt-1 text-sm text-dark-2">
-          Vales · Liquidaciones · Reintegros · Consumos TC Corp · Pagos. Cada operación queda registrada en{' '}
+          Vales · Liquidaciones · Reintegros · Consumos TC · Pagos. Cada operación queda registrada en{' '}
           <code>audit_log</code>.
         </p>
       </header>
@@ -87,7 +95,8 @@ export function FinanzasPage() {
       {tab === 'vales' && <ValesSection canEdit={canEdit} />}
       {tab === 'liquidaciones' && <LiquidacionesSection canEdit={canEdit} />}
       {tab === 'reintegros' && <ReintegrosSection canEdit={canEdit} />}
-      {tab === 'consumos' && <ConsumosSection canEdit={canEdit} />}
+      {tab === 'consumos' && <ConsumosSection canEdit={canEdit} tipo="corporativa" />}
+      {tab === 'consumos_pres' && <ConsumosSection canEdit={canEdit} tipo="presidencia" />}
       {tab === 'pagos' && <PagosSection canEdit={canEdit} />}
     </section>
   );

@@ -48,7 +48,13 @@ function csvCell(s: string | number | null | undefined): string {
   return `"${str}"`;
 }
 
-export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
+type SectionProps = {
+  canEdit: boolean;
+  /** Qué tarjetas atiende esta pestaña. */
+  tipo: 'corporativa' | 'presidencia';
+};
+
+export function ConsumosSection({ canEdit, tipo }: SectionProps) {
   const toast = useToast();
   const query = useConsumos();
   const create = useCreateConsumo();
@@ -110,7 +116,27 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
   const [filterCard, setFilterCard] = useState('');
   const [filterText, setFilterText] = useState('');
 
-  const all = query.data ?? [];
+  // De qué tipo es la tarjeta de cada consumo. Se resuelve por el id cuando
+  // lo hay y por el texto cuando no. Un consumo cuya tarjeta no está en el
+  // catálogo no pertenece a ninguna de las dos pestañas: se queda en la de
+  // corporativas --la de siempre-- para que no desaparezca de la vista.
+  const tipoDeConsumo = useMemo(() => {
+    const porId = new Map<string, string>();
+    const porTexto = new Map<string, string>();
+    for (const t of tarjetasList.data ?? []) {
+      porId.set(t.id, t.tipo);
+      if (t.tc_id) porTexto.set(t.tc_id.toLowerCase().trim(), t.tipo);
+    }
+    return (c: Consumo): string =>
+      (c.tarjeta_id ? porId.get(c.tarjeta_id) : undefined) ??
+      porTexto.get((c.card_id ?? '').toLowerCase().trim()) ??
+      'corporativa';
+  }, [tarjetasList.data]);
+
+  const all = useMemo(
+    () => (query.data ?? []).filter((c) => tipoDeConsumo(c) === tipo),
+    [query.data, tipoDeConsumo, tipo],
+  );
 
   const cards = useMemo(() => {
     const s = new Set<string>();
@@ -181,7 +207,9 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
     <section className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-heading text-xl font-semibold text-dark">Consumos de TC</h2>
+          <h2 className="font-heading text-xl font-semibold text-dark">
+            Consumos de TC {tipo === 'corporativa' ? 'Corporativas' : 'de Presidencia'}
+          </h2>
           <p className="mt-1 text-sm text-dark-2">
             Cada consumo genera un voucher serial. El badge VENCE muestra los días hábiles hasta el límite de 7 días para reintegro.
           </p>
@@ -207,7 +235,7 @@ export function ConsumosSection({ canEdit }: { canEdit: boolean }) {
         </div>
       </header>
 
-      <TcGallery filterCard={filterCard} onSelectCard={setFilterCard} />
+      <TcGallery tipo={tipo} filterCard={filterCard} onSelectCard={setFilterCard} />
 
       <div className="grid grid-cols-1 gap-2 rounded-md border border-sand bg-white p-3 sm:grid-cols-3">
         <select

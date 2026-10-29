@@ -132,7 +132,7 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
                 style={{ background: `linear-gradient(135deg, ${tint}cc, ${tint})` }}
                 title={isActive ? 'Click para quitar el filtro' : 'Click para filtrar a esta TC'}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-80">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] opacity-95">
                   {t.empresa ?? t.titular ?? (esCorp ? 'Corporativa' : 'Presidencia')}
                 </p>
                 <p className="mt-2 font-mono text-sm font-semibold leading-tight">{t.tc_id}</p>

@@ -33,16 +33,21 @@ function totales(t: TarjetaPeriodo | undefined): [string, number][] {
  * informa --dice que esa tarjeta no se usó-- mientras que una tarjeta ausente
  * se confunde con un error de captura.
  */
-/** Si el panel queda abierto o cerrado, recordado entre visitas. */
+/**
+ * Si el panel queda abierto o cerrado, recordado entre visitas.
+ *
+ * Arranca CERRADO: lo primero de esta pantalla son los viajes, y el consumo
+ * por tarjeta se consulta cuando toca pagar, no cada vez que se entra.
+ */
 const LLAVE_ABIERTO = 'cea.tt.tc-panel';
 
 export function TcPanelTT() {
   const [rango, setRango] = useState(anioActual);
   const [abiertoPanel, setAbiertoPanel] = useState(() => {
     try {
-      return localStorage.getItem(LLAVE_ABIERTO) !== 'off';
+      return localStorage.getItem(LLAVE_ABIERTO) === 'on';
     } catch {
-      return true;
+      return false;
     }
   });
   const [abierta, setAbierta] = useState<{ datos: TarjetaPeriodo; tarjeta: Tarjeta | null } | null>(null);
@@ -76,32 +81,48 @@ export function TcPanelTT() {
   const vacio =
     !periodoQ.isLoading && !periodoQ.isError && (periodoQ.data?.renglones.length ?? 0) === 0;
 
+  function alternar() {
+    const v = !abiertoPanel;
+    setAbiertoPanel(v);
+    try {
+      localStorage.setItem(LLAVE_ABIERTO, v ? 'on' : 'off');
+    } catch {
+      // Sin localStorage el panel no recuerda; no es motivo para romper la
+      // pantalla.
+    }
+  }
+
   return (
     <section className="rounded-card border border-sand bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <div>
-          <h2 className="font-heading text-base font-extrabold text-dark">Consumos de TC</h2>
-          <p className="text-[11px] text-dark-3">
-            Lo que cada tarjeta movió en los viajes del período. Un clic abre su estado de cuenta.
-          </p>
-        </div>
-
         <button
           type="button"
-          onClick={() => {
-            const v = !abiertoPanel;
-            setAbiertoPanel(v);
-            try {
-              localStorage.setItem(LLAVE_ABIERTO, v ? 'on' : 'off');
-            } catch {
-              // Sin localStorage el panel simplemente no recuerda; no es motivo
-              // para romper la pantalla.
-            }
-          }}
-          className="rounded-md border border-sand px-2 py-1 text-[11px] font-semibold text-dark-2 hover:border-teal hover:text-teal"
+          onClick={alternar}
+          aria-expanded={abiertoPanel}
+          className="flex items-start gap-2 text-left"
         >
-          {abiertoPanel ? 'Ocultar' : 'Mostrar'}
+          <span className="mt-1 text-xs text-dark-3">{abiertoPanel ? '▾' : '▸'}</span>
+          <span>
+            <span className="block font-heading text-base font-extrabold text-dark">
+              💳 Consumos de TC
+            </span>
+            <span className="block text-[11px] text-dark-3">
+              {abiertoPanel
+                ? 'Lo que cada tarjeta movió en los viajes del período. Un clic abre su estado de cuenta.'
+                : 'Lo que cada tarjeta movió en los viajes. Clic para verlo.'}
+            </span>
+          </span>
         </button>
+
+        {!abiertoPanel && (
+          <button
+            type="button"
+            onClick={alternar}
+            className="ml-auto rounded-md border border-sand px-3 py-1.5 text-[11px] font-semibold text-dark-2 hover:border-teal hover:text-teal"
+          >
+            Mostrar
+          </button>
+        )}
 
         {abiertoPanel && (
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -133,6 +154,13 @@ export function TcPanelTT() {
             className="rounded-md border border-sand bg-white px-2 py-1.5 text-[11px] text-dark focus:border-teal focus:outline-none"
             aria-label="Hasta"
           />
+          <button
+            type="button"
+            onClick={alternar}
+            className="rounded-md border border-sand px-3 py-1.5 text-[11px] font-semibold text-dark-2 hover:border-teal hover:text-teal"
+          >
+            Ocultar
+          </button>
         </div>
         )}
       </div>
@@ -255,10 +283,9 @@ function Ficha({
   onAbrir: (datos: TarjetaPeriodo) => void;
 }) {
   const tinte = tarjeta.color ?? '#0d2b2e';
-  // Solo la empresa o el banco: el titular se repite en casi todas las de
-  // Presidencia y convertia el encabezado en ruido. Quien es el titular se ve
-  // en el desplegable de pago y en el estado de cuenta.
-  const sub = tarjeta.empresa ?? tarjeta.banco;
+  // Misma ficha que la galería de Finanzas: arriba de quién es la tarjeta,
+  // en medio su identificador y abajo el banco.
+  const duenio = tarjeta.empresa ?? tarjeta.titular ?? tarjeta.banco;
   const movido = (datos?.renglones.length ?? 0) > 0;
   // Una tarjeta sin movimiento necesita un objeto igual para abrir su hoja:
   // la hoja en blanco dice "no movió nada", que es informacion.
@@ -286,12 +313,15 @@ function Ficha({
         style={{ background: `linear-gradient(135deg, ${tinte}cc, ${tinte})` }}
         title="Ver el estado de cuenta de esta tarjeta"
       >
-        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] opacity-80">
-          {sub || 'Tarjeta'}
+        <p className="truncate text-[11px] font-extrabold uppercase tracking-[0.14em] opacity-95">
+          {duenio || 'Tarjeta'}
         </p>
         <p className="mt-1.5 break-words font-mono text-sm font-extrabold leading-tight">
           {tarjeta.tc_id}
         </p>
+        {tarjeta.banco && tarjeta.banco !== duenio && (
+          <p className="mt-1 truncate text-[10px] opacity-80">{tarjeta.banco}</p>
+        )}
         {!tarjeta.activo && (
           <p className="mt-1 inline-block rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider">
             Dada de baja

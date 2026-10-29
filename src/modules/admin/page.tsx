@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { describeError } from './hooks';
 import { CatalogPage } from './components/CatalogPage';
 import { UsuariosCatalog } from './UsuariosCatalog';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -574,7 +577,44 @@ function TarjetasCatalog({ canEdit }: { canEdit: boolean }) {
   const create = useCreateTarjeta();
   const update = useUpdateTarjeta();
   const remove = useDeleteTarjeta();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [importerOpen, setImporterOpen] = useState(false);
+
+  /**
+   * Dar de baja una tarjeta no es borrarla.
+   *
+   * Pasó de verdad: se extraviaron tarjetas que ya tenían consumos del mes y
+   * que ya venían repuestas. Borrarlas se llevaría el historial por delante y
+   * dejarlas activas invita a cargarles algo que no se puede cobrar. Darlas
+   * de baja las saca de Arriaza T&T y las deja consultables en Finanzas.
+   */
+  async function alternarActivo(r: Tarjeta) {
+    const baja = r.activo;
+    const ok = await confirm({
+      title: baja ? 'Dar de baja la tarjeta' : 'Reactivar la tarjeta',
+      message: baja ? (
+        <>
+          <strong>{r.tc_id}</strong> deja de ofrecerse en Arriaza T&amp;T y no se le podrá cargar
+          nada nuevo. Sus consumos no se tocan: se siguen viendo en Finanzas y en los viajes donde
+          ya está.
+        </>
+      ) : (
+        <>
+          <strong>{r.tc_id}</strong> vuelve a ofrecerse en Arriaza T&amp;T para cobrar servicios
+          nuevos.
+        </>
+      ),
+      confirmLabel: baja ? 'Dar de baja' : 'Reactivar',
+    });
+    if (!ok) return;
+    try {
+      await update.mutateAsync({ id: r.id, patch: { activo: !r.activo } });
+      toast.success(baja ? 'Tarjeta dada de baja.' : 'Tarjeta reactivada.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
 
   const tipoLabel = { corporativa: 'Corporativa', presidencia: 'Presidencia' } as const;
 
@@ -615,7 +655,18 @@ function TarjetasCatalog({ canEdit }: { canEdit: boolean }) {
       header: 'Identificador',
       sortable: true,
       accessor: (r) => r.tc_id,
-      render: (r) => <span className="font-mono text-dark">{r.tc_id}</span>,
+      render: (r) => (
+        <span>
+          <span className={`font-mono ${r.activo ? 'text-dark' : 'text-dark-3 line-through'}`}>
+            {r.tc_id}
+          </span>
+          {!r.activo && (
+            <span className="ml-2 inline-flex rounded-full bg-rust-l px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-rust">
+              De baja
+            </span>
+          )}
+        </span>
+      ),
     },
     { key: 'red', header: 'Red', sortable: true, accessor: (r) => r.red, render: (r) => r.red ?? '—' },
     { key: 'banco', header: 'Banco', accessor: (r) => r.banco, render: (r) => r.banco ?? '—' },
@@ -656,6 +707,28 @@ function TarjetasCatalog({ canEdit }: { canEdit: boolean }) {
         Form={TarjetaForm}
         rowLabel={(r) => `${tipoLabel[r.tipo]} ${r.tc_id}`}
         canEdit={canEdit}
+        extraActions={
+          canEdit
+            ? (r) => (
+                <button
+                  type="button"
+                  onClick={() => void alternarActivo(r)}
+                  className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+                    r.activo
+                      ? 'border-sand text-dark-2 hover:border-rust hover:text-rust'
+                      : 'border-teal/40 text-teal-d hover:bg-teal-l'
+                  }`}
+                  title={
+                    r.activo
+                      ? 'Sale de Arriaza T&T; sus consumos se siguen viendo en Finanzas'
+                      : 'Vuelve a ofrecerse en Arriaza T&T'
+                  }
+                >
+                  {r.activo ? 'Dar de baja' : 'Reactivar'}
+                </button>
+              )
+            : undefined
+        }
         headerExtra={
           canEdit ? (
             <button

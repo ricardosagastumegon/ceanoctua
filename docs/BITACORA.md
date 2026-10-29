@@ -6,6 +6,32 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 38 · 2026-10-29 · Tarjetas · se ven, se leen y se dan de baja
+
+**Objetivo:** tres cosas que salieron del mismo lugar, el día que se extraviaron unas tarjetas de Presidencia que ya tenían consumos del mes y que ya venían repuestas.
+
+**Cambios de schema:** ninguno. La columna `activo` de `tarjetas_credito` ya existía y nadie la estaba usando.
+
+**Comentarios:**
+
+- **El desplegable de «Pagado con» era ilegible y además estaba roto.** Once tarjetas como once renglones de texto casi iguales: seis terminan en «Miguel A Arriaza» y casi todas dicen «BAC», así que lo único que las distingue —la terminación— quedaba enterrado a media línea. Un `<option>` no admite ni color ni dos renglones, así que pasó a ser un desplegable propio, como el de aeropuertos. Y el grupo «Presidencia» nunca aparecía: el tipo viene del enum `tc_tipo`, que es minúsculo, y se comparaba contra `'Presidencia'`. Las siete caían bajo «Corporativas».
+
+- **El texto guardado sigue empezando por el `tc_id`.** La liquidación saca de ahí el nombre corto de una hoja impresa hace meses (`texto.split(' · ')[0]`); cambiar ese orden habría reescrito en silencio lo que dicen los reportes viejos. Se le agregó la empresa detrás, que es lo que identifica a una corporativa.
+
+- **Consumos de TC en la pantalla de T&T.** La Liquidación por período ya daba estos números, pero había que abrirla y leerla. Ahora hay una ficha por tarjeta con lo que movió en el período —año en curso por defecto— y un clic abre su estado de cuenta. Se muestran todas las activas aunque estén en cero: un cero dice que esa tarjeta no se usó, mientras que una tarjeta ausente se confunde con un error de captura.
+
+- **Lo que se pagó con algo fuera del catálogo va en su propio bloque.** Si se filtrara sin más, ese dinero desaparecería de la vista sin que nadie se entere. Es la misma regla del bloque «Sin fecha» de la liquidación por período.
+
+- **Dar de baja no es borrar.** Borrar una tarjeta extraviada se lleva el historial por delante; dejarla activa invita a cargarle algo que ya no se puede cobrar. De baja: sale del desplegable de T&T, su ficha se queda en el panel mientras tenga movimiento en el período, y sus consumos se siguen consultando en Finanzas.
+
+- **Las tarjetas de Presidencia nunca tuvieron galería en Finanzas.** La única que había filtraba corporativas, y había un consumo de la Visa Term. 8694 por Q1,205.50 que no se veía en ninguna ficha. Ahora cada pestaña lista solo lo suyo; antes la de corporativas los listaba todos, incluido ese.
+
+- **Lo que se canceló en el camino:** un botón de «ver datos de TC» detrás de contraseña. Una contraseña que solo tapa la pantalla no protege nada —el dato sale por la pestaña de red—, y hacerlo bien significaba cifrar en el navegador con una frase que nunca viaja. La usuaria prefirió dejarlo. Si vuelve, va con cifrado de verdad y **sin CVV**: eso no se guarda.
+
+**Commits clave:** `a0cf849`, `a017240`, `b3f2618`, `6034a3b`, `6a767d6`.
+
+---
+
 ## Fase 37 · 2026-10-29 · T&T · Consumos Varios del viaje
 
 **Objetivo:** al cerrar un viaje le entregan a la asistente un reporte de los gastos menudos pagados con tarjeta —propinas, taxis, farmacia, lavandería—. Son decenas de renglones chiquitos que *«NO uno por uno, si no como un total y bajo un concepto»*: «CONSUMOS VARIOS Sra. Arriaza». Hasta hoy ese dinero no tenía dónde ir, así que no aparecía en la liquidación y el consumo por tarjeta salía corto justo cuando hay que pedir el reintegro. Plan en [`PLAN-TT-CONSUMOS-VARIOS.md`](../PLAN-TT-CONSUMOS-VARIOS.md).

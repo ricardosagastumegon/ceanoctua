@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
+import { useVales } from '../vales/hooks';
+import { useLinkedVales } from './hooks';
 import type { LiqRow, Liquidacion } from './api';
 
 function fmt(n: number, currency: string): string {
@@ -112,6 +114,8 @@ export function LiquidacionPrintable({ liq, rows }: Props) {
         </section>
       )}
 
+      <ValesRespaldo liq={liq} />
+
       {/* Firmas */}
       <section className="grid grid-cols-2 gap-8 border-t border-sand px-6 py-8">
         <div className="text-center">
@@ -130,6 +134,69 @@ export function LiquidacionPrintable({ liq, rows }: Props) {
         Board Assistant · CC Board · Liquidación · {formatDateTime(new Date())}
       </footer>
     </article>
+  );
+}
+
+/**
+ * Los vales que respalda esta liquidacion.
+ *
+ * El amarre vive en `liquidacion_vales` desde la fase 17, pero la hoja solo
+ * miraba `vale_serial` --un campo de texto suelto que el formulario dejo de
+ * llenar-- asi que el papel salia diciendo "Vale recibido Q 875.00" sin decir
+ * de cual vale. Al archivarla, nadie podia rastrearlo.
+ *
+ * Va en letra chica: es una referencia para cruzar documentos, no el
+ * contenido principal de la hoja.
+ */
+function ValesRespaldo({ liq }: { liq: Liquidacion }) {
+  const idsQ = useLinkedVales(liq.id);
+  const valesQ = useVales();
+  const ids = new Set(idsQ.data ?? []);
+  const vales = (valesQ.data ?? []).filter((v) => ids.has(v.id));
+
+  // Las liquidaciones viejas no tienen el amarre, solo el texto que se
+  // escribio a mano. Se muestra igual: es lo unico que hay de ellas.
+  if (vales.length === 0) {
+    if (!liq.vale_serial) return null;
+    return (
+      <section className="border-t border-sand px-6 py-3">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-dark-3">
+          Vale de respaldo
+        </p>
+        <p className="font-mono text-xs text-dark-2">{liq.vale_serial}</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="border-t border-sand px-6 py-3">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dark-3">
+        {vales.length === 1 ? 'Vale de respaldo' : 'Vales de respaldo'}
+      </p>
+      <table className="w-full border-collapse text-[11px]">
+        <tbody>
+          {vales.map((v) => (
+            <tr key={v.id} className="align-top">
+              <td className="whitespace-nowrap py-0.5 pr-3 font-mono font-semibold text-dark">
+                {v.serial}
+              </td>
+              <td className="whitespace-nowrap py-0.5 pr-3 text-dark-3">
+                {v.fecha ? formatDate(v.fecha) : '—'}
+              </td>
+              <td className="py-0.5 pr-3 text-dark-2">
+                {[v.tipo === 'entidad' ? 'Vale a entidad' : 'Desembolso', v.vale_a]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </td>
+              <td className="py-0.5 pr-3 text-dark-2">{v.concepto ?? ''}</td>
+              <td className="whitespace-nowrap py-0.5 text-right font-mono font-semibold text-dark">
+                {fmt(Number(v.monto ?? 0), v.moneda ?? liq.moneda)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

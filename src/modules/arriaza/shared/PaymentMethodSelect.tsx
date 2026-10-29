@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import {
+  etiquetaTarjeta,
+  subtituloTarjeta,
+  terminacionTarjeta,
+  useTarjetasPago,
+  type TarjetaPago as Tarjeta,
+} from './tarjetas';
 
 /**
  * «Pagado con» · las tarjetas del módulo Admin.
@@ -27,56 +32,6 @@ import { supabase } from '@/lib/supabase';
 /** Formas de pago que no son una tarjeta del catálogo. */
 const OTROS_MEDIOS = ['Transferencia Bancaria', 'Efectivo', 'Otro'] as const;
 
-type Tarjeta = {
-  id: string;
-  tc_id: string | null;
-  tipo: string | null;
-  empresa: string | null;
-  red: string | null;
-  banco: string | null;
-  titular: string | null;
-  color: string | null;
-  activo: boolean;
-};
-
-/**
- * El texto que se muestra y se guarda.
- *
- * El `tc_id` va SIEMPRE de primero: la liquidación saca de ahí el nombre
- * corto de una hoja impresa hace meses (`texto.split(' · ')[0]`). Cambiar ese
- * orden reescribiría en silencio lo que dicen los reportes viejos.
- */
-export function etiquetaTarjeta(t: Tarjeta): string {
-  return [t.tc_id, t.empresa, t.red, t.banco, t.titular].filter(Boolean).join(' · ');
-}
-
-/** La terminación, que es lo único que de verdad distingue una tarjeta de otra. */
-function terminacion(tcId: string | null): string | null {
-  const m = (tcId ?? '').match(/(\d{3,6})\s*$/);
-  return m ? m[1] : null;
-}
-
-/** A quién pertenece, en una línea. */
-function subtitulo(t: Tarjeta): string {
-  return t.empresa ?? [t.banco, t.titular].filter(Boolean).join(' · ');
-}
-
-function useTarjetas() {
-  return useQuery({
-    queryKey: ['tarjetas_credito', 'pagado_con'],
-    staleTime: 5 * 60 * 1000,
-    queryFn: async (): Promise<Tarjeta[]> => {
-      const { data, error } = await supabase
-        .from('tarjetas_credito')
-        .select('id, tc_id, tipo, empresa, red, banco, titular, color, activo');
-      if (error) throw error;
-      return ((data ?? []) as Tarjeta[]).sort((a, b) =>
-        (a.tc_id ?? '').localeCompare(b.tc_id ?? ''),
-      );
-    },
-  });
-}
-
 type Props = {
   /** El texto guardado en `pagado_con`. */
   value: string | null | undefined;
@@ -88,7 +43,7 @@ type Props = {
 };
 
 export function PaymentMethodSelect({ value, valueId, onChange, label, id }: Props) {
-  const tarjetas = useTarjetas();
+  const tarjetas = useTarjetasPago();
   const filas = tarjetas.data ?? [];
   const [abierto, setAbierto] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -165,7 +120,7 @@ export function PaymentMethodSelect({ value, valueId, onChange, label, id }: Pro
                   </span>
                 )}
               </span>
-              <span className="block truncate text-[11px] text-dark-3">{subtitulo(elegida)}</span>
+              <span className="block truncate text-[11px] text-dark-3">{subtituloTarjeta(elegida)}</span>
             </span>
           </>
         ) : (
@@ -270,7 +225,7 @@ function FilaTarjeta({
   seleccionado: boolean;
   onClick: () => void;
 }) {
-  const term = terminacion(tarjeta.tc_id);
+  const term = terminacionTarjeta(tarjeta.tc_id);
   return (
     <button
       type="button"
@@ -282,7 +237,7 @@ function FilaTarjeta({
       <Chip color={tarjeta.color} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-extrabold text-dark">{tarjeta.tc_id}</span>
-        <span className="block truncate text-[11px] text-dark-3">{subtitulo(tarjeta)}</span>
+        <span className="block truncate text-[11px] text-dark-3">{subtituloTarjeta(tarjeta)}</span>
       </span>
       {term && (
         <span className="shrink-0 rounded bg-sand px-1.5 py-0.5 font-mono text-[11px] font-extrabold text-dark-2">

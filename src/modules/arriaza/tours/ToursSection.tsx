@@ -5,6 +5,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
+import { TarjetaServicio } from '../shared/TarjetaServicio';
 import { useAttToursByViaje, useDeleteAttTour } from './hooks';
 import { TourFormModal } from './TourFormModal';
 import { TourPrintable } from './TourPrintable';
@@ -118,6 +119,7 @@ export function ToursSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDidOp
               ].filter(Boolean).join(' · ')}
             </div>
           </div>
+          <TarjetaServicio id={t.pagado_con_id} texto={t.pagado_con} />
           <div className="shrink-0 text-right">
             <div className="font-heading text-sm font-extrabold" style={{ color: META.dark }}>
               {t.moneda ?? 'USD'} {totalTour(t.tarifa, t.personas).toFixed(2)}

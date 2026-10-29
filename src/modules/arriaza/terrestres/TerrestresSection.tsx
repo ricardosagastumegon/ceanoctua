@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { MontoConCargos, useCargosPorServicio } from '../cargos/MontoConCargos';
+import { TarjetaServicio } from '../shared/TarjetaServicio';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useAttTerrestresByViaje, useDeleteAttTerrestre } from './hooks';
@@ -121,6 +122,7 @@ export function TerrestresSection({ viajeId, canEdit, tripNo, autoOpenCreate, on
               ].filter(Boolean).join(' · ')}
             </div>
           </div>
+          <TarjetaServicio id={x.pagado_con_id} texto={x.pagado_con} />
           <MontoConCargos
             base={totalTerrestre(x.tarifa, x.personas, x.monto_extras)}
             cargos={cargosPorId.get(x.id) ?? 0}

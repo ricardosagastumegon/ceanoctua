@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { MontoConCargos, useCargosPorServicio } from '../cargos/MontoConCargos';
+import { TarjetaServicio } from '../shared/TarjetaServicio';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useDeleteHotel, useHoteles } from './hooks';
@@ -127,6 +128,7 @@ export function HotelesSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
               ].filter(Boolean).join(' · ')}
             </div>
           </div>
+          <TarjetaServicio id={h.pagado_con_id} texto={h.pagado_con} />
           <MontoConCargos
             base={Number(h.monto ?? 0)}
             cargos={cargosPorId.get(h.id) ?? 0}

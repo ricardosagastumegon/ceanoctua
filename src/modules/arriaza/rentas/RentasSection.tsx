@@ -5,6 +5,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
+import { TarjetaServicio } from '../shared/TarjetaServicio';
 import { useAttRentasByViaje, useDeleteAttRenta } from './hooks';
 import { RentaFormModal } from './RentaFormModal';
 import { RentaPrintable } from './RentaPrintable';
@@ -127,6 +128,7 @@ export function RentasSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDidO
               ].filter(Boolean).join(' · ')}
             </div>
           </div>
+          <TarjetaServicio id={r.pagado_con_id} texto={r.pagado_con} />
           <div className="shrink-0 text-right">
             <div className="font-heading text-sm font-extrabold" style={{ color: META.dark }}>
               {r.moneda ?? 'USD'} {total(r).toFixed(2)}

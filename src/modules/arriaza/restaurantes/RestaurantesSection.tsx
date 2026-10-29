@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { MontoConCargos, useCargosPorServicio } from '../cargos/MontoConCargos';
+import { TarjetaServicio } from '../shared/TarjetaServicio';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useDeleteRestaurante, useRestaurantes } from './hooks';
@@ -141,6 +142,7 @@ export function RestaurantesSection({ viajeId, canEdit, tripNo, autoOpenCreate, 
                 ].filter(Boolean).join(' · ')}
               </div>
             </div>
+            <TarjetaServicio id={r.pagado_con_id} texto={r.pagado_con} />
             <MontoConCargos
             base={Number(r.monto ?? 0)}
             cargos={cargosPorId.get(r.id) ?? 0}

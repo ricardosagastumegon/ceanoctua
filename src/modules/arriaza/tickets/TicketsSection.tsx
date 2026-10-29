@@ -6,6 +6,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { SERVICE_META } from '../constants/serviceMeta';
 import { MontoConCargos, useCargosPorServicio } from '../cargos/MontoConCargos';
+import { TarjetaServicio } from '../shared/TarjetaServicio';
 import { BotonCancelar } from '../shared/BotonCancelar';
 import { fmtDate } from '../utils';
 import { useDeleteTicket, useTickets } from './hooks';
@@ -154,6 +155,7 @@ export function TicketsSection({ viajeId, canEdit, tripNo, autoOpenCreate, onDid
                 {t.fecha_llegada ? ` — ${fmtDate(t.fecha_llegada)}` : ''}
               </div>
             </div>
+            <TarjetaServicio id={t.pagado_con_id} texto={t.pagado_con} />
             <MontoConCargos
               base={Number(t.monto ?? 0)}
               cargos={cargosPorId.get(t.id) ?? 0}

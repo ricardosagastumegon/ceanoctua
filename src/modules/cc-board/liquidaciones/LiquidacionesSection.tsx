@@ -20,6 +20,7 @@ import {
 } from './hooks';
 import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
+import { useCreateFirma } from '@/modules/cea/firmas/hooks';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { useEntidades } from '@/modules/admin/hooks';
 
@@ -53,6 +54,7 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const query = useLiquidaciones();
   const create = useCreateLiquidacion();
   const update = useUpdateLiquidacion();
+  const crearFirma = useCreateFirma();
   const replaceVales = useReplaceLinkedVales();
   const entidadesList = useEntidades();
   const [importerOpen, setImporterOpen] = useState(false);
@@ -366,6 +368,36 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
               >
                 👁
               </button>
+              {/* Pedir firma sin pasar por Pagos: hay liquidaciones que se
+                  firman antes de tramitarse, y el papel ya esta en CEA. */}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await crearFirma.mutateAsync({
+                        input: {
+                          tipo: `Liquidación ${row.serial ?? ''}`.trim(),
+                          urgencia: 'importante',
+                          recepcion: new Date().toISOString().slice(0, 10),
+                          solicitado: row.entidad ?? row.solicitado ?? null,
+                          justificacion: row.motivo ?? null,
+                          liquidacion_id: row.id,
+                          origen: 'digital',
+                        },
+                        miembroIds: [],
+                      });
+                      toast.success('Enviada a firma · ver CEA → Firmas');
+                    } catch (e) {
+                      toast.error(describeError(e));
+                    }
+                  }}
+                  className="rounded-md border border-gold/50 bg-gold-light px-2 py-1 text-xs font-semibold text-gold hover:opacity-90"
+                  title="Pedir firma de este documento"
+                >
+                  ✍️ FIRMA
+                </button>
+              )}
               {/* A Pagos solo van las que paga una entidad: una solicitud de
                   pago es un trámite contable de la entidad, no de una
                   persona. La que pagó alguien de su bolsa se reintegra, no se

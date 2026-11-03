@@ -44,6 +44,19 @@ export function useUpdateFirma() {
   });
 }
 
+export function useFirmarDocumento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => firmasApi.firmar(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.all });
+      // El paso del pago depende de sus firmas: si no se invalida, la
+      // solicitud sigue diciendo que espera firma.
+      void qc.invalidateQueries({ queryKey: ['pagos'] });
+    },
+  });
+}
+
 export function useDeleteFirma() {
   const qc = useQueryClient();
   return useMutation({

@@ -149,6 +149,9 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         solicitado: pago.entidad ?? pago.proveedor ?? null,
         justificacion: pago.concepto ?? null,
         pago_id: pago.id,
+        // Nace dentro del sistema: el documento ya esta en CEA y quien firma
+        // lo ve con su monto. La fisica es el papel que alguien trae.
+        origen: 'digital',
       };
       const { error } = await supabase.from('firmas').insert(insertPayload);
       if (error) throw error;

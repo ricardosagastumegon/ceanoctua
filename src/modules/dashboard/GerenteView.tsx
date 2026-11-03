@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
-import { useFirmas } from '@/modules/cea/firmas/hooks';
+import { useFirmarDocumento, useFirmas } from '@/modules/cea/firmas/hooks';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { describeError } from '@/modules/admin/hooks';
 import { usePagos } from '@/modules/finanzas/pagos/hooks';
 import { useCeaTodos } from '@/modules/cea/todos/hooks';
 import { useAttViajes } from '@/modules/arriaza/viajes/hooks';
@@ -85,6 +88,33 @@ export function GerenteView() {
   const pagosQ = usePagos();
   const todosQ = useCeaTodos();
   const viajesQ = useAttViajes();
+  const firmar = useFirmarDocumento();
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  /**
+   * Firmar desde aquí, sin ir a buscar el documento a otra pantalla. Se
+   * pregunta antes: queda registrado con su nombre y la fecha.
+   */
+  async function firmarDocumento(id: string, titulo: string) {
+    const ok = await confirm({
+      title: 'Firmar documento',
+      message: (
+        <>
+          ¿Dar por firmado <strong>{titulo}</strong>? Queda registrado con tu nombre y la fecha
+          de hoy.
+        </>
+      ),
+      confirmLabel: 'Firmar',
+    });
+    if (!ok) return;
+    try {
+      await firmar.mutateAsync(id);
+      toast.success('Documento firmado.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
 
   const porPago = new Map((pagosQ.data ?? []).map((p) => [p.id, p]));
 
@@ -97,11 +127,12 @@ export function GerenteView() {
         (a.recepcion ?? '').localeCompare(b.recepcion ?? ''),
     );
 
-  // Digital es la que nació dentro del sistema: la disparó otro usuario desde
-  // una solicitud de pago y trae su monto. Física es la que se registró a
-  // mano porque llegó un papel.
-  const digitales = enEspera.filter((f) => f.pago_id);
-  const fisicas = enEspera.filter((f) => !f.pago_id);
+  // Digital es la que nació dentro del sistema --la disparó alguien desde una
+  // solicitud de pago o una liquidación-- y física es el papel que trajeron a
+  // la oficina y se registró a mano. Es un dato de la firma, no algo que se
+  // deduzca de si tiene pago.
+  const digitales = enEspera.filter((f) => f.origen === 'digital');
+  const fisicas = enEspera.filter((f) => f.origen !== 'digital');
 
   const pendientes = (todosQ.data ?? [])
     .filter((t) => !t.done)
@@ -170,6 +201,9 @@ export function GerenteView() {
                     : dia(f.recepcion)
                 }
                 alerta={espera != null && espera <= -3}
+                accion={
+                  <BotonFirmar onClick={() => void firmarDocumento(f.id, f.tipo)} />
+                }
               />
             );
           })}
@@ -201,6 +235,9 @@ export function GerenteView() {
                     : dia(f.recepcion)
                 }
                 alerta={espera != null && espera <= -3}
+                accion={
+                  <BotonFirmar onClick={() => void firmarDocumento(f.id, f.tipo)} />
+                }
               />
             );
           })}
@@ -367,6 +404,24 @@ function Bloque({
   );
 }
 
+/**
+ * El botón de firmar.
+ *
+ * Grande a propósito: se usa desde el teléfono y con el pulgar. Es la acción
+ * por la que esta persona entra a la aplicación.
+ */
+function BotonFirmar({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-md bg-teal px-3 py-1.5 text-xs font-extrabold text-white shadow-sm hover:bg-teal-d"
+    >
+      ✍️ Firmar
+    </button>
+  );
+}
+
 /** Un renglón de cualquiera de las listas. */
 function Renglon({
   etiqueta,
@@ -376,6 +431,7 @@ function Renglon({
   cifra,
   pie,
   alerta,
+  accion,
 }: {
   etiqueta: string;
   tono: string;
@@ -384,6 +440,7 @@ function Renglon({
   cifra: string | null;
   pie: string | null;
   alerta: boolean;
+  accion?: React.ReactNode;
 }) {
   return (
     <li className="rounded-md border border-sand bg-sand-l/30 px-3 py-2">
@@ -399,11 +456,16 @@ function Renglon({
         )}
       </div>
       {detalle && <p className="mt-0.5 line-clamp-2 text-[11px] text-dark-3">{detalle}</p>}
-      {pie && (
-        <p className={`mt-0.5 text-[10px] ${alerta ? 'font-extrabold text-rust' : 'text-dark-3'}`}>
-          {pie}
-        </p>
-      )}
+      <div className="mt-1 flex items-end justify-between gap-2">
+        {pie ? (
+          <p className={`text-[10px] ${alerta ? 'font-extrabold text-rust' : 'text-dark-3'}`}>
+            {pie}
+          </p>
+        ) : (
+          <span />
+        )}
+        {accion}
+      </div>
     </li>
   );
 }

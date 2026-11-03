@@ -6,7 +6,14 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { formatDate } from '@/lib/dates';
-import { useBoardMiembros, useCreateFirma, useDeleteFirma, useFirmas, useUpdateFirma } from './hooks';
+import {
+  useBoardMiembros,
+  useCreateFirma,
+  useDeleteFirma,
+  useFirmarDocumento,
+  useFirmas,
+  useUpdateFirma,
+} from './hooks';
 import type { FirmaInsert, FirmaWithSigners } from './api';
 import { FirmaForm } from './FirmaForm';
 import { FirmaPrintable } from './FirmaPrintable';
@@ -53,9 +60,36 @@ export function FirmasSection({ canEdit }: { canEdit: boolean }) {
   const create = useCreateFirma();
   const update = useUpdateFirma();
   const remove = useDeleteFirma();
+  const firmar = useFirmarDocumento();
   const miembros = useBoardMiembros();
   const toast = useToast();
   const confirm = useConfirm();
+
+  /**
+   * Firmar con un boton y no abriendo el formulario de edicion.
+   *
+   * Se pregunta antes porque deja constancia de quien firmo y cuando: es una
+   * afirmacion sobre un documento, no una casilla que se destilda.
+   */
+  async function firmarDocumento(row: FirmaWithSigners) {
+    const ok = await confirm({
+      title: 'Firmar documento',
+      message: (
+        <>
+          ¿Dar por firmado <strong>{row.tipo}</strong>? Queda registrado con tu nombre y la
+          fecha de hoy.
+        </>
+      ),
+      confirmLabel: 'Firmar',
+    });
+    if (!ok) return;
+    try {
+      await firmar.mutateAsync(row.id);
+      toast.success('Documento firmado.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
 
   const [editing, setEditing] = useState<FirmaWithSigners | null | undefined>(undefined);
   const [viewing, setViewing] = useState<FirmaWithSigners | null>(null);
@@ -262,6 +296,16 @@ export function FirmasSection({ canEdit }: { canEdit: boolean }) {
         rowKey={(r) => r.id}
         actions={(row) => (
           <div className="flex justify-end gap-1">
+            {canEdit && row.status_firma === 'en_espera' && (
+              <button
+                type="button"
+                onClick={() => void firmarDocumento(row)}
+                className="rounded-md bg-teal px-2 py-1 text-xs font-extrabold text-white hover:bg-teal-d"
+                title="Marcar como firmado"
+              >
+                ✍️ Firmar
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setViewing(row)}

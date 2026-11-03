@@ -141,9 +141,9 @@ export type Database = {
         ];
       };
       usuarios: {
-        Row: { id: string; nombre: string | null; email: string | null; rol: Database['public']['Enums']['app_rol']; miembro_id: string | null; activo: boolean; created_at: string; updated_at: string };
-        Insert: { id: string; nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; activo?: boolean };
-        Update: { nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; activo?: boolean };
+        Row: { id: string; nombre: string | null; email: string | null; rol: Database['public']['Enums']['app_rol']; miembro_id: string | null; activo: boolean; firma_path: string | null; created_at: string; updated_at: string };
+        Insert: { id: string; nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; activo?: boolean; firma_path?: string | null };
+        Update: { nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; activo?: boolean; firma_path?: string | null };
         Relationships: [
           { foreignKeyName: 'usuarios_miembro_id_fkey'; columns: ['miembro_id']; referencedRelation: 'miembros_board'; referencedColumns: ['id'] },
         ];
@@ -589,6 +589,9 @@ export type Database = {
           fecha_entrega: string | null;
           quien_recibe: string | null;
           pago_id: string | null;
+          origen: string;
+          liquidacion_id: string | null;
+          firmada_por: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -610,6 +613,9 @@ export type Database = {
           fecha_entrega?: string | null;
           quien_recibe?: string | null;
           pago_id?: string | null;
+          origen?: string;
+          liquidacion_id?: string | null;
+          firmada_por?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -624,6 +630,9 @@ export type Database = {
           fecha_entrega?: string | null;
           quien_recibe?: string | null;
           pago_id?: string | null;
+          origen?: string;
+          liquidacion_id?: string | null;
+          firmada_por?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [

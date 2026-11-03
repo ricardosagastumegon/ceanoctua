@@ -83,6 +83,26 @@ export const firmasApi = {
     return data;
   },
 
+  /**
+   * Firmar el documento.
+   *
+   * Deja constancia de quien y cuando: sin eso, "firmado" es una casilla que
+   * alguien marco y no se sabe quien. Se hace con un boton y no abriendo el
+   * formulario de edicion, que era la unica forma y nadie adivinaba.
+   */
+  async firmar(id: string): Promise<void> {
+    const { data: sesion } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('firmas')
+      .update({
+        status_firma: 'firmado',
+        fecha_firma: new Date().toISOString().slice(0, 10),
+        firmada_por: sesion.user?.id ?? null,
+      })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   async remove(id: string): Promise<void> {
     // Soft delete to keep audit trail consistent
     const { error } = await supabase.from('firmas').update({ deleted_at: new Date().toISOString() }).eq('id', id);

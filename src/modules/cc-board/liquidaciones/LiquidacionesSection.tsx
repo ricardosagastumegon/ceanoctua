@@ -366,11 +366,14 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
               >
                 👁
               </button>
-              {/* Botón PAGOS siempre visible — el usuario decide si enviar a Pagos
-                  sin importar la forma de pago. */}
+              {/* A Pagos solo van las que paga una entidad: una solicitud de
+                  pago es un trámite contable de la entidad, no de una
+                  persona. La que pagó alguien de su bolsa se reintegra, no se
+                  tramita. */}
               {canEdit && (
                 <button
                   type="button"
+                  disabled={!row.paga_entidad_id}
                   onClick={async () => {
                     try {
                       await pushPagoNotificacion({
@@ -379,14 +382,19 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
                         monto: Number(row.monto_total),
                         moneda: row.moneda,
                         resumen: `Liquidación ${row.serial ?? ''} · ${row.motivo ?? '(sin motivo)'} · ${row.solicitado ?? ''}`,
+                        entidad_id: row.paga_entidad_id,
                       });
                       toast.success('Enviado a Pagos · ver Notificaciones');
                     } catch (e) {
                       toast.error(describeError(e));
                     }
                   }}
-                  className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20"
-                  title="Enviar a Pagos como notificación"
+                  className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={
+                    row.paga_entidad_id
+                      ? 'Enviar a Pagos como notificación'
+                      : 'Solo se envían a Pagos las liquidaciones que paga una entidad'
+                  }
                 >
                   💸 PAGOS
                 </button>

@@ -136,6 +136,12 @@ export async function pushPagoNotificacion(input: {
   monto: number | null;
   moneda: string | null;
   resumen: string;
+  /**
+   * La entidad que paga. Viaja con la notificación para que el panel pueda
+   * juntar varias en una sola solicitud sin ir a buscarla a otra tabla, y
+   * porque una solicitud de pago es un trámite de una entidad.
+   */
+  entidad_id?: string | null;
 }): Promise<void> {
   const { error } = await supabase.from('pagos_notificaciones').insert({
     origen_tipo: input.origen_tipo,
@@ -143,6 +149,7 @@ export async function pushPagoNotificacion(input: {
     monto: input.monto,
     moneda: input.moneda,
     resumen: input.resumen,
+    entidad_id: input.entidad_id ?? null,
   });
   if (error) throw error;
   // La invalidación va AQUÍ y no en cada caller: con `staleTime: 30s` el panel

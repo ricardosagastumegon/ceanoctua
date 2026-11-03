@@ -3452,6 +3452,7 @@ export type Database = {
           resumen: string | null;
           procesado: boolean;
           pago_id: string | null;
+          entidad_id: string | null;
           created_at: string;
           procesado_at: string | null;
         };
@@ -3464,11 +3465,13 @@ export type Database = {
           resumen?: string | null;
           procesado?: boolean;
           pago_id?: string | null;
+          entidad_id?: string | null;
           procesado_at?: string | null;
         };
         Update: {
           procesado?: boolean;
           pago_id?: string | null;
+          entidad_id?: string | null;
           procesado_at?: string | null;
         };
         Relationships: [
@@ -3498,6 +3501,8 @@ export type Database = {
           solicitado: string | null;
           reintegrar_a: string | null;
           reintegrar_a_persona_id: string | null;
+          paga_entidad_id: string | null;
+          paga_persona_id: string | null;
           vale_serial: string | null;
           vale_monto: number;
           total_compras: number | null;
@@ -3528,6 +3533,8 @@ export type Database = {
           solicitado?: string | null;
           reintegrar_a?: string | null;
           reintegrar_a_persona_id?: string | null;
+          paga_entidad_id?: string | null;
+          paga_persona_id?: string | null;
           vale_serial?: string | null;
           vale_monto?: number;
           total_compras?: number | null;
@@ -3554,6 +3561,8 @@ export type Database = {
           solicitado?: string | null;
           reintegrar_a?: string | null;
           reintegrar_a_persona_id?: string | null;
+          paga_entidad_id?: string | null;
+          paga_persona_id?: string | null;
           vale_serial?: string | null;
           vale_monto?: number;
           total_compras?: number | null;

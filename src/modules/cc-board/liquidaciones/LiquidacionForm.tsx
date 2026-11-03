@@ -4,6 +4,7 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { formatMoney } from '@/lib/money';
 import { useVales } from '../vales/hooks';
+import { useEntidades, usePersonas } from '@/modules/admin/hooks';
 import { useLinkedVales, useLiqRows } from './hooks';
 import {
   LIQ_ESTADOS,
@@ -35,6 +36,8 @@ type FormState = {
   reintegrar_a: string;
   vale_serial: string;
   vale_monto: string;
+  /** Quien paga, codificado como `ent:<uuid>` o `per:<uuid>`. */
+  paga: string;
   comentarios: string;
   notas: string;
   responsable: string;
@@ -64,6 +67,7 @@ const empty: FormState = {
   reintegrar_a: '',
   vale_serial: '',
   vale_monto: '0',
+  paga: '',
   comentarios: '',
   notas: '',
   responsable: '',
@@ -93,6 +97,11 @@ function fromRow(r: Liquidacion | null | undefined): FormState {
     reintegrar_a: r.reintegrar_a ?? '',
     vale_serial: r.vale_serial ?? '',
     vale_monto: String(r.vale_monto ?? 0),
+    paga: r.paga_entidad_id
+      ? `ent:${r.paga_entidad_id}`
+      : r.paga_persona_id
+        ? `per:${r.paga_persona_id}`
+        : '',
     comentarios: r.comentarios ?? '',
     notas: r.notas ?? '',
     responsable: r.responsable ?? '',
@@ -125,6 +134,8 @@ export function LiquidacionForm({ initial, preLinkValeId, submitting, onSubmit, 
   const [selectedValeIds, setSelectedValeIds] = useState<string[]>([]);
 
   const valesQ = useVales();
+  const entidadesQ = useEntidades();
+  const personasQ = usePersonas();
   const existingRowsQ = useLiqRows(initial?.id);
   const linkedValesQ = useLinkedVales(initial?.id);
 
@@ -190,6 +201,23 @@ export function LiquidacionForm({ initial, preLinkValeId, submitting, onSubmit, 
   }
 
   const total = rows.reduce((s, r) => s + numCantidad(r.cantidad) * numCantidad(r.unitario), 0);
+  // El nombre del pagador, para la foto que se guarda en `entidad`.
+  const nombrePaga = v.paga.startsWith('ent:')
+    ? (entidadesQ.data ?? []).find((x) => x.id === v.paga.slice(4))?.nombre ?? ''
+    : v.paga.startsWith('per:')
+      ? (personasQ.data ?? []).find((x) => x.id === v.paga.slice(4))?.nombre ?? ''
+      : '';
+
+  // Al liquidar un vale, quien paga sale del vale y no se teclea. En un vale a
+  // entidad es `vale_a_entidad_id`; en un desembolso, `liquidar_a_entidad_id`:
+  // en los dos casos el lado entidad es el que pone el dinero.
+  useEffect(() => {
+    if (initial?.id || v.paga) return;
+    const vale = (valesQ.data ?? []).find((x) => selectedValeIds.includes(x.id));
+    const ent = vale?.vale_a_entidad_id ?? vale?.liquidar_a_entidad_id ?? null;
+    if (ent) setV((p) => (p.paga ? p : { ...p, paga: `ent:${ent}` }));
+  }, [selectedValeIds, valesQ.data, initial?.id, v.paga]);
+
   // Suma de los vales seleccionados (M:N). Reemplaza al vale_monto single.
   const valeMonto = (valesQ.data ?? [])
     .filter((x) => selectedValeIds.includes(x.id))
@@ -218,13 +246,18 @@ export function LiquidacionForm({ initial, preLinkValeId, submitting, onSubmit, 
       periodo: v.periodo.trim() || null,
       moneda: v.moneda,
       monto_total: total,
-      entidad: v.entidad.trim() || null,
+      // La foto del nombre el dia que se capturo. Sale del catalogo, no de
+      // lo que alguien escriba: es lo que imprime la hoja y lo que leen las
+      // liquidaciones viejas.
+      entidad: nombrePaga || null,
       payment_method: v.payment_method || null,
       motivo: v.motivo.trim(),
       producto: v.producto.trim() || null,
       solicitado: v.solicitado.trim(),
       reintegrar_a: v.reintegrar_a.trim() || null,
       vale_serial: v.vale_serial.trim() || null,
+      paga_entidad_id: v.paga.startsWith('ent:') ? v.paga.slice(4) : null,
+      paga_persona_id: v.paga.startsWith('per:') ? v.paga.slice(4) : null,
       vale_monto: valeMonto,
       comentarios: v.comentarios.trim() || null,
       notas: v.notas.trim() || null,
@@ -267,7 +300,38 @@ export function LiquidacionForm({ initial, preLinkValeId, submitting, onSubmit, 
           </Select>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <TextInput name="entidad" label="Entidad o personal que paga" value={v.entidad} onChange={(e) => upd('entidad', e.target.value)} />
+          <div>
+            <Select
+              name="paga"
+              label="Entidad o personal que paga"
+              value={v.paga}
+              onChange={(e) => upd('paga', e.target.value)}
+            >
+              <option value="">— Seleccionar —</option>
+              <optgroup label="Entidades">
+                {(entidadesQ.data ?? []).map((x) => (
+                  <option key={x.id} value={`ent:${x.id}`}>{x.nombre}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Personal JD">
+                {(personasQ.data ?? []).map((x) => (
+                  <option key={x.id} value={`per:${x.id}`}>{x.nombre}</option>
+                ))}
+              </optgroup>
+            </Select>
+            {v.paga.startsWith('per:') && (
+              <p className="mt-1 text-[11px] text-rust">
+                Pagado por una persona: esta liquidación no se puede enviar a Pagos. Una
+                solicitud de pago es un trámite contable de una entidad.
+              </p>
+            )}
+            {!v.paga && v.entidad && (
+              <p className="mt-1 text-[11px] text-rust">
+                Decía «{v.entidad}» y no corresponde a ningún catálogo. Escógelo de la lista
+                para no perder la trazabilidad.
+              </p>
+            )}
+          </div>
           <Select name="payment_method" label="Forma de pago" value={v.payment_method} onChange={(e) => upd('payment_method', e.target.value)}>
             {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>

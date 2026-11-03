@@ -42,14 +42,14 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
-### DT-21 ·  está copiado nueve veces
+### DT-21 · `ConfirmacionBoton` está copiado nueve veces
 
 - **Origen:** Fase 40 · al agregarle el botón de «Ver» a los adjuntos de T&T.
 - **Impacto:** el mismo componente --subir un archivo y avisar que ya está--
   vive duplicado en los nueve formularios de servicio, idéntico salvo el
   color y el nombre de la función que sube. Cada arreglo hay que hacerlo
   nueve veces, que es justo lo que acaba de pasar.
-- **Estimado:** 40 min · un solo componente en  que reciba la
+- **Estimado:** 40 min · un solo componente en `arriaza/shared` que reciba la
   función de subida y los colores del servicio. Sin riesgo de datos: es
   puramente de pantalla.
 - **Estado:** Pendiente, sin urgencia. Hacerlo cuando toque tocar esos

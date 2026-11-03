@@ -154,7 +154,7 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
             ? 'Tus pendientes, con su prioridad y en qué va cada uno.'
             : 'Pendientes operativos del CEA con prioridad (Alta/Hold/TKIM/Media/Baja) y estado del flujo (Comentado → Solicitado → Planeado → Ejecutado → Finalizado).'
         }
-        newLabel="+ Nuevo to-do"
+        newLabel="+ Nuevo pendiente"
         modalSize="lg"
         columns={columns}
         rows={filtrados}

@@ -213,7 +213,18 @@ export function GerenteView() {
                 }
                 alerta={espera != null && espera <= -3}
                 accion={
-                  <BotonFirmar onClick={() => void firmarDocumento(f.id, f.tipo)} />
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    {pago?.serial && (
+                      <Link
+                        to={`/finanzas?sp=${encodeURIComponent(pago.serial)}#pagos`}
+                        className="rounded-md border border-teal/40 px-2.5 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                        title="Abrir la solicitud en Finanzas para revisarla antes de firmar"
+                      >
+                        Ver detalles
+                      </Link>
+                    )}
+                    <BotonFirmar onClick={() => void firmarDocumento(f.id, f.tipo)} />
+                  </div>
                 }
               />
             );
@@ -258,7 +269,7 @@ export function GerenteView() {
       {/* ── Tareas ───────────────────────────────────────────────────── */}
       <Bloque
         titulo="Tareas pendientes"
-        bajada="Del tablero de to-dos de CEA"
+        bajada="Del TO DO de CEA"
         icono="✅"
         cuenta={pendientes.length}
         color="#bf4609"

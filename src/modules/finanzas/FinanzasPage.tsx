@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/lib/auth';
+import { puede, useAuth } from '@/lib/auth';
 
 // Las 5 secciones del módulo Finanzas (Fase 16 · F-0):
 //   1. Vales              ← venía de CC Board
@@ -38,7 +38,11 @@ const sections: { key: SectionKey; label: string }[] = [
 
 export function FinanzasPage() {
   const { profile } = useAuth();
-  const canEdit = profile?.rol === 'admin' || profile?.rol === 'asistente';
+  // Quien entra y quien puede escribir salen del permiso por módulo. Antes
+  // se miraba el rol base, y por eso la gerente --`solo_lectura` con
+  // `finanzas:observador`-- veía la pestaña en la barra y al entrar se topaba
+  // con «Sin acceso».
+  const canEdit = puede(profile, 'finanzas', 'editor');
   const location = useLocation();
 
   // Sub-sección inicial: lee el hash de la URL (ej. /finanzas#vales) si existe.
@@ -48,17 +52,23 @@ export function FinanzasPage() {
   };
   const [tab, setTab] = useState<SectionKey>(initialFromHash);
 
+  // `?sp=SP-2026-0011` llega desde «Ver detalles» en el tablero de quien
+  // firma: no basta con dejarla en la lista, hay que decirle cuál es la suya.
+  const resaltar = new URLSearchParams(location.search).get('sp');
+
   // Si el hash cambia (ej. navegación desde otra sección), actualiza tab.
   useEffect(() => {
     const h = location.hash.replace('#', '') as SectionKey;
     if (sections.find((s) => s.key === h)) setTab(h);
   }, [location.hash]);
 
-  if (profile?.rol !== 'admin' && profile?.rol !== 'asistente') {
+  if (!puede(profile, 'finanzas')) {
     return (
       <section className="rounded-card border border-sand bg-white p-8 shadow-sm">
         <h1 className="font-heading text-2xl font-semibold text-dark">Sin acceso</h1>
-        <p className="mt-2 text-sm text-dark-2">El módulo Finanzas es exclusivo de admin y asistente.</p>
+        <p className="mt-2 text-sm text-dark-2">
+          No tienes Finanzas asignado. Se habilita en Admin → Usuarios y accesos.
+        </p>
       </section>
     );
   }
@@ -97,7 +107,7 @@ export function FinanzasPage() {
       {tab === 'reintegros' && <ReintegrosSection canEdit={canEdit} />}
       {tab === 'consumos' && <ConsumosSection canEdit={canEdit} tipo="corporativa" />}
       {tab === 'consumos_pres' && <ConsumosSection canEdit={canEdit} tipo="presidencia" />}
-      {tab === 'pagos' && <PagosSection canEdit={canEdit} />}
+      {tab === 'pagos' && <PagosSection canEdit={canEdit} resaltar={resaltar} />}
     </section>
   );
 }

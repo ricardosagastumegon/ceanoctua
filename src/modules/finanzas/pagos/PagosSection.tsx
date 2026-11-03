@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { StepTracker } from '@/components/ui/StepTracker';
@@ -42,7 +42,25 @@ const estadoBg: Record<Pago['status'], string> = {
   Devuelto: 'bg-rust text-white',
 };
 
-export function PagosSection({ canEdit }: { canEdit: boolean }) {
+export function PagosSection({
+  canEdit,
+  resaltar,
+}: {
+  canEdit: boolean;
+  /** Serial de la solicitud a la que se vino, si se llegó desde el tablero. */
+  resaltar?: string | null;
+}) {
+  // Traerla a la vista y marcarla. Sin esto, quien llega desde su tablero cae
+  // en una lista de solicitudes parecidas y tiene que adivinar cuál era.
+  const resaltada = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    if (!resaltar) return;
+    const t = setTimeout(() => {
+      resaltada.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [resaltar]);
+
   const query = usePagos();
   const create = useCreatePago();
   const update = useUpdatePago();
@@ -399,7 +417,16 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
             const isLast = p.step_idx >= PAGO_STEPS.length - 1;
             const tipoColor = p.tipo_label ? PAGO_TIPO_COLORS[p.tipo_label] : undefined;
             return (
-              <li key={p.id} className="rounded-card border border-sand bg-white p-4 shadow-sm">
+              <li
+                key={p.id}
+                ref={resaltar && p.serial === resaltar ? resaltada : undefined}
+                className={[
+                  'rounded-card border bg-white p-4 shadow-sm',
+                  resaltar && p.serial === resaltar
+                    ? 'border-gold ring-2 ring-gold/40'
+                    : 'border-sand',
+                ].join(' ')}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">

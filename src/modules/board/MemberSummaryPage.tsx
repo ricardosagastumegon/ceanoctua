@@ -251,7 +251,7 @@ export function MemberSummaryPage({ codigo }: Props) {
               ← Dashboard
             </Link>
             <Link to="/cea" className="inline-flex items-center rounded-md border border-sand px-3 py-1.5 text-xs font-semibold text-dark-2 hover:bg-sand-l">
-              CEA · To-dos / Firmas
+              CEA · TO DO / Firmas
             </Link>
             <Link to="/finanzas" className="inline-flex items-center rounded-md border border-sand px-3 py-1.5 text-xs font-semibold text-dark-2 hover:bg-sand-l">
               Finanzas

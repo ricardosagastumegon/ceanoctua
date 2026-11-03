@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
 import { usePagos } from '@/modules/finanzas/pagos/hooks';
+import { useLiquidaciones } from '@/modules/cc-board/liquidaciones/hooks';
 import { useCeaTodos } from '@/modules/cea/todos/hooks';
 import { useAttViajes } from '@/modules/arriaza/viajes/hooks';
 import { formatMoney } from '@/lib/money';
@@ -87,6 +88,7 @@ export function GerenteView() {
   const { profile } = useAuth();
   const firmasQ = useFirmas();
   const pagosQ = usePagos();
+  const liquidacionesQ = useLiquidaciones();
   const todosQ = useCeaTodos();
   const viajesQ = useAttViajes();
   const firmar = useFirmarDocumento();
@@ -118,6 +120,9 @@ export function GerenteView() {
   }
 
   const porPago = new Map((pagosQ.data ?? []).map((p) => [p.id, p]));
+  // Una firma digital puede venir de una solicitud de pago o de una
+  // liquidación. Las dos llevan a su documento; lo que cambia es la puerta.
+  const porLiquidacion = new Map((liquidacionesQ.data ?? []).map((l) => [l.id, l]));
 
   // Cada quien ve lo suyo. El admin las ve todas, porque es quien reparte y
   // necesita saber que esta parado aunque no sea suyo.
@@ -195,6 +200,12 @@ export function GerenteView() {
         >
           {digitales.map((f) => {
             const pago = f.pago_id ? porPago.get(f.pago_id) : undefined;
+            const liq = f.liquidacion_id ? porLiquidacion.get(f.liquidacion_id) : undefined;
+            const aDonde = pago?.serial
+              ? `/finanzas?sp=${encodeURIComponent(pago.serial)}#pagos`
+              : liq?.serial
+                ? `/finanzas?liq=${encodeURIComponent(liq.serial)}#liquidaciones`
+                : null;
             const espera = enDias(f.recepcion);
             return (
               <Renglon
@@ -202,10 +213,16 @@ export function GerenteView() {
                 etiqueta={f.urgencia ?? 'programado'}
                 tono={TONO_URGENCIA[f.urgencia ?? 'programado'] ?? TONO_URGENCIA.programado}
                 titulo={f.tipo}
-                detalle={[pago?.proveedor ?? f.solicitado, f.justificacion]
+                detalle={[pago?.proveedor ?? liq?.solicitado ?? f.solicitado, f.justificacion]
                   .filter(Boolean)
                   .join(' · ')}
-                cifra={pago ? money(Number(pago.monto), pago.moneda) : null}
+                cifra={
+                  pago
+                    ? money(Number(pago.monto), pago.moneda)
+                    : liq
+                      ? money(Number(liq.monto_total), liq.moneda)
+                      : null
+                }
                 pie={
                   espera != null && espera <= -3
                     ? `${Math.abs(espera)} días esperando`
@@ -214,9 +231,9 @@ export function GerenteView() {
                 alerta={espera != null && espera <= -3}
                 accion={
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                    {pago?.serial && (
+                    {aDonde && (
                       <Link
-                        to={`/finanzas?sp=${encodeURIComponent(pago.serial)}#pagos`}
+                        to={aDonde}
                         className="rounded-md border border-teal/40 px-2.5 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
                         title="Abrir la solicitud en Finanzas para revisarla antes de firmar"
                       >

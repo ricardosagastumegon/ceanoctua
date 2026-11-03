@@ -21,7 +21,8 @@ import {
 import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
-import { useCancelarFirma, useFirmasPendientes } from '@/modules/cea/firmas/hooks';
+import { useCancelarFirma, useFirmas, useFirmasPendientes } from '@/modules/cea/firmas/hooks';
+import { useAuth } from '@/lib/auth';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { useEntidades } from '@/modules/admin/hooks';
 
@@ -51,7 +52,21 @@ const estadoBg: Record<string, string> = {
   Pagada: 'bg-teal text-white',
 };
 
-export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
+export function LiquidacionesSection({
+  canEdit,
+  resaltar,
+}: {
+  canEdit: boolean;
+  /** Serial de la liquidación a la que se vino desde el tablero de firmas. */
+  resaltar?: string | null;
+}) {
+  const { profile } = useAuth();
+
+  // La asistente lleva el libro completo. Quien entra de afuera llegó aquí
+  // porque le mandaron un documento a firmar, y solo le corresponden esos:
+  // el resto de las liquidaciones del mes no son asunto suyo.
+  const soloMias = !(profile?.rol === 'admin' || profile?.rol === 'asistente');
+  const firmasQ = useFirmas();
   const query = useLiquidaciones();
   const create = useCreateLiquidacion();
   const update = useUpdateLiquidacion();
@@ -129,11 +144,22 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const [editing, setEditing] = useState<Liquidacion | null | undefined>(undefined);
   const [viewing, setViewing] = useState<Liquidacion | null>(null);
   const viewingRows = useLiqRows(viewing?.id);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(resaltar ?? '');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterName, setFilterName] = useState('');
 
-  const all = query.data ?? [];
+  const mias = useMemo(() => {
+    const ids = new Set<string>();
+    for (const f of firmasQ.data ?? []) {
+      if (f.liquidacion_id && f.asignada_a === profile?.id) ids.add(f.liquidacion_id);
+    }
+    return ids;
+  }, [firmasQ.data, profile?.id]);
+
+  const all = useMemo(() => {
+    const filas = query.data ?? [];
+    return soloMias ? filas.filter((r) => mias.has(r.id)) : filas;
+  }, [query.data, soloMias, mias]);
 
   // Filtros
   const filtered = useMemo(() => {
@@ -380,7 +406,11 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
         loading={query.isLoading}
         error={query.isError ? describeError(query.error) : null}
         onRetry={() => void query.refetch()}
-        emptyMessage="Sin liquidaciones con estos filtros."
+        emptyMessage={
+          soloMias
+            ? 'No tienes liquidaciones enviadas a tu firma.'
+            : 'Sin liquidaciones con estos filtros.'
+        }
         rowKey={(r) => r.id}
         actions={(row) => {
           return (

@@ -27,12 +27,24 @@ type SectionKey =
   | 'consumos_pres'
   | 'pagos';
 
-const sections: { key: SectionKey; label: string }[] = [
-  { key: 'vales', label: 'Vales' },
-  { key: 'liquidaciones', label: 'Liquidaciones' },
-  { key: 'reintegros', label: 'Reintegros' },
+/**
+ * `interna` marca lo que es la operación de la asistente: los vales y sus
+ * liquidaciones, los reintegros, y los consumos de las tarjetas de
+ * Presidencia, que solo conciernen a Presidencia.
+ *
+ * Quien entra de afuera viene a revisar lo que tiene que autorizar --las
+ * solicitudes de pago-- y el gasto de las corporativas. Las otras cuatro
+ * pestañas le estorban.
+ *
+ * A una liquidación sí puede llegar, pero por la puerta de su tablero: si se
+ * la mandaron a firmar, «Ver detalles» la trae con `?liq=`.
+ */
+const sections: { key: SectionKey; label: string; interna?: boolean }[] = [
+  { key: 'vales', label: 'Vales', interna: true },
+  { key: 'liquidaciones', label: 'Liquidaciones', interna: true },
+  { key: 'reintegros', label: 'Reintegros', interna: true },
   { key: 'consumos', label: 'Consumos TC Corp' },
-  { key: 'consumos_pres', label: 'Consumos TC Pres' },
+  { key: 'consumos_pres', label: 'Consumos TC Pres', interna: true },
   { key: 'pagos', label: 'Pagos' },
 ];
 
@@ -45,22 +57,36 @@ export function FinanzasPage() {
   const canEdit = puede(profile, 'finanzas', 'editor');
   const location = useLocation();
 
+  const esAsistente = profile?.rol === 'admin' || profile?.rol === 'asistente';
+
+  // `?sp=SP-2026-0011` o `?liq=CC-2026-0019` llegan desde «Ver detalles» en el
+  // tablero de quien firma: no basta con dejarla en la lista, hay que decirle
+  // cuál es la suya.
+  const params = new URLSearchParams(location.search);
+  const resaltarPago = params.get('sp');
+  const resaltarLiq = params.get('liq');
+
+  // La liquidación que viene marcada en la URL abre su pestaña aunque no esté
+  // en la barra: se llega a ese documento concreto, no a la sección.
+  const visibles = sections.filter(
+    (s) => esAsistente || !s.interna || (s.key === 'liquidaciones' && !!resaltarLiq),
+  );
+
   // Sub-sección inicial: lee el hash de la URL (ej. /finanzas#vales) si existe.
   const initialFromHash = (): SectionKey => {
     const h = location.hash.replace('#', '') as SectionKey;
-    return (sections.find((s) => s.key === h)?.key ?? 'vales') as SectionKey;
+    return (visibles.find((s) => s.key === h)?.key ?? visibles[0]?.key ?? 'pagos') as SectionKey;
   };
   const [tab, setTab] = useState<SectionKey>(initialFromHash);
-
-  // `?sp=SP-2026-0011` llega desde «Ver detalles» en el tablero de quien
-  // firma: no basta con dejarla en la lista, hay que decirle cuál es la suya.
-  const resaltar = new URLSearchParams(location.search).get('sp');
 
   // Si el hash cambia (ej. navegación desde otra sección), actualiza tab.
   useEffect(() => {
     const h = location.hash.replace('#', '') as SectionKey;
-    if (sections.find((s) => s.key === h)) setTab(h);
-  }, [location.hash]);
+    if (visibles.find((s) => s.key === h)) setTab(h);
+    // `visibles` se recalcula en cada render; lo que importa es el hash y si
+    // la URL trae una liquidación marcada, que es lo que la hace visible.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.hash, resaltarLiq, esAsistente]);
 
   if (!puede(profile, 'finanzas')) {
     return (
@@ -85,7 +111,7 @@ export function FinanzasPage() {
 
       <div className="overflow-hidden rounded-card border border-sand bg-white p-1 shadow-sm">
         <nav className="flex flex-wrap gap-1" aria-label="Secciones de Finanzas">
-          {sections.map((s) => (
+          {visibles.map((s) => (
             <button
               key={s.key}
               type="button"
@@ -102,12 +128,14 @@ export function FinanzasPage() {
         </nav>
       </div>
 
-      {tab === 'vales' && <ValesSection canEdit={canEdit} />}
-      {tab === 'liquidaciones' && <LiquidacionesSection canEdit={canEdit} />}
-      {tab === 'reintegros' && <ReintegrosSection canEdit={canEdit} />}
+      {esAsistente && tab === 'vales' && <ValesSection canEdit={canEdit} />}
+      {tab === 'liquidaciones' && (
+        <LiquidacionesSection canEdit={canEdit} resaltar={resaltarLiq} />
+      )}
+      {esAsistente && tab === 'reintegros' && <ReintegrosSection canEdit={canEdit} />}
       {tab === 'consumos' && <ConsumosSection canEdit={canEdit} tipo="corporativa" />}
-      {tab === 'consumos_pres' && <ConsumosSection canEdit={canEdit} tipo="presidencia" />}
-      {tab === 'pagos' && <PagosSection canEdit={canEdit} resaltar={resaltar} />}
+      {esAsistente && tab === 'consumos_pres' && <ConsumosSection canEdit={canEdit} tipo="presidencia" />}
+      {tab === 'pagos' && <PagosSection canEdit={canEdit} resaltar={resaltarPago} />}
     </section>
   );
 }

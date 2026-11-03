@@ -1,9 +1,10 @@
-import { Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
+import { Navigate } from 'react-router-dom';
+import { cargar } from './cargar';
 import { puede, useAuth } from '@/lib/auth';
 import type { Modulo } from '@/types';
 
-const DashboardPage = lazy(() => import('@/modules/dashboard/page'));
+const DashboardPage = lazy(() => cargar(() => import('@/modules/dashboard/page')));
 
 /**
  * A dónde cae alguien que abre la aplicación.

@@ -7,6 +7,8 @@ import { describeError } from '@/modules/admin/hooks';
 import { ManualStatusSelect } from './shared/ManualStatusSelect';
 import { TripServicesPanel } from './TripServicesPanel';
 import { TripFormModal, type TripDestinos } from './TripFormModal';
+import { useSyncParticipantes } from './viajes/participantes-hooks';
+import type { ParticipanteInput } from './viajes/participantes-api';
 import { ItineraryModal } from './ItineraryModal';
 import { ShareModal } from './ShareModal';
 import { LiquidacionModal } from './LiquidacionModal';
@@ -49,6 +51,7 @@ export function TripDetailPage() {
   const update = useUpdateAttViaje();
   const remove = useDeleteAttViaje();
   const syncDestinos = useSyncViajeDestinos();
+  const syncParticipantes = useSyncParticipantes();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -79,11 +82,21 @@ export function TripDetailPage() {
   const ciudades = destinos.data?.ciudades ?? [];
   const paradas = destinos.data?.paradas ?? [];
 
-  async function handleSave(values: AttViajeInsert, nuevos: TripDestinos) {
+  // El tercer argumento es obligatorio aunque TypeScript no lo exija: una
+  // función que recibe menos parámetros de los que le pasan sigue siendo
+  // válida, así que este guardado se quedó sin participantes y los perdía en
+  // silencio. Cualquier pantalla que abra el formulario del viaje tiene que
+  // guardar las tres cosas: el viaje, sus destinos y quién va.
+  async function handleSave(
+    values: AttViajeInsert,
+    nuevos: TripDestinos,
+    participantes: ParticipanteInput[],
+  ) {
     if (!viaje) return;
     try {
       await update.mutateAsync({ id: viaje.id, patch: values });
       await syncDestinos.mutateAsync({ viajeId: viaje.id, ...nuevos });
+      await syncParticipantes.mutateAsync({ viajeId: viaje.id, participantes });
       toast.success('Viaje actualizado.');
       setEditOpen(false);
     } catch (err) {

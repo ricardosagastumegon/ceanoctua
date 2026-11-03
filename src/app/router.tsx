@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { cargar } from './cargar';
 import { Layout } from './Layout';
 import Login from './Login';
 import { Inicio } from './Inicio';
@@ -7,23 +8,23 @@ import NuevaClave from './NuevaClave';
 
 // Lazy-load every page so each lives in its own chunk.
 // Reduces initial bundle from ~880 KB to ~250 KB.
-const MaaPage = lazy(() => import('@/modules/maa/page'));
-const JaPage = lazy(() => import('@/modules/ja/page'));
-const LaPage = lazy(() => import('@/modules/la/page'));
-const JmPage = lazy(() => import('@/modules/jm/page'));
-const AaPage = lazy(() => import('@/modules/aa/page'));
-const EgPage = lazy(() => import('@/modules/eg/page'));
-const PePage = lazy(() => import('@/modules/pe/page'));
+const MaaPage = lazy(() => cargar(() => import('@/modules/maa/page')));
+const JaPage = lazy(() => cargar(() => import('@/modules/ja/page')));
+const LaPage = lazy(() => cargar(() => import('@/modules/la/page')));
+const JmPage = lazy(() => cargar(() => import('@/modules/jm/page')));
+const AaPage = lazy(() => cargar(() => import('@/modules/aa/page')));
+const EgPage = lazy(() => cargar(() => import('@/modules/eg/page')));
+const PePage = lazy(() => cargar(() => import('@/modules/pe/page')));
 // CcBoardPage eliminada en Fase 16 · F-0 (mergeada con Finanzas).
-const ArriazaPage = lazy(() => import('@/modules/arriaza/page'));
-const ArriazaTripPage = lazy(() => import('@/modules/arriaza/detail-page'));
-const AeronavesPage = lazy(() => import('@/modules/aeronaves/page'));
-const AeronaveDetailPage = lazy(() => import('@/modules/aeronaves/detail-page'));
-const CeaPage = lazy(() => import('@/modules/cea/page'));
-const AdminPage = lazy(() => import('@/modules/admin/page'));
-const MielSjPage = lazy(() => import('@/modules/miel-sj/page'));
-const FinanzasPage = lazy(() => import('@/modules/finanzas/page'));
-const CajaChicaPage = lazy(() => import('@/modules/caja-chica/page'));
+const ArriazaPage = lazy(() => cargar(() => import('@/modules/arriaza/page')));
+const ArriazaTripPage = lazy(() => cargar(() => import('@/modules/arriaza/detail-page')));
+const AeronavesPage = lazy(() => cargar(() => import('@/modules/aeronaves/page')));
+const AeronaveDetailPage = lazy(() => cargar(() => import('@/modules/aeronaves/detail-page')));
+const CeaPage = lazy(() => cargar(() => import('@/modules/cea/page')));
+const AdminPage = lazy(() => cargar(() => import('@/modules/admin/page')));
+const MielSjPage = lazy(() => cargar(() => import('@/modules/miel-sj/page')));
+const FinanzasPage = lazy(() => cargar(() => import('@/modules/finanzas/page')));
+const CajaChicaPage = lazy(() => cargar(() => import('@/modules/caja-chica/page')));
 
 function withSuspense(node: ReactNode) {
   return (

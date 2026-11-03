@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
@@ -101,10 +101,29 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
   // Los participantes llegan por su propia tabla. El nombre no se guarda ahí:
   // se busca en el catálogo al mostrar, para que corregir un nombre en Admin
   // lo corrija en todos los viajes donde aparece.
+  //
+  // Se llena UNA sola vez por viaje, y de ahí en adelante manda lo que el
+  // usuario tenga en pantalla, para que nada que llegue después le pise la
+  // selección.
+  //
+  // Espera además a que los DOS catálogos estén cargados. Si la lista de
+  // participantes llega antes que los nombres, cada participante se queda sin
+  // nombre y se cae de la lista; guardar en ese momento lo habría borrado del
+  // viaje de verdad.
+  const hidratado = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!open || !editing?.id || !participantesQ.data) return;
-    const personas = personasQ.data ?? [];
-    const invitados = invitadosQ.data ?? [];
+    if (!open) {
+      hidratado.current = null;
+      return;
+    }
+    if (!editing?.id) return;
+    if (hidratado.current === editing.id) return;
+    if (!participantesQ.data || !personasQ.data || !invitadosQ.data) return;
+
+    const personas = personasQ.data;
+    const invitados = invitadosQ.data;
+    hidratado.current = editing.id;
     setParticipantes(
       participantesQ.data
         .map((r): ParticipanteInput | null => {

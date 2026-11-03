@@ -57,6 +57,15 @@ TEXAS se partió en dos personas. Probado con rollback antes de aplicar.
   gerente es `solo_lectura` con `cea:editor`, y la pantalla le negaba lo que la
   base le permitía.
 
+**Incidente el mismo día:** agregar un participante desde la página del viaje
+no guardaba nada. Ese botón tiene su propio guardado, aparte del de la lista de
+viajes, y se quedó sin recibir los participantes. TypeScript no lo marca: una
+función que acepta menos parámetros de los que le pasan sigue siendo válida, así
+que el tercer argumento se perdía en silencio. El audit_log lo delató —viaje,
+países y ciudades actualizados, cero participantes—. De paso se arregló el
+«Failed to fetch dynamically imported module» al navegar con una pestaña abierta
+desde antes de publicar: ahora la página se recarga sola una vez.
+
 **Comentarios:** queda pendiente clasificar los 12 invitados migrados, que
 entraron con relación «Por clasificar». La gerente no figura hoy en ningún
 viaje, así que su Arriaza T&T está vacío hasta que se le agregue a uno.

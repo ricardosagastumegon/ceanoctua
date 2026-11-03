@@ -192,7 +192,25 @@ export function ConsumosSection({ canEdit, tipo }: SectionProps) {
   }
 
   const columns: DataTableColumn<Consumo>[] = [
-    { key: 'voucher_num', header: 'Voucher', sortable: true, accessor: (r) => r.voucher_num, render: (r) => <span className="font-mono text-xs text-dark">{r.voucher_num ?? '—'}</span> },
+    {
+      key: 'voucher_num',
+      header: 'Voucher',
+      sortable: true,
+      accessor: (r) => r.voucher_num,
+      render: (r) => (
+        <span>
+          <span className="font-mono text-xs text-dark">{r.voucher_num ?? '—'}</span>
+          {r.origen_tabla && (
+            <span
+              className="ml-1.5 inline-flex rounded-full bg-teal-l px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-teal-d"
+              title="Nace de un servicio de Arriaza T&T. Se mantiene desde el viaje."
+            >
+              T&amp;T
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: 'fecha', header: 'Fecha', sortable: true, accessor: (r) => r.fecha, render: (r) => formatDate(r.fecha) },
     { key: 'card_id', header: 'Tarjeta', sortable: true, accessor: (r) => r.card_id, render: (r) => <span className="font-mono text-xs text-dark-2">{r.card_id}</span> },
     { key: 'proveedor', header: 'Proveedor', sortable: true, accessor: (r) => r.proveedor, render: (r) => <span className="font-medium text-dark">{r.proveedor}</span> },

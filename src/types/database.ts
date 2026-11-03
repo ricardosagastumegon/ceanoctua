@@ -3638,6 +3638,8 @@ export type Database = {
           no_autorizacion: string | null;
           pagado_por: string | null;
           reintegro_id: string | null;
+          origen_tabla: string | null;
+          origen_id: string | null;
           deleted_at: string | null;
         };
         Insert: AuditInsert & {
@@ -3661,6 +3663,8 @@ export type Database = {
           no_autorizacion?: string | null;
           pagado_por?: string | null;
           reintegro_id?: string | null;
+          origen_tabla?: string | null;
+          origen_id?: string | null;
           deleted_at?: string | null;
         };
         Update: AuditUpdate & {
@@ -3681,6 +3685,8 @@ export type Database = {
           no_autorizacion?: string | null;
           pagado_por?: string | null;
           reintegro_id?: string | null;
+          origen_tabla?: string | null;
+          origen_id?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];

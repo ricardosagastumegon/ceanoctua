@@ -140,6 +140,13 @@ export function ConsumoForm({ initial, submitting, onSubmit, onCancel }: Catalog
           <span className="font-mono text-dark">{initial.voucher_num}</span>
         </div>
       )}
+      {initial?.origen_tabla && (
+        <div className="rounded-md border border-teal/40 bg-teal-l/40 px-3 py-2 text-xs text-dark-2">
+          <b>Este consumo nace de un servicio de Arriaza T&amp;T.</b> La fecha, la tarjeta y el
+          monto se mantienen desde el viaje: lo que corrijas aquí se va a volver a escribir la
+          próxima vez que se guarde ese servicio. Corrígelo en el viaje.
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="fecha" label="Fecha *" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} required />
         <TextInput name="monto" label="Monto *" type="number" min="0" step="0.01" value={v.monto} onChange={(e) => upd('monto', e.target.value)} required />

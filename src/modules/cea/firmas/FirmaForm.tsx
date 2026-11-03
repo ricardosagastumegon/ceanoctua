@@ -6,6 +6,7 @@ import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
 import type { Database } from '@/types/database';
 import type { FirmaInsert, FirmaWithSigners } from './api';
 import { useBoardMiembros } from './hooks';
+import { PersonaSelect } from './PersonaSelect';
 
 type Urgencia = Database['public']['Enums']['firma_urgencia'];
 type StatusFirma = Database['public']['Enums']['firma_status'];
@@ -131,13 +132,30 @@ export function FirmaForm({ initial, submitting, onSubmit, onCancel }: FirmaForm
       </div>
       <TextArea name="justificacion" label="Justificación" value={v.justificacion} onChange={(e) => upd('justificacion', e.target.value)} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextInput name="entregado" label="Entregado por" value={v.entregado} onChange={(e) => upd('entregado', e.target.value)} />
-        <TextInput name="solicitado" label="Solicitado por" value={v.solicitado} onChange={(e) => upd('solicitado', e.target.value)} />
+        <PersonaSelect
+          name="entregado"
+          label="Entregado por"
+          value={v.entregado}
+          onChange={(x) => upd('entregado', x)}
+          hint="Quién trajo el documento"
+        />
+        <PersonaSelect
+          name="solicitado"
+          label="Solicitado por"
+          value={v.solicitado}
+          onChange={(x) => upd('solicitado', x)}
+          hint="Quién pide la firma"
+        />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="fecha_firma" label="Fecha firma" type="date" value={v.fecha_firma} onChange={(e) => upd('fecha_firma', e.target.value)} />
         <TextInput name="fecha_entrega" label="Fecha entrega" type="date" value={v.fecha_entrega} onChange={(e) => upd('fecha_entrega', e.target.value)} />
-        <TextInput name="quien_recibe" label="Quién recibe" value={v.quien_recibe} onChange={(e) => upd('quien_recibe', e.target.value)} />
+        <PersonaSelect
+          name="quien_recibe"
+          label="Quién recibe"
+          value={v.quien_recibe}
+          onChange={(x) => upd('quien_recibe', x)}
+        />
       </div>
 
       {/* Multi-select de firmantes */}

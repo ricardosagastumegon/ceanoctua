@@ -138,8 +138,13 @@ export function GerenteView() {
   const digitales = enEspera.filter((f) => f.origen === 'digital');
   const fisicas = enEspera.filter((f) => f.origen !== 'digital');
 
+  // Solo lo asignado a esta persona. Antes aparecian los pendientes de todo
+  // el equipo, que para quien supervisa es ruido: no sabe cuales atender.
+  // Quien no tenga persona de Personal JD asociada no ve ninguno, que es
+  // preferible a verlos todos.
   const pendientes = (todosQ.data ?? [])
     .filter((t) => !t.done)
+    .filter((t) => !!profile?.persona_id && t.persona_id === profile.persona_id)
     .sort(
       (a, b) =>
         (PESO_PRIORIDAD[a.prioridad ?? 'media'] ?? 1) -

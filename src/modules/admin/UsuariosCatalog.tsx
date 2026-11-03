@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
-import { describeError } from '@/modules/admin/hooks';
+import { describeError, usePersonas } from '@/modules/admin/hooks';
 import type { AppRol, Modulo, Permiso } from '@/types';
 
 /**
@@ -47,6 +47,7 @@ type UsuarioFila = {
   email: string | null;
   rol: AppRol;
   activo: boolean;
+  persona_id: string | null;
 };
 
 function useUsuarios() {
@@ -55,7 +56,7 @@ function useUsuarios() {
     queryFn: async (): Promise<UsuarioFila[]> => {
       const { data, error } = await supabase
         .from('usuarios')
-        .select('id, nombre, email, rol, activo')
+        .select('id, nombre, email, rol, activo, persona_id')
         .order('nombre');
       if (error) throw error;
       return (data ?? []) as UsuarioFila[];
@@ -116,6 +117,27 @@ export function UsuariosCatalog({ canEdit }: { canEdit: boolean }) {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'usuario_modulos', elegido] });
+    },
+    onError: (err) => toast.error(describeError(err)),
+  });
+
+  /**
+   * A que persona de Personal JD corresponde la cuenta.
+   *
+   * De aqui sale que es «suyo» dentro de la app: los pendientes que le
+   * aparecen en su tablero son los to-dos asignados a esa persona. Sin
+   * persona asociada no ve pendientes propios -- preferible a verlos todos,
+   * que era el comportamiento anterior.
+   */
+  const cambiarPersona = useMutation({
+    mutationFn: async (persona_id: string | null) => {
+      if (!elegido) return;
+      const { error } = await supabase.from('usuarios').update({ persona_id }).eq('id', elegido);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'usuarios'] });
+      toast.success('Persona actualizada.');
     },
     onError: (err) => toast.error(describeError(err)),
   });
@@ -209,6 +231,14 @@ export function UsuariosCatalog({ canEdit }: { canEdit: boolean }) {
                 </div>
               </div>
 
+              <PersonaDeUsuario
+                usuario={usuario}
+                otros={usuarios.data ?? []}
+                canEdit={canEdit}
+                onChange={(v) => cambiarPersona.mutate(v)}
+                guardando={cambiarPersona.isPending}
+              />
+
               {usuario.rol === 'admin' && (
                 <div className="rounded-md border border-gold bg-gold-light/50 px-3 py-2 text-xs text-dark-2">
                   Un <b>admin</b> pasa por encima de estos permisos: puede todo en todos los
@@ -263,6 +293,65 @@ export function UsuariosCatalog({ canEdit }: { canEdit: boolean }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Que persona de Personal JD es esta cuenta.
+ *
+ * Se amarra por id y no por nombre: el nombre se escribe distinto en cada
+ * lado --«Lissa Arriaza», «L. Arriaza»-- y con eso ya se perdio una vez el
+ * amarre. Dos cuentas apuntando a la misma persona verian los mismos
+ * pendientes, asi que se avisa cuando ya esta tomada.
+ */
+function PersonaDeUsuario({
+  usuario, otros, canEdit, onChange, guardando,
+}: {
+  usuario: UsuarioFila;
+  otros: UsuarioFila[];
+  canEdit: boolean;
+  onChange: (v: string | null) => void;
+  guardando: boolean;
+}) {
+  const personasQ = usePersonas();
+  const personas = personasQ.data ?? [];
+
+  const tomadas = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const u of otros) {
+      if (u.id !== usuario.id && u.persona_id) m.set(u.persona_id, u.nombre ?? 'otra cuenta');
+    }
+    return m;
+  }, [otros, usuario.id]);
+
+  return (
+    <div className="rounded-md border border-sand bg-sand-l/40 px-3 py-3">
+      <label
+        htmlFor="persona-usuario"
+        className="block text-xs font-semibold uppercase tracking-wider text-dark-2"
+      >
+        Persona de Personal JD
+      </label>
+      <select
+        id="persona-usuario"
+        value={usuario.persona_id ?? ''}
+        disabled={!canEdit || guardando}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="mt-1 w-full max-w-sm rounded-md border border-sand bg-white px-3 py-2 text-sm disabled:opacity-60"
+      >
+        <option value="">— Sin persona asociada —</option>
+        {personas.map((per) => (
+          <option key={per.id} value={per.id}>
+            {per.nombre}
+            {tomadas.has(per.id) ? ` · ya es ${tomadas.get(per.id)}` : ''}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1.5 max-w-xl text-[11px] text-dark-3">
+        De esto depende qué ve como <b>suyo</b>: en su tablero le aparecen los pendientes del
+        TO DO de CEA asignados a esta persona. Sin persona asociada no le aparece ninguno.
+      </p>
+    </div>
   );
 }
 

@@ -141,9 +141,9 @@ export type Database = {
         ];
       };
       usuarios: {
-        Row: { id: string; nombre: string | null; email: string | null; rol: Database['public']['Enums']['app_rol']; miembro_id: string | null; activo: boolean; firma_path: string | null; created_at: string; updated_at: string };
-        Insert: { id: string; nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; activo?: boolean; firma_path?: string | null };
-        Update: { nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; activo?: boolean; firma_path?: string | null };
+        Row: { id: string; nombre: string | null; email: string | null; rol: Database['public']['Enums']['app_rol']; miembro_id: string | null; persona_id: string | null; activo: boolean; firma_path: string | null; created_at: string; updated_at: string };
+        Insert: { id: string; nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; persona_id?: string | null; activo?: boolean; firma_path?: string | null };
+        Update: { nombre?: string | null; email?: string | null; rol?: Database['public']['Enums']['app_rol']; miembro_id?: string | null; persona_id?: string | null; activo?: boolean; firma_path?: string | null };
         Relationships: [
           { foreignKeyName: 'usuarios_miembro_id_fkey'; columns: ['miembro_id']; referencedRelation: 'miembros_board'; referencedColumns: ['id'] },
         ];

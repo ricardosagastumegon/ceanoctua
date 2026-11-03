@@ -38,6 +38,12 @@ export type UserProfile = {
   rol: AppRol;
   miembro_id: string | null;
   miembro_codigo: string | null;
+  /**
+   * Qué persona de Personal JD es. De aquí sale qué to-dos son suyos: la
+   * cuenta con la que se entra y la persona a la que se le asigna trabajo
+   * son dos cosas distintas.
+   */
+  persona_id: string | null;
   activo: boolean;
   /**
    * Nivel por módulo. Espejo de `usuario_modulos`, que es lo que de verdad

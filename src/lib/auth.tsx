@@ -27,7 +27,7 @@ export const AuthContext = createContext<AuthContextValue | undefined>(undefined
 async function loadProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('usuarios')
-    .select('id, nombre, rol, miembro_id, activo')
+    .select('id, nombre, rol, miembro_id, persona_id, activo')
     .eq('id', userId)
     .maybeSingle();
   if (error || !data) return null;
@@ -58,6 +58,7 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
     nombre: data.nombre as string | null,
     rol: data.rol as AppRol,
     miembro_id: data.miembro_id as string | null,
+    persona_id: (data as { persona_id?: string | null }).persona_id ?? null,
     activo: data.activo as boolean,
     miembro_codigo: miembroCodigo,
     modulos,

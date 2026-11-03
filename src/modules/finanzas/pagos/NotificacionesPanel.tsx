@@ -1,8 +1,9 @@
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/query-client';
 import { useToast } from '@/components/ui/Toast';
-import { describeError } from '@/modules/admin/hooks';
+import { describeError, useEntidades } from '@/modules/admin/hooks';
 import { formatDateTime } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import type { Database } from '@/types/database';
@@ -18,13 +19,20 @@ function fmt(n: number, currency: string | null): string {
 }
 
 type Props = {
-  /** Callback que abre el form de nueva SP con los datos del origen. */
-  onCreateFromNotif: (notif: Notif) => void;
+  /**
+   * Abre el form de nueva SP con los datos de los orígenes.
+   *
+   * Recibe una lista y no una sola: cuatro liquidaciones de la misma entidad
+   * se pagan con una sola solicitud, que es como se tramitan de verdad.
+   */
+  onCreateFromNotifs: (notifs: Notif[]) => void;
 };
 
-export function NotificacionesPanel({ onCreateFromNotif }: Props) {
+export function NotificacionesPanel({ onCreateFromNotifs }: Props) {
   const qc = useQueryClient();
   const toast = useToast();
+  const entidadesQ = useEntidades();
+  const [sel, setSel] = useState<ReadonlySet<string>>(new Set());
 
   const query = useQuery<Notif[], Error>({
     queryKey: PAGOS_NOTIF_KEY,
@@ -60,6 +68,34 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
 
   const items = query.data ?? [];
 
+  const nombreEntidad = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of entidadesQ.data ?? []) m.set(e.id, e.nombre);
+    return m;
+  }, [entidadesQ.data]);
+
+  /**
+   * La primera seleccionada fija la entidad y la moneda; las demás solo
+   * pueden acompañarla si coinciden en las dos. Una solicitud de pago es de
+   * una entidad, y sumar quetzales con dólares no es sumar.
+   */
+  const ancla = items.find((n) => sel.has(n.id)) ?? null;
+  const seleccionables = (n: Notif) =>
+    !!n.entidad_id &&
+    (!ancla || (n.entidad_id === ancla.entidad_id && (n.moneda ?? '') === (ancla.moneda ?? '')));
+
+  const elegidas = items.filter((n) => sel.has(n.id));
+  const total = elegidas.reduce((a, n) => a + (Number(n.monto) || 0), 0);
+
+  function alternar(id: string) {
+    setSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <aside className="rounded-card border border-purple/30 bg-purple/5 p-4">
       <header className="mb-3 flex items-center justify-between">
@@ -70,6 +106,35 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
           {items.length} pendiente{items.length === 1 ? '' : 's'}
         </span>
       </header>
+
+      {elegidas.length > 0 && (
+        <div className="mb-3 rounded-md border border-teal bg-teal-l/40 p-2">
+          <p className="text-[11px] font-semibold text-teal-d">
+            {elegidas.length} seleccionada{elegidas.length === 1 ? '' : 's'} ·{' '}
+            {ancla?.entidad_id ? nombreEntidad.get(ancla.entidad_id) ?? 'Entidad' : ''}
+          </p>
+          <p className="font-mono text-sm font-bold text-dark">{fmt(total, ancla?.moneda ?? null)}</p>
+          <div className="mt-1.5 flex gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                onCreateFromNotifs(elegidas);
+                setSel(new Set());
+              }}
+              className="flex-1 rounded-md bg-teal px-2 py-1 text-[10px] font-semibold text-white hover:bg-teal-d"
+            >
+              ＋ Una solicitud con {elegidas.length}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSel(new Set())}
+              className="rounded-md border border-sand bg-white px-2 py-1 text-[10px] font-semibold text-dark-3"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+      )}
 
       {query.isLoading ? (
         <p className="text-xs text-dark-3">Cargando…</p>
@@ -83,6 +148,20 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
               className="rounded-md border border-purple/30 bg-white p-2 text-sm shadow-sm"
             >
               <div className="flex items-start justify-between gap-2">
+                {n.entidad_id && (
+                  <input
+                    type="checkbox"
+                    checked={sel.has(n.id)}
+                    disabled={!seleccionables(n)}
+                    onChange={() => alternar(n.id)}
+                    className="mt-1 h-3.5 w-3.5 shrink-0 accent-teal disabled:opacity-30"
+                    title={
+                      seleccionables(n)
+                        ? 'Juntar en una sola solicitud'
+                        : 'La paga otra entidad o va en otra moneda'
+                    }
+                  />
+                )}
                 <div className="flex-1">
                   <span
                     className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
@@ -101,13 +180,18 @@ export function NotificacionesPanel({ onCreateFromNotif }: Props) {
                       {fmt(Number(n.monto), n.moneda)}
                     </p>
                   )}
+                  {n.entidad_id && (
+                    <p className="mt-0.5 truncate text-[10px] font-semibold text-teal-d">
+                      {nombreEntidad.get(n.entidad_id) ?? 'Entidad'}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-[10px] text-dark-3">{formatDateTime(n.created_at)}</p>
                 </div>
               </div>
               <div className="mt-2 flex gap-1">
                 <button
                   type="button"
-                  onClick={() => onCreateFromNotif(n)}
+                  onClick={() => onCreateFromNotifs([n])}
                   className="flex-1 rounded-md bg-teal px-2 py-1 text-[10px] font-semibold text-white hover:bg-teal-d"
                 >
                   ＋ Nueva solicitud

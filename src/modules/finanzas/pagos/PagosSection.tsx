@@ -52,7 +52,9 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
 
   const [editing, setEditing] = useState<Pago | null | undefined>(undefined);
   /** Notificación que originó el form abierto — se marca procesada al guardar. */
-  const [fromNotif, setFromNotif] = useState<string | null>(null);
+  const [fromNotifs, setFromNotifs] = useState<string[]>([]);
+  const [verPagadas, setVerPagadas] = useState(false);
+  const [buscaPagada, setBuscaPagada] = useState('');
   const [viewing, setViewing] = useState<Pago | null>(null);
   const [formato, setFormato] = useState<Pago | null>(null);
   const [filterTipo, setFilterTipo] = useState('');
@@ -172,11 +174,13 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
    * con `procesado_at` para poder rastrear qué la cerró.
    */
   const marcarNotifProcesada = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ ids, pagoId }: { ids: string[]; pagoId: string }) => {
+      // `pago_id` es lo que convierte la notificación en rastro: sin él no hay
+      // forma de saber qué liquidaciones cubrió una solicitud.
       const { error } = await supabase
         .from('pagos_notificaciones')
-        .update({ procesado: true, procesado_at: new Date().toISOString() })
-        .eq('id', id);
+        .update({ procesado: true, procesado_at: new Date().toISOString(), pago_id: pagoId })
+        .in('id', ids);
       if (error) throw error;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: PAGOS_NOTIF_KEY }),
@@ -191,6 +195,29 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
       return true;
     });
   }, [all, filterTipo, filterStep]);
+
+  /**
+   * Una solicitud que termino su flujo ya no se trabaja, se consulta. Mezclarla
+   * con las que estan en curso alarga la pantalla y esconde lo que falta hacer,
+   * que es justo lo que se viene a ver.
+   */
+  const enCurso = useMemo(
+    () => filtered.filter((p) => p.step_idx < PAGO_STEPS.length - 1),
+    [filtered],
+  );
+
+  const pagadas = useMemo(() => {
+    const base = filtered.filter((p) => p.step_idx >= PAGO_STEPS.length - 1);
+    const q = buscaPagada.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter((p) =>
+      [p.serial, p.proveedor, p.entidad, p.concepto, p.nit, p.referencia]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [filtered, buscaPagada]);
 
   const kpis = useMemo(() => {
     const counts = [0, 0, 0, 0, 0, 0];
@@ -208,7 +235,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
 
   function closeForm() {
     setEditing(undefined);
-    setFromNotif(null);
+    setFromNotifs([]);
   }
 
   async function handleSave(values: PagoInsert) {
@@ -218,14 +245,22 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         toast.success('Pago actualizado.');
       } else {
         // El origen se guarda en el pago: sin esto la notificación que lo
-        // disparó queda huérfana y no hay forma de auditar el vínculo.
-        await create.mutateAsync(
-          fromNotif ? { ...values, origen_notificacion_id: fromNotif } : values,
+        // disparó queda huérfana y no hay forma de auditar el vínculo. Cuando
+        // son varias, la columna guarda la primera y el resto queda amarrado
+        // por `pago_id` en cada notificación.
+        const creado = await create.mutateAsync(
+          fromNotifs.length > 0
+            ? { ...values, origen_notificacion_id: fromNotifs[0] }
+            : values,
         );
-        if (fromNotif) {
+        if (fromNotifs.length > 0) {
           try {
-            await marcarNotifProcesada.mutateAsync(fromNotif);
-            toast.success('Pago creado. Notificación procesada.');
+            await marcarNotifProcesada.mutateAsync({ ids: fromNotifs, pagoId: creado.id });
+            toast.success(
+              fromNotifs.length === 1
+                ? 'Pago creado. Notificación procesada.'
+                : `Pago creado. ${fromNotifs.length} notificaciones procesadas.`,
+            );
           } catch (e) {
             // El pago sí se creó: no lo revertimos por esto, solo avisamos.
             toast.error(`Pago creado, pero la notificación sigue pendiente: ${describeError(e)}`);
@@ -280,7 +315,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
             </button>
             <button
               type="button"
-              onClick={() => { setFromNotif(null); setEditing(null); }}
+              onClick={() => { setFromNotifs([]); setEditing(null); }}
               className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-d"
             >
               + Nueva solicitud
@@ -291,16 +326,19 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
         <NotificacionesPanel
-          onCreateFromNotif={(notif) => {
-            void prellenarDesdeNotificacion(notif).then((extra) => {
+          onCreateFromNotifs={(notifs) => {
+            if (notifs.length === 0) return;
+            const primera = notifs[0];
+            void prellenarDesdeNotificacion(primera).then((extra) => {
               // Pre-rellena los campos del nuevo pago con los datos del origen.
-              setFromNotif(notif.id);
+              setFromNotifs(notifs.map((n) => n.id));
               setEditing({
                 id: '',
-                monto: notif.monto ?? 0,
-                moneda: (notif.moneda as 'GTQ' | 'USD' | 'EUR' | 'GBP') ?? 'GTQ',
-                concepto: notif.resumen ?? null,
-                origen_notificacion_id: notif.id,
+                monto: notifs.reduce((a, n) => a + (Number(n.monto) || 0), 0),
+                moneda: (primera.moneda as 'GTQ' | 'USD' | 'EUR' | 'GBP') ?? 'GTQ',
+                concepto: conceptoDeNotificaciones(notifs),
+                entidad_id: primera.entidad_id ?? null,
+                origen_notificacion_id: primera.id,
                 fecha: new Date().toISOString().slice(0, 10),
                 ...extra,
               } as unknown as Pago);
@@ -343,11 +381,15 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
         <p className="text-sm text-dark-3">Cargando…</p>
       ) : query.isError ? (
         <p className="text-sm text-rust">Error: {describeError(query.error)}</p>
-      ) : filtered.length === 0 ? (
-        <p className="rounded-md border border-dashed border-sand bg-white p-6 text-center text-sm text-dark-3">Sin pagos.</p>
+      ) : enCurso.length === 0 ? (
+        <p className="rounded-md border border-dashed border-sand bg-white p-6 text-center text-sm text-dark-3">
+          {pagadas.length > 0
+            ? 'Sin solicitudes en curso. Las que terminaron están abajo.'
+            : 'Sin pagos.'}
+        </p>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((p) => {
+          {enCurso.map((p) => {
             const isLast = p.step_idx >= PAGO_STEPS.length - 1;
             const tipoColor = p.tipo_label ? PAGO_TIPO_COLORS[p.tipo_label] : undefined;
             return (
@@ -454,7 +496,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                       )}
                       <button
                         type="button"
-                        onClick={() => { setFromNotif(null); setEditing(p); }}
+                        onClick={() => { setFromNotifs([]); setEditing(p); }}
                         className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
                       >
                         ✏️
@@ -477,6 +519,100 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
             );
           })}
         </ul>
+      )}
+
+      {filtered.some((p) => p.step_idx >= PAGO_STEPS.length - 1) && (
+        <section className="mt-4 rounded-card border border-sand bg-white p-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setVerPagadas((v) => !v)}
+              className="flex items-center gap-2 text-left"
+              aria-expanded={verPagadas}
+            >
+              <span className="text-xs text-dark-3">{verPagadas ? '▾' : '▸'}</span>
+              <span>
+                <span className="block font-heading text-sm font-extrabold text-dark">
+                  ✅ Solicitudes pagadas
+                </span>
+                <span className="block text-[11px] text-dark-3">
+                  Terminaron su flujo. Se consultan, no se trabajan.
+                </span>
+              </span>
+            </button>
+            <span className="rounded-full bg-teal-l px-2 py-0.5 text-[11px] font-bold text-teal-d">
+              {pagadas.length}
+            </span>
+            {verPagadas && (
+              <input
+                type="search"
+                value={buscaPagada}
+                onChange={(e) => setBuscaPagada(e.target.value)}
+                placeholder="Buscar correlativo, proveedor, entidad, concepto, NIT…"
+                className="ml-auto w-72 rounded border border-sand px-3 py-1.5 text-sm"
+              />
+            )}
+          </div>
+
+          {verPagadas && (
+            <div className="mt-3 overflow-x-auto">
+              {pagadas.length === 0 ? (
+                <p className="py-4 text-center text-sm text-dark-3">Sin resultados.</p>
+              ) : (
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-sand bg-sand-l/50 text-[10px] uppercase tracking-wider text-dark-3">
+                      <th className="px-2 py-2 text-left">Correlativo</th>
+                      <th className="px-2 py-2 text-left">Fecha</th>
+                      <th className="px-2 py-2 text-left">Proveedor</th>
+                      <th className="px-2 py-2 text-left">Concepto</th>
+                      <th className="px-2 py-2 text-right">Monto</th>
+                      <th className="px-2 py-2 text-center">Comprobante</th>
+                      <th className="px-2 py-2 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagadas.map((p) => (
+                      <tr key={p.id} className="border-b border-sand/60">
+                        <td className="whitespace-nowrap px-2 py-1.5 font-mono text-xs font-semibold text-teal-d">
+                          {p.serial ?? '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-1.5 text-dark-2">
+                          {formatDate(p.fecha)}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <span className="font-medium text-dark">{p.proveedor}</span>
+                          {p.entidad && (
+                            <span className="block text-[10px] text-dark-3">{p.entidad}</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 text-dark-2">
+                          <span className="line-clamp-1 block max-w-md">{p.concepto}</span>
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono font-semibold text-dark">
+                          {fmt(Number(p.monto), p.moneda)}
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          {p.comprobante_storage_path ? '📎' : '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-1.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setViewing(p)}
+                            className="rounded-md border border-teal/40 px-2 py-0.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                            title="Ver PDF"
+                          >
+                            👁
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </section>
       )}
 
       <Modal
@@ -540,6 +676,25 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
  * mano, que es lo que pasaba antes. Nunca vale la pena bloquear la creacion
  * de un pago por un prellenado.
  */
+/**
+ * El concepto de una solicitud que cubre varios orígenes.
+ *
+ * Con uno solo se usa su resumen tal cual. Con varios, el resumen completo de
+ * cada uno seria un parrafo: se listan los correlativos, que es lo que se
+ * busca cuando se concilia.
+ */
+function conceptoDeNotificaciones(notifs: { resumen: string | null }[]): string | null {
+  if (notifs.length === 0) return null;
+  if (notifs.length === 1) return notifs[0].resumen ?? null;
+  const seriales = notifs
+    .map((n) => n.resumen?.match(/\b[A-Z]{2,3}-\d{4}-\d{3,4}\b/)?.[0])
+    .filter(Boolean);
+  if (seriales.length === notifs.length) {
+    return `${notifs.length} liquidaciones · ${seriales.join(', ')}`;
+  }
+  return notifs.map((n) => n.resumen ?? '').filter(Boolean).join(' · ');
+}
+
 async function prellenarDesdeNotificacion(
   notif: { origen_tipo: string; origen_id: string },
 ): Promise<Record<string, unknown>> {

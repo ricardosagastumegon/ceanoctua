@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/auth';
 import { PersonalView } from './PersonalView';
 import { FullView } from './FullView';
+import { GerenteView } from './GerenteView';
 
 export function DashboardPage() {
   const { profile, loading, signOut } = useAuth();
@@ -86,5 +87,12 @@ export function DashboardPage() {
     return <PersonalView memberCode={profile.miembro_codigo} />;
   }
 
-  return <FullView rol={profile.rol} />;
+  // Quien opera el sistema --admin y asistente-- ve el tablero completo. Quien
+  // entra a supervisar y firmar ve el suyo: el tablero de operacion no es "lo
+  // mismo con menos columnas", le estorba.
+  if (profile.rol === 'admin' || profile.rol === 'asistente') {
+    return <FullView rol={profile.rol} />;
+  }
+
+  return <GerenteView />;
 }

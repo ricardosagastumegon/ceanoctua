@@ -12,7 +12,9 @@
          pantalla de inicio y abra sin la barra del navegador. -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/icono.svg" />
-    <link rel="apple-touch-icon" href="/icono.svg" />
+    <!-- iOS ignora el SVG en apple-touch-icon: sin un PNG, "Agregar a
+         pantalla de inicio" pone una captura de la pagina como icono. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icono-180.png" />
     <meta name="theme-color" content="#055a5f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="CEA" />

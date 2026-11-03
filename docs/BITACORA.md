@@ -6,6 +6,46 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 41 · 2026-11-03 · Aeronaves · Estado de cuenta Aeroclub al 31 de octubre
+
+**Objetivo:** dejar el depósito de combustible al día para arrancar noviembre
+limpio. La asistente entregó el estado de cuenta actualizado del proveedor.
+
+**Lo que cambió:** nueve movimientos nuevos. El disponible pasa de
+**Q12,413.44** a **Q25,860.23** y el corte (`historico_hasta`) al **31 de
+octubre**, que es el último cargo del documento: de ahí en adelante los
+consumos que capture CEA cuentan contra el saldo.
+
+**Cómo se verificó antes de escribir:**
+
+- Los 366 primeros renglones del archivo son idénticos a los guardados, uno
+  por uno: tipo, fecha, documento y monto.
+- La suma propia de los 377 movimientos —sin leer la columna de saldos del
+  proveedor— da exactamente lo que esa columna declara. El total consumido
+  calculado, Q373,669.00, coincide con el «total cliente» del documento.
+- La migración lleva su propia comprobación: si el disponible no queda en
+  25,860.23, lanza excepción y no guarda nada. Se probó con reversión antes
+  de aplicar.
+
+**Dos cosas del documento que conviene saber:**
+
+- Un renglón —el FER2037346 del 13/11/2024— trae **cargo y abono en la misma
+  línea**. Ya estaba bien guardado como dos movimientos; se deja anotado
+  porque al releer parece un error de captura. Es también lo que hizo que la
+  primera suma de control saliera Q896 corta.
+- El cargo de Q3,631.20 había entrado con el documento truncado («FER») y con
+  la fecha del movimiento vecino. El estado de cuenta nuevo lo completa:
+  FER2051640 del 30 de octubre. Se corrigió, junto con su posición.
+
+**Queda avisado:** los dos anticipos de Q6,812.05 y Q1,449.50 vienen fechados
+**9 de noviembre**, posterior al día en que se entregó el documento. Se
+cargaron tal cual porque son parte del saldo que el proveedor declara, pero
+vale confirmarlo con Aeroclub.
+
+**Commits clave:** ver `git log` del 2026-11-03.
+
+---
+
 ## Fase 39 · 2026-11-03 · Quién va en el viaje, y qué ve cada quien
 
 **Objetivo:** que cada usuario entre a lo suyo. Salió de una frase de la

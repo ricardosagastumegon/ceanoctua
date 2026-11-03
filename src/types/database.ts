@@ -592,6 +592,7 @@ export type Database = {
           origen: string;
           liquidacion_id: string | null;
           firmada_por: string | null;
+          asignada_a: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -616,6 +617,7 @@ export type Database = {
           origen?: string;
           liquidacion_id?: string | null;
           firmada_por?: string | null;
+          asignada_a?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -633,6 +635,7 @@ export type Database = {
           origen?: string;
           liquidacion_id?: string | null;
           firmada_por?: string | null;
+          asignada_a?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [

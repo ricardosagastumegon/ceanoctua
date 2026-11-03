@@ -17,6 +17,7 @@ import {
   useUploadPagoComprobante,
 } from './hooks';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
+import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
 import { SolicitudPagoPrintable } from './SolicitudPagoPrintable';
@@ -53,6 +54,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
   const [editing, setEditing] = useState<Pago | null | undefined>(undefined);
   /** Notificación que originó el form abierto — se marca procesada al guardar. */
   const [fromNotifs, setFromNotifs] = useState<string[]>([]);
+  const [pidiendoFirma, setPidiendoFirma] = useState<Pago | null>(null);
   const [verPagadas, setVerPagadas] = useState(false);
   const [buscaPagada, setBuscaPagada] = useState('');
   const [viewing, setViewing] = useState<Pago | null>(null);
@@ -140,36 +142,6 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
     },
   });
 
-  const requestFirma = useMutation({
-    mutationFn: async (pago: Pago) => {
-      const insertPayload = {
-        tipo: `Pago ${pago.serial ?? pago.proveedor ?? pago.id.slice(0, 8)}`,
-        urgencia: 'importante' as const,
-        recepcion: new Date().toISOString().slice(0, 16),
-        solicitado: pago.entidad ?? pago.proveedor ?? null,
-        justificacion: pago.concepto ?? null,
-        pago_id: pago.id,
-        // Nace dentro del sistema: el documento ya esta en CEA y quien firma
-        // lo ve con su monto. La fisica es el papel que alguien trae.
-        origen: 'digital',
-      };
-      const { error } = await supabase.from('firmas').insert(insertPayload);
-      if (error) throw error;
-    },
-    onSuccess: async (_d, pago) => {
-      void qc.invalidateQueries({ queryKey: ['pagos', 'firma_counts'] });
-      void qc.invalidateQueries({ queryKey: ['firmas'] });
-      // Auto-avanzar el paso 0→1 (En Solicitud de Firma) si todavía está en Generado
-      if (pago.step_idx === 0) {
-        try {
-          await advance.mutateAsync({ id: pago.id, current: pago });
-        } catch {
-          /* ignored */
-        }
-      }
-      toast.success('Firma solicitada. Ábrela en CEA → Firmas para completar.');
-    },
-  });
 
   /**
    * Una notificación existe solo para pedir una acción: cuando esa acción ya
@@ -466,8 +438,7 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                       )}
                       <button
                         type="button"
-                        onClick={() => void requestFirma.mutateAsync(p)}
-                        disabled={requestFirma.isPending}
+                        onClick={() => setPidiendoFirma(p)}
                         className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20 disabled:opacity-60"
                         title="Crear solicitud de firma vinculada a este pago"
                       >
@@ -616,6 +587,30 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
             </div>
           )}
         </section>
+      )}
+
+      {pidiendoFirma && (
+        <PedirFirmaModal
+          open
+          onClose={() => setPidiendoFirma(null)}
+          documento={`${pidiendoFirma.serial ?? ''} · ${pidiendoFirma.proveedor}`.trim()}
+          base={{
+            tipo: `Pago ${pidiendoFirma.serial ?? pidiendoFirma.proveedor ?? ''}`.trim(),
+            recepcion: new Date().toISOString().slice(0, 10),
+            solicitado: pidiendoFirma.entidad ?? pidiendoFirma.proveedor ?? null,
+            justificacion: pidiendoFirma.concepto ?? null,
+            pago_id: pidiendoFirma.id,
+            origen: 'digital',
+          }}
+          onHecho={() => {
+            void qc.invalidateQueries({ queryKey: ['pagos', 'firma_counts'] });
+            // La solicitud pasa de Generado a En solicitud de firma: pedirla
+            // ES el paso, y dejarlo a mano garantiza que se olvide.
+            if (pidiendoFirma.step_idx === 0) {
+              void advance.mutateAsync({ id: pidiendoFirma.id, current: pidiendoFirma });
+            }
+          }}
+        />
       )}
 
       <Modal

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useFirmarDocumento, useFirmas } from '@/modules/cea/firmas/hooks';
+import { MiFirma } from '@/modules/cea/firmas/MiFirma';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
@@ -118,8 +119,11 @@ export function GerenteView() {
 
   const porPago = new Map((pagosQ.data ?? []).map((p) => [p.id, p]));
 
+  // Cada quien ve lo suyo. El admin las ve todas, porque es quien reparte y
+  // necesita saber que esta parado aunque no sea suyo.
   const enEspera = (firmasQ.data ?? [])
     .filter((f) => f.status_firma === 'en_espera')
+    .filter((f) => profile?.rol === 'admin' || f.asignada_a === profile?.id)
     .sort(
       (a, b) =>
         (PESO_URGENCIA[a.urgencia ?? 'programado'] ?? 2) -
@@ -169,6 +173,8 @@ export function GerenteView() {
             : `Tienes ${enEspera.length} ${enEspera.length === 1 ? 'documento' : 'documentos'} esperando tu firma.`}
         </p>
       </header>
+
+      <MiFirma />
 
       {/* ── Firmas ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

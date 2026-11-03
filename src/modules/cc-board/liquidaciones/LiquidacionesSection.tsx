@@ -20,7 +20,7 @@ import {
 } from './hooks';
 import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
-import { useCreateFirma } from '@/modules/cea/firmas/hooks';
+import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { useEntidades } from '@/modules/admin/hooks';
 
@@ -54,7 +54,7 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const query = useLiquidaciones();
   const create = useCreateLiquidacion();
   const update = useUpdateLiquidacion();
-  const crearFirma = useCreateFirma();
+  const [pidiendoFirma, setPidiendoFirma] = useState<Liquidacion | null>(null);
   const replaceVales = useReplaceLinkedVales();
   const entidadesList = useEntidades();
   const [importerOpen, setImporterOpen] = useState(false);
@@ -373,25 +373,7 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
               {canEdit && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      await crearFirma.mutateAsync({
-                        input: {
-                          tipo: `Liquidación ${row.serial ?? ''}`.trim(),
-                          urgencia: 'importante',
-                          recepcion: new Date().toISOString().slice(0, 10),
-                          solicitado: row.entidad ?? row.solicitado ?? null,
-                          justificacion: row.motivo ?? null,
-                          liquidacion_id: row.id,
-                          origen: 'digital',
-                        },
-                        miembroIds: [],
-                      });
-                      toast.success('Enviada a firma · ver CEA → Firmas');
-                    } catch (e) {
-                      toast.error(describeError(e));
-                    }
-                  }}
+                  onClick={() => setPidiendoFirma(row)}
                   className="rounded-md border border-gold/50 bg-gold-light px-2 py-1 text-xs font-semibold text-gold hover:opacity-90"
                   title="Pedir firma de este documento"
                 >
@@ -494,6 +476,22 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
           <LiquidacionPrintable liq={viewing} rows={viewingRows.data ?? []} />
         )}
       </PrintableModal>
+
+      {pidiendoFirma && (
+        <PedirFirmaModal
+          open
+          onClose={() => setPidiendoFirma(null)}
+          documento={`${pidiendoFirma.serial ?? ''} · ${pidiendoFirma.motivo ?? ''}`.trim()}
+          base={{
+            tipo: `Liquidación ${pidiendoFirma.serial ?? ''}`.trim(),
+            recepcion: new Date().toISOString().slice(0, 10),
+            solicitado: pidiendoFirma.entidad ?? pidiendoFirma.solicitado ?? null,
+            justificacion: pidiendoFirma.motivo ?? null,
+            liquidacion_id: pidiendoFirma.id,
+            origen: 'digital',
+          }}
+        />
+      )}
 
       <CsvImporter<LiquidacionInsert>
         open={importerOpen}

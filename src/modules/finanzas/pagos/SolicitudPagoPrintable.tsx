@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
+import { useEstampaDe } from '@/modules/cea/firmas/estampa';
 import type { Pago } from './api';
 import logoFz from './logo-fz.png';
 
@@ -109,8 +110,37 @@ function useOrigenes(pago: Pago) {
   });
 }
 
+/**
+ * Quien firmo esta solicitud, si ya esta firmada.
+ *
+ * Se busca la firma del pago que quedo en estado `firmado`: de ahi sale el
+ * usuario cuya firma hay que estampar. Se estampa la de quien FIRMO, no la de
+ * a quien se le pidio.
+ */
+function useQuienFirmo(pagoId: string) {
+  return useQuery({
+    queryKey: ['firma_del_pago', pagoId],
+    enabled: !!pagoId,
+    queryFn: async (): Promise<{ por: string | null; fecha: string | null } | null> => {
+      const { data, error } = await supabase
+        .from('firmas')
+        .select('firmada_por, fecha_firma')
+        .eq('pago_id', pagoId)
+        .eq('status_firma', 'firmado')
+        .is('deleted_at', null)
+        .order('fecha_firma', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const f = (data ?? [])[0];
+      return f ? { por: f.firmada_por, fecha: f.fecha_firma } : null;
+    },
+  });
+}
+
 export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
   const origenes = useOrigenes(pago).data ?? [];
+  const firmo = useQuienFirmo(pago.id).data ?? null;
+  const estampa = useEstampaDe(firmo?.por).data ?? null;
   const moneda = pago.moneda;
   const monto = Number(pago.monto);
   const esAnticipo = (pago.tipo_label ?? '').includes('Anticipo');
@@ -436,7 +466,17 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
           {/* ── Bloque de firmas ──────────────────────────────────────── */}
           <tr style={{ height: pt(70.9) }}>
             <td colSpan={2} style={{ border: THIN }} />
-            <td colSpan={2} style={{ border: THIN }} />
+            <td colSpan={2} style={{ border: THIN, textAlign: 'center', verticalAlign: 'bottom' }}>
+              {/* La firma de quien de verdad firmo, estampada. Sin imagen el
+                  recuadro queda en blanco para firmar a mano, como siempre. */}
+              {estampa && (
+                <img
+                  src={estampa}
+                  alt=""
+                  style={{ maxHeight: pt(60), maxWidth: '90%', margin: '0 auto', display: 'block' }}
+                />
+              )}
+            </td>
             <td colSpan={2} style={{ border: THIN }} />
           </tr>
           <tr style={{ height: pt(15.75) }}>
@@ -452,7 +492,7 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
           </tr>
           <tr style={{ height: pt(19.9) }}>
             <SigCell noBottom>Asistente de Gerencias</SigCell>
-            <SigCell noBottom>{''}</SigCell>
+            <SigCell noBottom>{firmo?.fecha ? `Firmado ${formatDate(firmo.fecha)}` : ''}</SigCell>
             <SigCell noBottom>Alta Dirección</SigCell>
           </tr>
           <tr style={{ height: pt(19.9) }}>

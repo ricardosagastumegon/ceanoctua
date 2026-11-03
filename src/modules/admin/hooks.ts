@@ -5,6 +5,7 @@ import { createCrudHooks } from '@/lib/createCrudHooks';
 import {
   empleadosApi,
   entidadesApi,
+  invitadosApi,
   personasApi,
   proveedoresApi,
   statusSpApi,
@@ -38,6 +39,7 @@ export function describeError(error: unknown, action?: 'delete'): string {
 const entidades = createCrudHooks('entidades', entidadesApi);
 const personas = createCrudHooks('personas', personasApi);
 const empleados = createCrudHooks('empleados', empleadosApi);
+const invitados = createCrudHooks('invitados', invitadosApi);
 const tiposPago = createCrudHooks('tipos_pago', tiposPagoApi);
 const proveedores = createCrudHooks('proveedores', proveedoresApi);
 const tarjetas = createCrudHooks('tarjetas_credito', tarjetasApi);
@@ -48,6 +50,7 @@ export const adminKeys = {
   entidades: entidades.queryKey,
   personas: personas.queryKey,
   empleados: empleados.queryKey,
+  invitados: invitados.queryKey,
   tiposPago: tiposPago.queryKey,
   proveedores: proveedores.queryKey,
   tarjetas: tarjetas.queryKey,
@@ -85,6 +88,12 @@ export function useAutorizadores() {
     queryFn: () => personasApi.listAutorizadores(),
   });
 }
+
+// Invitados (acompanantes de viaje que no son Personal JD)
+export const useInvitados = invitados.useList;
+export const useCreateInvitado = invitados.useCreate;
+export const useUpdateInvitado = invitados.useUpdate;
+export const useDeleteInvitado = invitados.useDelete;
 
 // Empleados
 export const useEmpleados = empleados.useList;

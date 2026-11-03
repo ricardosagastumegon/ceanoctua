@@ -168,6 +168,36 @@ export const empleadosApi = {
   },
 };
 
+// Invitados --------------------------------------------------------------
+// Quien viaja sin ser Personal JD: familia, socios, acompanantes. Se alimenta
+// desde aqui y desde el propio formulario del viaje, que es donde uno se da
+// cuenta de que falta alguien.
+export type Invitado = Database['public']['Tables']['invitados']['Row'];
+export type InvitadoInsert = Database['public']['Tables']['invitados']['Insert'];
+export type InvitadoUpdate = Database['public']['Tables']['invitados']['Update'];
+
+export const invitadosApi = {
+  async list(): Promise<Invitado[]> {
+    const { data, error } = await supabase.from('invitados').select('*').order('nombre');
+    if (error) throw error;
+    return data ?? [];
+  },
+  async create(input: InvitadoInsert): Promise<Invitado> {
+    const { data, error } = await supabase.from('invitados').insert(input).select('*').single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, patch: InvitadoUpdate): Promise<Invitado> {
+    const { data, error } = await supabase.from('invitados').update(patch).eq('id', id).select('*').single();
+    if (error) throw error;
+    return data;
+  },
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase.from('invitados').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
 // Tipos de pago ----------------------------------------------------------
 export type TipoPago = Database['public']['Tables']['tipos_pago']['Row'];
 export type TipoPagoInsert = Database['public']['Tables']['tipos_pago']['Insert'];

@@ -289,7 +289,7 @@ export function GerenteView() {
         })}
         {pendientes.length > 8 && (
           <p className="px-1 pt-1 text-[11px] text-dark-3">
-            y {pendientes.length - 8} más en CEA → To-dos
+            y {pendientes.length - 8} más en CEA → TO DO
           </p>
         )}
       </Bloque>

@@ -6,6 +6,10 @@ import { Select } from '@/components/ui/Select';
 import { CountryPicker } from './shared/CountryPicker';
 import { isoForCountry } from './constants/countries';
 import { useViajeDestinos } from './viajes/destinos-hooks';
+import { useParticipantesDelViaje } from './viajes/participantes-hooks';
+import { ParticipantesPicker } from './shared/ParticipantesPicker';
+import { usePersonas, useInvitados } from '@/modules/admin/hooks';
+import type { ParticipanteInput } from './viajes/participantes-api';
 import type { CiudadInput, PaisInput, ParadaInput } from './viajes/destinos-api';
 import type { AttViaje, AttViajeInsert } from './viajes/api';
 import type { Database } from '@/types/database';
@@ -21,7 +25,11 @@ type Props = {
   editing: AttViaje | null; // null = crear · AttViaje = editar
   submitting: boolean;
   onClose: () => void;
-  onSubmit: (values: AttViajeInsert, destinos: TripDestinos) => void | Promise<void>;
+  onSubmit: (
+    values: AttViajeInsert,
+    destinos: TripDestinos,
+    participantes: ParticipanteInput[],
+  ) => void | Promise<void>;
 };
 
 /** Las tres opciones del documento. "Otros" abre el texto libre. */
@@ -30,14 +38,6 @@ type Motivo = (typeof MOTIVOS)[number];
 
 const vacio: TripDestinos = { paises: [], ciudades: [], paradas: [] };
 
-/** Texto de `acompanantes` → lista. Solo corta por coma (ver nota en el estado). */
-function splitParticipantes(texto: string | null | undefined): string[] {
-  return (texto ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 // Modal Crear/Editar viaje · Fase 21.
 // El viaje es el encabezado del "carrito": aquí se define a dónde se va y por
 // qué, y los servicios se agregan después desde la pantalla del viaje.
@@ -45,14 +45,11 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
   const [titulo, setTitulo] = useState('');
   const [fechaIni, setFechaIni] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  // Los participantes viven en una sola columna de texto (`acompanantes`)
-  // separados por coma. En la UI se editan uno por uno, pero no ameritan tabla
-  // propia: son nombres sueltos, sin datos que colgar de cada uno. Cuando un
-  // pasajero necesita pasaporte o asiento, eso ya vive en att_ticket_pax.
-  // Ojo con el separador: se parte solo por coma, porque "Fulano & Mengana"
-  // es una pareja y cuenta como un participante.
-  const [participantes, setParticipantes] = useState<string[]>([]);
-  const [participanteDraft, setParticipanteDraft] = useState('');
+  // Los participantes salen de dos catálogos --Personal JD e Invitados-- y se
+  // guardan por id en att_viaje_participantes. `acompanantes` sigue existiendo
+  // porque ocho pantallas la leen, pero ya no se escribe desde aquí: un
+  // trigger la recalcula.
+  const [participantes, setParticipantes] = useState<ParticipanteInput[]>([]);
   const [motivo, setMotivo] = useState<Motivo>('Trabajo');
   const [motivoOtro, setMotivoOtro] = useState('');
   const [pagadoPor, setPagadoPor] = useState('');
@@ -62,6 +59,11 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
   const [error, setError] = useState<string | null>(null);
 
   const guardados = useViajeDestinos(open && editing?.id ? editing.id : undefined);
+  const participantesQ = useParticipantesDelViaje(
+    open && editing?.id ? editing.id : undefined,
+  );
+  const personasQ = usePersonas();
+  const invitadosQ = useInvitados();
 
   useEffect(() => {
     if (!open) return;
@@ -69,7 +71,6 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       setTitulo(editing.titulo ?? '');
       setFechaIni(editing.fecha_ini ?? '');
       setFechaFin(editing.fecha_fin ?? '');
-      setParticipantes(splitParticipantes(editing.acompanantes));
       setPagadoPor(editing.paidby ?? '');
       setNotas(editing.notas ?? '');
       // Los viajes viejos traen el motivo como texto libre. Si no es una de las
@@ -94,9 +95,29 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       setDestinos(vacio);
     }
     setCiudadDraft('');
-    setParticipanteDraft('');
     setError(null);
   }, [open, editing]);
+
+  // Los participantes llegan por su propia tabla. El nombre no se guarda ahí:
+  // se busca en el catálogo al mostrar, para que corregir un nombre en Admin
+  // lo corrija en todos los viajes donde aparece.
+  useEffect(() => {
+    if (!open || !editing?.id || !participantesQ.data) return;
+    const personas = personasQ.data ?? [];
+    const invitados = invitadosQ.data ?? [];
+    setParticipantes(
+      participantesQ.data
+        .map((r): ParticipanteInput | null => {
+          if (r.persona_id) {
+            const per = personas.find((x) => x.id === r.persona_id);
+            return per ? { tipo: 'persona', id: per.id, nombre: per.nombre } : null;
+          }
+          const inv = invitados.find((x) => x.id === r.invitado_id);
+          return inv ? { tipo: 'invitado', id: inv.id, nombre: inv.nombre } : null;
+        })
+        .filter((x): x is ParticipanteInput => x !== null),
+    );
+  }, [open, editing?.id, participantesQ.data, personasQ.data, invitadosQ.data]);
 
   // Los destinos llegan por separado (3 tablas) y después del viaje.
   useEffect(() => {
@@ -141,17 +162,6 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
   function removeCiudad(i: number) {
     setDestinos((d) => ({ ...d, ciudades: d.ciudades.filter((_, k) => k !== i) }));
   }
-  function addParticipante() {
-    const nombre = participanteDraft.trim();
-    if (!nombre) return;
-    setParticipantes((ps) =>
-      ps.some((x) => x.toLowerCase() === nombre.toLowerCase()) ? ps : [...ps, nombre],
-    );
-    setParticipanteDraft('');
-  }
-  function removeParticipante(i: number) {
-    setParticipantes((ps) => ps.filter((_, k) => k !== i));
-  }
   function addParada() {
     setDestinos((d) => ({
       ...d,
@@ -192,7 +202,6 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       titulo: titulo.trim(),
       fecha_ini: fechaIni,
       fecha_fin: fechaFin,
-      acompanantes: participantes.join(', ') || null,
       proposito: motivo,
       other_reason: motivo === 'Otros' ? motivoOtro.trim() || null : null,
       paidby: pagadoPor.trim() || null,
@@ -203,10 +212,14 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
       destino: destinos.ciudades.map((c) => c.nombre).join(', ') || principal?.nombre || null,
       estado: 'planificado' as Database['public']['Enums']['trip_status'],
     };
-    void onSubmit(values, {
-      ...destinos,
-      paradas: destinos.paradas.map((p) => ({ ...p, nombre: p.nombre.trim() })),
-    });
+    void onSubmit(
+      values,
+      {
+        ...destinos,
+        paradas: destinos.paradas.map((p) => ({ ...p, nombre: p.nombre.trim() })),
+      },
+      participantes,
+    );
   }
 
   return (
@@ -394,54 +407,7 @@ export function TripFormModal({ open, editing, submitting, onClose, onSubmit }: 
           </button>
         </fieldset>
 
-        {/* ── Participantes ─────────────────────────────────────────── */}
-        <fieldset className="rounded-md border border-sand p-3">
-          <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-dark-2">
-            Participantes
-          </legend>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={participanteDraft}
-              onChange={(e) => setParticipanteDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addParticipante();
-                }
-              }}
-              placeholder="Nombre del participante"
-              className="block w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-dark placeholder:text-dark-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
-            />
-            <button
-              type="button"
-              onClick={addParticipante}
-              className="shrink-0 rounded-md border border-teal/40 px-3 py-2 text-xs font-semibold text-teal-d hover:bg-teal-l"
-            >
-              ＋ Agregar
-            </button>
-          </div>
-          {participantes.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {participantes.map((nombre, i) => (
-                <li
-                  key={`${nombre}-${i}`}
-                  className="inline-flex items-center gap-2 rounded-full bg-purple/10 px-3 py-1 text-xs font-semibold text-purple"
-                >
-                  👤 {nombre}
-                  <button
-                    type="button"
-                    onClick={() => removeParticipante(i)}
-                    className="text-purple/60 hover:text-rust"
-                    aria-label={`Quitar ${nombre}`}
-                  >
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </fieldset>
+        <ParticipantesPicker value={participantes} onChange={setParticipantes} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextInput

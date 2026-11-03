@@ -11,6 +11,7 @@ import { VehiculosSection } from './vehiculos/VehiculosSection';
 import { EntidadForm } from './components/EntidadForm';
 import { PersonaForm } from './components/PersonaForm';
 import { EmpleadoForm } from './components/EmpleadoForm';
+import { InvitadoForm } from './components/InvitadoForm';
 import { TipoPagoForm } from './components/TipoPagoForm';
 import { ProveedorForm } from './components/ProveedorForm';
 import { TarjetaForm } from './components/TarjetaForm';
@@ -18,6 +19,7 @@ import { StatusSpForm } from './components/StatusSpForm';
 import { TipoCertificadoForm } from './components/TipoCertificadoForm';
 import {
   useCreateEmpleado,
+  useCreateInvitado,
   useCreateEntidad,
   useCreatePersona,
   useCreateProveedor,
@@ -25,6 +27,7 @@ import {
   useCreateTarjeta,
   useCreateTipoPago,
   useDeleteEmpleado,
+  useDeleteInvitado,
   useDeleteEntidad,
   useDeletePersona,
   useDeleteProveedor,
@@ -33,6 +36,7 @@ import {
   useDeleteTipoPago,
   useEmpleados,
   useEntidades,
+  useInvitados,
   useEntidadesRealtime,
   usePersonas,
   useProveedores,
@@ -44,6 +48,7 @@ import {
   useTarjetas,
   useTiposPago,
   useUpdateEmpleado,
+  useUpdateInvitado,
   useUpdateEntidad,
   useUpdatePersona,
   useUpdateProveedor,
@@ -54,6 +59,7 @@ import {
 import type {
   Empleado,
   Entidad,
+  Invitado,
   Persona,
   Proveedor,
   StatusSp,
@@ -66,6 +72,7 @@ type CatalogKey =
   | 'entidades'
   | 'personas'
   | 'empleados'
+  | 'invitados'
   | 'tipos_pago'
   | 'proveedores'
   | 'tarjetas'
@@ -78,6 +85,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'entidades', label: 'Entidades' },
   { key: 'personas', label: 'Personal JD' },
   { key: 'empleados', label: 'Empleados' },
+  { key: 'invitados', label: 'Invitados' },
   { key: 'tipos_pago', label: 'Tipos de pago' },
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
@@ -126,6 +134,7 @@ export default function AdminPage() {
       {tab === 'entidades' && <EntidadesCatalog canEdit={isAdmin} />}
       {tab === 'personas' && <PersonasCatalog canEdit={isAdmin} />}
       {tab === 'empleados' && <EmpleadosCatalog canEdit={isAdmin} />}
+      {tab === 'invitados' && <InvitadosCatalog canEdit={isAdmin} />}
       {tab === 'tipos_pago' && <TiposPagoCatalog canEdit={isAdmin} />}
       {tab === 'proveedores' && <ProveedoresCatalog canEdit={isAdmin} />}
       {tab === 'tarjetas' && <TarjetasCatalog canEdit={isAdmin} />}
@@ -133,6 +142,65 @@ export default function AdminPage() {
       {tab === 'status_sp' && <StatusSpCatalog canEdit={isAdmin} />}
       {tab === 'certificados_aereos' && <CertificadosAereosCatalog canEdit={isAdmin} />}
     </section>
+  );
+}
+
+// ============================================================
+// Invitados
+// ============================================================
+function InvitadosCatalog({ canEdit }: { canEdit: boolean }) {
+  const query = useInvitados();
+  const create = useCreateInvitado();
+  const update = useUpdateInvitado();
+  const remove = useDeleteInvitado();
+
+  const columns: DataTableColumn<Invitado>[] = [
+    {
+      key: 'nombre',
+      header: 'Nombre',
+      sortable: true,
+      accessor: (r) => r.nombre,
+      render: (r) => (
+        <span className={r.activo ? 'font-medium text-dark' : 'font-medium text-dark-3 line-through'}>
+          {r.nombre}
+        </span>
+      ),
+    },
+    {
+      key: 'relacion',
+      header: 'Relación',
+      sortable: true,
+      accessor: (r) => r.relacion,
+      render: (r) => r.relacion ?? '—',
+    },
+    { key: 'empresa', header: 'Empresa', sortable: true, accessor: (r) => r.empresa, render: (r) => r.empresa ?? '—' },
+    {
+      key: 'contacto',
+      header: 'Contacto',
+      accessor: (r) => r.telefono ?? r.email,
+      render: (r) => [r.telefono, r.email].filter(Boolean).join(' · ') || '—',
+    },
+  ];
+
+  return (
+    <CatalogPage
+      title="Invitados"
+      description="Quien viaja sin ser Personal JD: familia, socios, acompañantes. De aquí sale la lista de participantes de cada viaje."
+      newLabel="+ Nuevo invitado"
+      columns={columns}
+      rows={query.data ?? []}
+      loading={query.isLoading}
+      isError={query.isError}
+      error={query.error}
+      onRetry={() => void query.refetch()}
+      onCreate={(values) => create.mutateAsync(values)}
+      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+      onDelete={(id) => remove.mutateAsync(id)}
+      submitting={create.isPending || update.isPending}
+      Form={InvitadoForm}
+      rowLabel={(r) => r.nombre}
+      canEdit={canEdit}
+    />
   );
 }
 

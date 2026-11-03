@@ -6,6 +6,65 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 39 · 2026-11-03 · Quién va en el viaje, y qué ve cada quien
+
+**Objetivo:** que cada usuario entre a lo suyo. Salió de una frase de la
+asistente sobre la cuenta de la gerente: «en ARRIAZA T&T le aparecerá el viaje
+solo cuando esté agregada como participante». Esa pregunta —¿en qué viajes va
+fulano?— no se podía responder, porque los participantes eran una cadena de
+texto.
+
+**El hueco:** en los seis viajes que había, el presidente estaba escrito de
+cuatro formas: «Miguel Angel Arriaza», «Miguel Arriaza», «Miguel Angel Arriaz»
+y pegado a otra persona con un `&`. Es el mismo problema que ya se había
+arreglado en el libro de firmas, un nivel más abajo.
+
+**Cambios de schema:**
+- `invitados` — catálogo de quien viaja sin ser Personal JD. Patrón C.
+  Índice único sobre `sin_tildes(nombre)`: «Safié» y «Safie» no pueden entrar
+  dos veces.
+- `att_viaje_participantes` — quién va en qué viaje, por id contra `personas`
+  o `invitados`, uno de los dos y nunca ambos.
+- `sin_tildes(text)` — normalizar nombres para comparar.
+- `att_viajes.acompanantes` pasa a ser **derivada**: tres triggers la
+  recalculan —al mover un participante, al renombrar una persona, al renombrar
+  un invitado—. Se conservó porque ocho pantallas la leen; tocarlas todas era
+  mucho más riesgo que un trigger.
+- `usuarios.persona_id` (migración anterior del mismo día) es lo que amarra la
+  cuenta con la persona, y de ahí sale todo el filtrado.
+
+**No se guarda el nombre en la relación**, al revés que en los cargos a
+tarjeta. Un cargo es un recibo cerrado; la lista de quién va en un viaje es un
+dato vivo, y corregir «Arriaz» en el catálogo tiene que corregirlo en los seis
+viajes, no dejar el error congelado.
+
+**Migración de lo existente:** 26 participantes — 14 a Personal JD, 12
+invitados nuevos. Los tres nombres mal escritos se mapearon al correcto y WACO
+TEXAS se partió en dos personas. Probado con rollback antes de aplicar.
+
+**Cambios de UI:**
+- Admin → **Invitados**, catálogo nuevo.
+- El formulario del viaje cambia el campo de texto por un desplegable de
+  Personal JD + Invitados, con alta rápida de invitado sin salir del
+  formulario: uno se entera de que falta alguien a media captura.
+- Arriaza T&T muestra solo los viajes propios a quien no es admin ni
+  asistente. Es qué se muestra, no un muro: el resumen del dashboard sigue
+  viéndolos todos y vive del mismo dato.
+- CEA: la sección se llama **TO DO**. Firmas, Notas de entrega, Lavandería y
+  Directorio son el escritorio de la asistente y solo ella las ve; quien entra
+  de afuera cae directo en sus pendientes, filtrados a los suyos.
+- Quién puede editar en CEA sale de `usuario_modulos` y ya no del rol base: la
+  gerente es `solo_lectura` con `cea:editor`, y la pantalla le negaba lo que la
+  base le permitía.
+
+**Comentarios:** queda pendiente clasificar los 12 invitados migrados, que
+entraron con relación «Por clasificar». La gerente no figura hoy en ningún
+viaje, así que su Arriaza T&T está vacío hasta que se le agregue a uno.
+
+**Commits clave:** ver `git log` del 2026-11-03.
+
+---
+
 ## Fase 38 · 2026-10-29 · Tarjetas · se ven, se leen y se dan de baja
 
 **Objetivo:** tres cosas que salieron del mismo lugar, el día que se extraviaron unas tarjetas de Presidencia que ya tenían consumos del mes y que ya venían repuestas.

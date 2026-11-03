@@ -23,6 +23,11 @@ import {
 } from './viajes/hooks';
 import type { AttViaje, AttViajeInsert } from './viajes/api';
 import { useSyncViajeDestinos } from './viajes/destinos-hooks';
+import {
+  useSyncParticipantes,
+  useTodosLosParticipantes,
+} from './viajes/participantes-hooks';
+import type { ParticipanteInput } from './viajes/participantes-api';
 import { autoTripStatus } from './utils';
 import type { ManualStatus } from './constants/serviceMeta';
 
@@ -42,6 +47,7 @@ export function AttPage() {
   const update = useUpdateAttViaje();
   const remove = useDeleteAttViaje();
   const syncDestinos = useSyncViajeDestinos();
+  const syncParticipantes = useSyncParticipantes();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -54,7 +60,26 @@ export function AttPage() {
   const [viendo, setViendo] = useState<AttViaje | null>(null);
   const [itinerario, setItinerario] = useState<AttViaje | null>(null);
 
-  const viajes = query.data ?? [];
+  // Quién va en cada viaje. Quien no es admin ni asistente solo ve los viajes
+  // donde está como participante: para la gerente, los veinte viajes de la
+  // familia son ruido, y el suyo se pierde entre ellos.
+  //
+  // Es qué se le muestra, no un muro: el resumen de próximos viajes del
+  // dashboard sigue viéndolos todos, y vive del mismo dato.
+  const participantesQ = useTodosLosParticipantes();
+  const veTodos = canEdit;
+
+  const viajes = useMemo(() => {
+    const todos = query.data ?? [];
+    if (veTodos) return todos;
+    if (!profile?.persona_id) return [];
+    const mios = new Set(
+      (participantesQ.data ?? [])
+        .filter((r) => r.persona_id === profile.persona_id)
+        .map((r) => r.viaje_id),
+    );
+    return todos.filter((v) => mios.has(v.id));
+  }, [query.data, participantesQ.data, veTodos, profile?.persona_id]);
   // Las reuniones de todos los viajes, para marcarlas en el calendario.
   const reunionesQuery = useAttReuniones();
   const reunionesCalendario = (reunionesQuery.data ?? []).map((r) => ({
@@ -91,7 +116,11 @@ export function AttPage() {
     };
   }, [viajes]);
 
-  async function handleSave(values: AttViajeInsert, destinos: TripDestinos) {
+  async function handleSave(
+    values: AttViajeInsert,
+    destinos: TripDestinos,
+    participantes: ParticipanteInput[],
+  ) {
     try {
       // El viaje va primero porque los destinos necesitan su id. En creación el
       // id no existe hasta que la base lo devuelve.
@@ -100,6 +129,7 @@ export function AttPage() {
           ? (await update.mutateAsync({ id: editing.id, patch: values }), editing.id)
           : (await create.mutateAsync(values)).id;
       await syncDestinos.mutateAsync({ viajeId, ...destinos });
+      await syncParticipantes.mutateAsync({ viajeId, participantes });
       toast.success(editing?.id ? 'Viaje actualizado.' : 'Viaje creado.');
       setEditing(undefined);
     } catch (err) {
@@ -253,7 +283,12 @@ export function AttPage() {
       <TripFormModal
         open={editing !== undefined}
         editing={editing ?? null}
-        submitting={create.isPending || update.isPending || syncDestinos.isPending}
+        submitting={
+          create.isPending ||
+          update.isPending ||
+          syncDestinos.isPending ||
+          syncParticipantes.isPending
+        }
         onClose={() => setEditing(undefined)}
         onSubmit={handleSave}
       />

@@ -110,6 +110,12 @@ export type Database = {
         Update: AuditUpdate & { nombre?: string; puesto?: string | null; depto?: string | null; empresa?: string | null; email?: string | null; telefono?: string | null; notas?: string | null; activo?: boolean };
         Relationships: [];
       };
+      invitados: {
+        Row: AuditCols & { id: string; nombre: string; relacion: string | null; empresa: string | null; telefono: string | null; email: string | null; notas: string | null; activo: boolean };
+        Insert: AuditInsert & { id?: string; nombre: string; relacion?: string | null; empresa?: string | null; telefono?: string | null; email?: string | null; notas?: string | null; activo?: boolean };
+        Update: AuditUpdate & { nombre?: string; relacion?: string | null; empresa?: string | null; telefono?: string | null; email?: string | null; notas?: string | null; activo?: boolean };
+        Relationships: [];
+      };
       tipos_pago: {
         Row: { id: string; legacy_id: number | null; tipo: string; descripcion: string | null; activo: boolean; created_at: string; updated_at: string };
         Insert: { id?: string; legacy_id?: number | null; tipo: string; descripcion?: string | null; activo?: boolean };
@@ -1377,6 +1383,29 @@ export type Database = {
       };
       // Fase 21 · destinos múltiples del viaje.
       // pais/ciudad/destino de att_viajes quedaron deprecadas en favor de estas.
+      att_viaje_participantes: {
+        Row: AuditCols & {
+          id: string;
+          viaje_id: string;
+          persona_id: string | null;
+          invitado_id: string | null;
+          orden: number;
+        };
+        Insert: AuditInsert & {
+          id?: string;
+          viaje_id: string;
+          persona_id?: string | null;
+          invitado_id?: string | null;
+          orden?: number;
+        };
+        Update: AuditUpdate & {
+          viaje_id?: string;
+          persona_id?: string | null;
+          invitado_id?: string | null;
+          orden?: number;
+        };
+        Relationships: [];
+      };
       att_viaje_paises: {
         Row: AuditCols & {
           id: string;

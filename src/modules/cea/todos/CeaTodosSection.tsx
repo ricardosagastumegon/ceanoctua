@@ -4,6 +4,7 @@ import { PrintableModal } from '@/components/ui/PrintableModal';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { formatDate, isOverdue } from '@/lib/dates';
 import { usePersonas } from '@/modules/admin/hooks';
+import { useAuth } from '@/lib/auth';
 import { useCeaTodos, useCreateCeaTodo, useDeleteCeaTodo, useToggleCeaTodo, useUpdateCeaTodo } from './hooks';
 import {
   CEA_TODO_ESTADO_COLOR,
@@ -23,6 +24,12 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
   const toggle = useToggleCeaTodo();
   const remove = useDeleteCeaTodo();
   const personas = usePersonas();
+  const { profile } = useAuth();
+
+  // La asistente lleva el tablero de todos; quien entra desde afuera --la
+  // gerente-- viene por lo suyo. Verlo todo no es un permiso de más, es ruido
+  // que esconde sus propios pendientes.
+  const soloMios = !(profile?.rol === 'admin' || profile?.rol === 'asistente');
 
   const [filtro, setFiltro] = useState('');
   const [viendo, setViendo] = useState(false);
@@ -39,7 +46,12 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
     return (id: string | null) => (id ? mapa.get(id) ?? '—' : '—');
   }, [gente]);
 
-  const todos = query.data ?? [];
+  const todos = useMemo(() => {
+    const filas = query.data ?? [];
+    if (!soloMios) return filas;
+    if (!profile?.persona_id) return [];
+    return filas.filter((t) => t.persona_id === profile.persona_id);
+  }, [query.data, soloMios, profile?.persona_id]);
   const filtrados = useMemo(() => {
     if (!filtro) return todos;
     if (filtro === SIN_ASIGNAR) return todos.filter((t) => !t.persona_id);
@@ -136,8 +148,12 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
   return (
     <>
       <CatalogPage<CeaTodo, import('./api').CeaTodoInsert>
-        title="To-dos del asistente"
-        description="Pendientes operativos del CEA con prioridad (Alta/Hold/TKIM/Media/Baja) y estado del flujo (Comentado → Solicitado → Planeado → Ejecutado → Finalizado)."
+        title="TO DO"
+        description={
+          soloMios
+            ? 'Tus pendientes, con su prioridad y en qué va cada uno.'
+            : 'Pendientes operativos del CEA con prioridad (Alta/Hold/TKIM/Media/Baja) y estado del flujo (Comentado → Solicitado → Planeado → Ejecutado → Finalizado).'
+        }
         newLabel="+ Nuevo to-do"
         modalSize="lg"
         columns={columns}
@@ -158,18 +174,20 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
         }
         headerExtra={
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              aria-label="Filtrar por personal de JD"
-              className="rounded-md border border-sand bg-white px-3 py-2 text-xs text-dark focus:border-teal focus:outline-none"
-            >
-              <option value="">Todo el personal de JD</option>
-              {conPendientes.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-              <option value={SIN_ASIGNAR}>— Sin asignar —</option>
-            </select>
+            {!soloMios && (
+              <select
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+                aria-label="Filtrar por personal de JD"
+                className="rounded-md border border-sand bg-white px-3 py-2 text-xs text-dark focus:border-teal focus:outline-none"
+              >
+                <option value="">Todo el personal de JD</option>
+                {conPendientes.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+                <option value={SIN_ASIGNAR}>— Sin asignar —</option>
+              </select>
+            )}
             <button
               type="button"
               onClick={() => setViendo(true)}

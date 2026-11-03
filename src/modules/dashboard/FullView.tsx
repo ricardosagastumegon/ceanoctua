@@ -14,6 +14,7 @@ import { businessDaysUntil, formatDate, isOverdue } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import { Card, EmptyLine, ErrorLine, KPI, LoadingLine } from './widgets';
 import { DashboardHero } from './DashboardHero';
+import { FirmasPendientes } from './FirmasPendientes';
 import type { AppRol } from '@/types';
 
 function fmt(n: number, currency: string): string {
@@ -94,6 +95,11 @@ export function FullView({ rol }: { rol: AppRol }) {
   return (
     <section className="space-y-6">
       <DashboardHero userName={profile?.nombre} activeTripsCount={viajesProximos.length} />
+
+      {/* Lo que espera su firma va arriba de todo: para quien firma, esto no
+          es un indicador del tablero, es su trabajo. */}
+      <FirmasPendientes />
+
       <header>
         <h1 className="font-heading text-2xl font-semibold text-dark">Dashboard</h1>
         <p className="mt-1 text-sm text-dark-2">

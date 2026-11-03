@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { TextInput } from '@/components/ui/TextInput';
+import { GenteChips, GenteSelect } from '@/components/ui/GenteSelect';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { formatMoney } from '@/lib/money';
@@ -341,8 +342,21 @@ export function LiquidacionForm({ initial, preLinkValeId, submitting, onSubmit, 
           <TextInput name="producto" label="Producto o servicio" value={v.producto} onChange={(e) => upd('producto', e.target.value)} />
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <TextInput name="solicitado" label="Solicitado por *" value={v.solicitado} onChange={(e) => upd('solicitado', e.target.value)} required hint="aparecerá como Autorizado por" />
-          <TextInput name="reintegrar_a" label="Reintegrar a" value={v.reintegrar_a} onChange={(e) => upd('reintegrar_a', e.target.value)} hint="si alguien pagó con fondos propios" />
+          <GenteChips
+            name="solicitado"
+            label="Solicitado por *"
+            value={v.solicitado}
+            onChange={(x) => upd('solicitado', x)}
+            hint="aparecerá como Autorizado por · puede ser más de uno"
+          />
+          <GenteSelect
+            name="reintegrar_a"
+            label="Reintegrar a"
+            value={v.reintegrar_a}
+            onChange={(x) => upd('reintegrar_a', x)}
+            grupos={['empleados', 'entidades']}
+            hint="a quién se le devuelve el dinero"
+          />
         </div>
       </fieldset>
 

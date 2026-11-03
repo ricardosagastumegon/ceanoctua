@@ -68,8 +68,15 @@ export function TcPanelTT() {
     () => (tarjetasQ.data ?? []).filter((t) => t.activo || porId.has(t.id)),
     [tarjetasQ.data, porId],
   );
-  const presidencia = visibles.filter((t) => t.tipo === 'presidencia');
-  const corporativas = visibles.filter((t) => t.tipo !== 'presidencia');
+  // Dentro de cada grupo, las que están en uso primero. Las de baja van en su
+  // propio renglón al final: tres de ellas abriendo la primera fila empujaban
+  // fuera de la vista justo las tarjetas con las que se paga hoy.
+  const porUso = (t: Tarjeta[]) => ({
+    activas: t.filter((x) => x.activo),
+    baja: t.filter((x) => !x.activo),
+  });
+  const presidencia = porUso(visibles.filter((t) => t.tipo === 'presidencia'));
+  const corporativas = porUso(visibles.filter((t) => t.tipo !== 'presidencia'));
 
   // Lo que se pagó con algo que no quedó amarrado al catálogo. Si no se
   // mostrara, ese dinero desaparecería de la vista sin que nadie se entere.
@@ -180,35 +187,17 @@ export function TcPanelTT() {
         </p>
       )}
 
-      {presidencia.length > 0 && (
+      {(presidencia.activas.length > 0 || presidencia.baja.length > 0) && (
         <>
           <Rotulo>Tarjetas de Presidencia</Rotulo>
-          <div className="flex flex-wrap gap-3">
-            {presidencia.map((t) => (
-              <Ficha
-                key={t.id}
-                tarjeta={t}
-                datos={porId.get(t.id)}
-                onAbrir={(datos) => setAbierta({ datos, tarjeta: t })}
-              />
-            ))}
-          </div>
+          <Fichas grupo={presidencia} porId={porId} onAbrir={setAbierta} />
         </>
       )}
 
-      {corporativas.length > 0 && (
+      {(corporativas.activas.length > 0 || corporativas.baja.length > 0) && (
         <>
           <Rotulo>Tarjetas corporativas</Rotulo>
-          <div className="flex flex-wrap gap-3">
-            {corporativas.map((t) => (
-              <Ficha
-                key={t.id}
-                tarjeta={t}
-                datos={porId.get(t.id)}
-                onAbrir={(datos) => setAbierta({ datos, tarjeta: t })}
-              />
-            ))}
-          </div>
+          <Fichas grupo={corporativas} porId={porId} onAbrir={setAbierta} />
         </>
       )}
 
@@ -273,6 +262,47 @@ function Rotulo({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Las que están en uso arriba; las de baja en un renglón aparte, a la derecha. */
+function Fichas({
+  grupo,
+  porId,
+  onAbrir,
+}: {
+  grupo: { activas: Tarjeta[]; baja: Tarjeta[] };
+  porId: Map<string, TarjetaPeriodo>;
+  onAbrir: (v: { datos: TarjetaPeriodo; tarjeta: Tarjeta }) => void;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-3">
+        {grupo.activas.map((t) => (
+          <Ficha
+            key={t.id}
+            tarjeta={t}
+            datos={porId.get(t.id)}
+            onAbrir={(datos) => onAbrir({ datos, tarjeta: t })}
+          />
+        ))}
+      </div>
+      {grupo.baja.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-start justify-end gap-2 border-t border-sand pt-2">
+          <span className="mr-auto self-center text-[10px] font-semibold uppercase tracking-wider text-dark-3">
+            Dadas de baja
+          </span>
+          {grupo.baja.map((t) => (
+            <Ficha
+              key={t.id}
+              tarjeta={t}
+              datos={porId.get(t.id)}
+              onAbrir={(datos) => onAbrir({ datos, tarjeta: t })}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 function Ficha({
   tarjeta,
   datos,
@@ -283,6 +313,7 @@ function Ficha({
   onAbrir: (datos: TarjetaPeriodo) => void;
 }) {
   const tinte = tarjeta.color ?? '#0d2b2e';
+  const baja = !tarjeta.activo;
   // Misma ficha que la galería de Finanzas: arriba de quién es la tarjeta,
   // en medio su identificador y abajo el banco.
   const duenio = tarjeta.empresa ?? tarjeta.titular ?? tarjeta.banco;
@@ -302,42 +333,54 @@ function Ficha({
 
   return (
     <article
-      className={`flex w-52 flex-col overflow-hidden rounded-card border shadow-sm transition-transform hover:scale-[1.02] ${
-        movido ? 'border-sand' : 'border-sand opacity-70'
-      }`}
+      className={[
+        'flex flex-col overflow-hidden rounded-card border border-sand shadow-sm transition-transform hover:scale-[1.02]',
+        baja ? 'w-40' : 'w-52',
+        movido || baja ? '' : 'opacity-70',
+      ].join(' ')}
     >
       <button
         type="button"
         onClick={() => onAbrir(datos ?? vacia)}
-        className="p-3 text-left text-white"
-        style={{ background: `linear-gradient(135deg, ${tinte}cc, ${tinte})` }}
+        className={baja ? 'bg-sand p-2.5 text-left text-dark-2' : 'p-3 text-left text-white'}
+        style={baja ? undefined : { background: `linear-gradient(135deg, ${tinte}cc, ${tinte})` }}
         title="Ver el estado de cuenta de esta tarjeta"
       >
-        <p className="truncate text-[11px] font-extrabold uppercase tracking-[0.14em] opacity-95">
+        <p
+          className={[
+            'truncate font-extrabold uppercase tracking-[0.14em]',
+            baja ? 'text-[9px] text-dark-3' : 'text-[11px] opacity-95',
+          ].join(' ')}
+        >
           {duenio || 'Tarjeta'}
         </p>
-        <p className="mt-1.5 break-words font-mono text-sm font-extrabold leading-tight">
+        <p
+          className={[
+            'break-words font-mono font-extrabold leading-tight',
+            baja ? 'mt-1 text-[11px]' : 'mt-1.5 text-sm',
+          ].join(' ')}
+        >
           {tarjeta.tc_id}
         </p>
-        {tarjeta.banco && tarjeta.banco !== duenio && (
+        {tarjeta.banco && tarjeta.banco !== duenio && !baja && (
           <p className="mt-1 truncate text-[10px] opacity-80">{tarjeta.banco}</p>
         )}
-        {!tarjeta.activo && (
-          <p className="mt-1 inline-block rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider">
+        {baja && (
+          <p className="mt-1 inline-block rounded bg-dark-3/15 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-dark-3">
             Dada de baja
           </p>
         )}
       </button>
-      <Pie datos={datos} />
+      <Pie datos={datos} chica={baja} />
     </article>
   );
 }
 
-function Pie({ datos }: { datos: TarjetaPeriodo | undefined }) {
+function Pie({ datos, chica }: { datos: TarjetaPeriodo | undefined; chica?: boolean }) {
   const n = datos?.renglones.length ?? 0;
   const sumas = totales(datos);
   return (
-    <div className="bg-white px-3 py-2">
+    <div className={chica ? 'bg-sand-l px-2.5 py-1.5' : 'bg-white px-3 py-2'}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-3">
         {n} servicio{n === 1 ? '' : 's'}
       </p>

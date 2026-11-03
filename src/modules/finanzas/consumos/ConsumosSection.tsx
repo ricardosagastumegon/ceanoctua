@@ -14,6 +14,8 @@ import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useAutorizadores, useProveedores, useTarjetas } from '@/modules/admin/hooks';
 import type { ConsumoInsert } from './api';
+import { usePagos } from '@/modules/finanzas/pagos/hooks';
+import { PAGO_STEPS } from '@/modules/finanzas/pagos/api';
 import { ConsumoPrintable } from './ConsumoPrintable';
 import { claveConsumo, hacerResolver } from './resolver';
 
@@ -24,7 +26,32 @@ function fmt(n: number, currency: string): string {
 
 const REINTEGRO_DEADLINE_BIZDAYS = 7;
 
-function venceBadge(consumo: Consumo): { label: string; tone: string } | null {
+/**
+ * El consumo se salda por dos caminos.
+ *
+ * El viejo es un reintegro --`reintegro_id`--. El que se usa hoy es mandarlo
+ * a Pagos: se crea una solicitud con `consumo_id` y cuando esa solicitud
+ * termina su flujo, el dinero volvió. El badge solo miraba el camino viejo,
+ * así que dos consumos ya pagados en septiembre seguían en rojo.
+ *
+ * No hace falta una columna nueva: la solicitud ya sabe si está pagada, y
+ * duplicar ese dato en el consumo abriría la puerta a que se contradigan.
+ */
+function venceBadge(
+  consumo: Consumo,
+  pagadoPorSolicitud?: string,
+): { label: string; tone: string; title?: string } | null {
+  if (pagadoPorSolicitud) {
+    return {
+      label: '✓ reintegrado',
+      tone: 'bg-teal-l text-teal-d',
+      title: `Pagado con la solicitud ${pagadoPorSolicitud}`,
+    };
+  }
+  return venceBadgeBase(consumo);
+}
+
+function venceBadgeBase(consumo: Consumo): { label: string; tone: string } | null {
   if (consumo.reintegro_id) return { label: '✓ reintegrado', tone: 'bg-teal-l text-teal-d' };
   const due = addBusinessDays(consumo.fecha, REINTEGRO_DEADLINE_BIZDAYS);
   const left = bizDaysLeft(due);
@@ -60,6 +87,19 @@ export function ConsumosSection({ canEdit, tipo }: SectionProps) {
   const query = useConsumos();
   const create = useCreateConsumo();
   const tarjetasList = useTarjetas();
+  const pagosQ = usePagos();
+
+  // Qué consumos ya se saldaron por una solicitud de pago que llegó al final
+  // de su flujo. El valor es el correlativo, para poder decir cuál fue.
+  const saldadoPor = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const pg of pagosQ.data ?? []) {
+      if (!pg.consumo_id) continue;
+      if (pg.step_idx < PAGO_STEPS.length - 1) continue;
+      m.set(pg.consumo_id, pg.serial ?? 'una solicitud pagada');
+    }
+    return m;
+  }, [pagosQ.data]);
   const proveedoresList = useProveedores();
   const autorizadoresList = useAutorizadores();
   const [importerOpen, setImporterOpen] = useState(false);
@@ -220,9 +260,16 @@ export function ConsumosSection({ canEdit, tipo }: SectionProps) {
       key: 'vence',
       header: 'Vence (7d háb.)',
       render: (r) => {
-        const b = venceBadge(r);
+        const b = venceBadge(r, saldadoPor.get(r.id));
         if (!b) return <span className="text-dark-3">—</span>;
-        return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${b.tone}`}>{b.label}</span>;
+        return (
+          <span
+            title={b.title}
+            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${b.tone}`}
+          >
+            {b.label}
+          </span>
+        );
       },
     },
   ];

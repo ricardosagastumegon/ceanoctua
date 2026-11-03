@@ -645,14 +645,27 @@ export function PagosSection({
                           {p.comprobante_storage_path ? '📎' : '—'}
                         </td>
                         <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setViewing(p)}
-                            className="rounded-md border border-teal/40 px-2 py-0.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
-                            title="Ver PDF"
-                          >
-                            👁
-                          </button>
+                          <div className="inline-flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setViewing(p)}
+                              className="rounded-md border border-teal/40 px-2 py-0.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                              title="Ver PDF"
+                            >
+                              👁
+                            </button>
+                            {/* La solicitud pagada es la que se consulta despues:
+                                ahi esta el formato que se firmo y, cuando se
+                                habilite la carga, tambien ira la factura. */}
+                            <button
+                              type="button"
+                              onClick={() => setFormato(p)}
+                              className="rounded-md border border-teal/40 px-2 py-0.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                              title="Formato oficial FZ-RG-0185 de esta solicitud"
+                            >
+                              📄
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

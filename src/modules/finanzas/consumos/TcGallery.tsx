@@ -52,11 +52,14 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
   const esCorp = tipo === 'corporativa';
   const rotulo = esCorp ? 'Tarjetas corporativas' : 'Tarjetas de presidencia';
 
-  // Las activas primero; las dadas de baja al final, que es donde estorban
-  // menos sin dejar de estar.
-  const corp = (tarjetasQ.data ?? [])
+  // Las dadas de baja van en su propio renglón, chicas y en gris: son ocho
+  // de quince y con el mismo tamaño y color se comían la pantalla, que es
+  // justo donde uno busca las que sí están en uso.
+  const delTipo = (tarjetasQ.data ?? [])
     .filter((t) => t.tipo === tipo)
-    .sort((a, b) => Number(b.activo) - Number(a.activo) || a.tc_id.localeCompare(b.tc_id));
+    .sort((a, b) => a.tc_id.localeCompare(b.tc_id));
+  const corp = delTipo.filter((t) => t.activo);
+  const deBaja = delTipo.filter((t) => !t.activo);
 
   const resolver = useMemo(() => hacerResolver(tarjetasQ.data ?? []), [tarjetasQ.data]);
 
@@ -114,61 +117,37 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
         )}
       </div>
       <div className="flex flex-wrap gap-3">
-        {corp.map((t) => {
-          const stats = statsByCardId.get(t.id);
-          const isActive = filterCard === t.id;
-          const tint = tintFromColor(t.color);
-          return (
-            <article
-              key={t.id}
-              className={`group flex w-56 flex-col overflow-hidden rounded-card border shadow-sm transition-transform hover:scale-[1.02] ${
-                isActive ? 'border-teal' : 'border-sand'
-              } ${t.activo ? '' : 'opacity-80'}`}
-            >
-              <button
-                type="button"
-                onClick={() => onSelectCard(isActive ? '' : t.id)}
-                className="p-4 text-left text-white"
-                style={{ background: `linear-gradient(135deg, ${tint}cc, ${tint})` }}
-                title={isActive ? 'Click para quitar el filtro' : 'Click para filtrar a esta TC'}
-              >
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] opacity-95">
-                  {t.empresa ?? t.titular ?? (esCorp ? 'Corporativa' : 'Presidencia')}
-                </p>
-                <p className="mt-2 font-mono text-sm font-semibold leading-tight">{t.tc_id}</p>
-                {t.banco && <p className="mt-1 text-[10px] opacity-80">{t.banco}</p>}
-                {!t.activo && (
-                  <p className="mt-1.5 inline-block rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider">
-                    Dada de baja
-                  </p>
-                )}
-              </button>
-              <div className="bg-white px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-3">
-                  {stats?.count ?? 0} consumo{stats?.count === 1 ? '' : 's'}
-                </p>
-                {stats && stats.totalsByMoneda.size > 0 && (
-                  <ul className="mt-1 space-y-0.5">
-                    {Array.from(stats.totalsByMoneda.entries()).map(([m, sum]) => (
-                      <li key={m} className="font-mono text-xs font-semibold text-dark">
-                        {fmt(sum, m)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setEstadoCuentaTarjeta(t)}
-                  disabled={!stats || stats.count === 0}
-                  className="mt-2 w-full rounded-md border border-teal/40 px-2 py-1 text-[10px] font-semibold text-teal-d hover:bg-teal-l disabled:opacity-40"
-                >
-                  ⬇ Estado de cuenta
-                </button>
-              </div>
-            </article>
-          );
-        })}
+        {corp.map((t) => (
+          <FichaTc
+            key={t.id}
+            tarjeta={t}
+            stats={statsByCardId.get(t.id)}
+            activa={filterCard === t.id}
+            esCorp={esCorp}
+            onFiltrar={() => onSelectCard(filterCard === t.id ? '' : t.id)}
+            onEstado={() => setEstadoCuentaTarjeta(t)}
+          />
+        ))}
       </div>
+
+      {deBaja.length > 0 && (
+        <div className="flex flex-wrap items-start justify-end gap-2 border-t border-sand pt-2">
+          <span className="mr-auto self-center text-[10px] font-semibold uppercase tracking-wider text-dark-3">
+            Dadas de baja
+          </span>
+          {deBaja.map((t) => (
+            <FichaTc
+              key={t.id}
+              tarjeta={t}
+              stats={statsByCardId.get(t.id)}
+              activa={filterCard === t.id}
+              esCorp={esCorp}
+              onFiltrar={() => onSelectCard(filterCard === t.id ? '' : t.id)}
+              onEstado={() => setEstadoCuentaTarjeta(t)}
+            />
+          ))}
+        </div>
+      )}
 
       <Modal
         open={tcCorpOpen}
@@ -204,5 +183,111 @@ export function TcGallery({ tipo, filterCard, onSelectCard }: Props) {
         )}
       </PrintableModal>
     </div>
+  );
+}
+
+/**
+ * Una tarjeta de la galería.
+ *
+ * Dada de baja se dibuja chica y en gris: sigue estando --sus consumos hay
+ * que pagarlos-- pero deja de competir por la vista con las que están en uso.
+ */
+function FichaTc({
+  tarjeta,
+  stats,
+  activa,
+  esCorp,
+  onFiltrar,
+  onEstado,
+}: {
+  tarjeta: Tarjeta;
+  stats: { count: number; totalsByMoneda: Map<string, number> } | undefined;
+  activa: boolean;
+  esCorp: boolean;
+  onFiltrar: () => void;
+  onEstado: () => void;
+}) {
+  const baja = !tarjeta.activo;
+  const tinte = tintFromColor(tarjeta.color);
+
+  return (
+    <article
+      className={[
+        'flex flex-col overflow-hidden rounded-card border shadow-sm transition-transform hover:scale-[1.02]',
+        baja ? 'w-40' : 'w-56',
+        activa ? 'border-teal' : 'border-sand',
+      ].join(' ')}
+    >
+      <button
+        type="button"
+        onClick={onFiltrar}
+        className={baja ? 'bg-sand p-2.5 text-left text-dark-2' : 'p-4 text-left text-white'}
+        style={baja ? undefined : { background: `linear-gradient(135deg, ${tinte}cc, ${tinte})` }}
+        title={activa ? 'Click para quitar el filtro' : 'Click para filtrar a esta TC'}
+      >
+        <p
+          className={[
+            'font-extrabold uppercase tracking-[0.14em]',
+            baja ? 'text-[9px] text-dark-3' : 'text-[11px] opacity-95',
+          ].join(' ')}
+        >
+          {tarjeta.empresa ?? tarjeta.titular ?? (esCorp ? 'Corporativa' : 'Presidencia')}
+        </p>
+        <p
+          className={[
+            'font-mono font-semibold leading-tight',
+            baja ? 'mt-1 text-[11px]' : 'mt-2 text-sm',
+          ].join(' ')}
+        >
+          {tarjeta.tc_id}
+        </p>
+        {tarjeta.banco && !baja && <p className="mt-1 text-[10px] opacity-80">{tarjeta.banco}</p>}
+        <p
+          className={
+            baja
+              ? 'mt-1 inline-block rounded bg-dark-3/15 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-dark-3'
+              : 'hidden'
+          }
+        >
+          Dada de baja
+        </p>
+      </button>
+      <div className={baja ? 'bg-sand-l px-2.5 py-1.5' : 'bg-white px-3 py-2'}>
+        <p
+          className={[
+            'font-semibold uppercase tracking-wider text-dark-3',
+            baja ? 'text-[9px]' : 'text-[10px]',
+          ].join(' ')}
+        >
+          {stats?.count ?? 0} consumo{stats?.count === 1 ? '' : 's'}
+        </p>
+        {stats && stats.totalsByMoneda.size > 0 && (
+          <ul className="mt-1 space-y-0.5">
+            {Array.from(stats.totalsByMoneda.entries()).map(([m, sum]) => (
+              <li
+                key={m}
+                className={[
+                  'font-mono font-semibold text-dark',
+                  baja ? 'text-[10px]' : 'text-xs',
+                ].join(' ')}
+              >
+                {fmt(sum, m)}
+              </li>
+            ))}
+          </ul>
+        )}
+        <button
+          type="button"
+          onClick={onEstado}
+          disabled={!stats || stats.count === 0}
+          className={[
+            'mt-2 w-full rounded-md border border-teal/40 font-semibold text-teal-d hover:bg-teal-l disabled:opacity-40',
+            baja ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]',
+          ].join(' ')}
+        >
+          ⬇ Estado de cuenta
+        </button>
+      </div>
+    </article>
   );
 }

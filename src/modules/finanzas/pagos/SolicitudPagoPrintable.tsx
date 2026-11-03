@@ -141,6 +141,32 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
   const origenes = useOrigenes(pago).data ?? [];
   const firmo = useQuienFirmo(pago.id).data ?? null;
   const estampa = useEstampaDe(firmo?.por).data ?? null;
+
+  // ── Que la hoja no pase de una pagina ────────────────────────────────
+  //
+  // El detalle de liquidaciones crece con cada una, y a partir de la tercera
+  // empujaba una segunda hoja casi vacia. En vez de recortar un solo espacio
+  // --que deja la hoja descuadrada-- se encoge TODO el aire en proporcion:
+  // los blancos entre bloques y los renglones de observaciones.
+  const crecio =
+    origenes.length > 0
+      ? 15.75 * (1 + origenes.length + (origenes.length > 1 ? 1 : 0))
+      : 0;
+
+  /** Lo que suman los espacios en blanco de la hoja, en puntos. */
+  const AIRE_TOTAL = 170.65;
+
+  /**
+   * Un espacio en blanco, encogido lo necesario. Ninguno baja del 25% de su
+   * tamano: por debajo de eso la hoja se ve apretada y deja de parecer el
+   * formato de siempre.
+   */
+  const aire = (h: number) =>
+    crecio <= 0 ? h : h * Math.max(0.25, 1 - crecio / AIRE_TOTAL);
+
+  // Con muchas liquidaciones el aire no alcanza. Antes que sacar una hoja
+  // casi vacia, la hoja entera se achica un poco al imprimir.
+  const zoom = crecio > AIRE_TOTAL * 0.75 ? 0.9 : 1;
   const moneda = pago.moneda;
   const monto = Number(pago.monto);
   const esAnticipo = (pago.tipo_label ?? '').includes('Anticipo');
@@ -167,6 +193,9 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
     background: '#ffffff',
     width: SHEET_W,
     margin: '0 auto',
+    // Ultimo recurso cuando el aire no alcanzo: achicar la hoja entera un
+    // poco es preferible a sacar una segunda pagina casi vacia.
+    ...(zoom !== 1 ? { zoom } : {}),
   };
 
   return (
@@ -389,20 +418,20 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
             <td />
           </tr>
 
-          <Spacer h={27} />
+          <Spacer h={aire(27)} />
 
           {/* ── Observaciones · 2 renglones ───────────────────────────── */}
-          <tr style={{ height: pt(22.5) }}>
+          <tr style={{ height: pt(aire(22.5)) }}>
             <Label text="OBSERVACIONES:" />
             <Value colSpan={5}>{observaciones[0]}</Value>
           </tr>
-          <tr style={{ height: pt(22.5) }}>
+          <tr style={{ height: pt(aire(22.5)) }}>
             <Value colSpan={6}>{observaciones[1]}</Value>
           </tr>
 
           {origenes.length > 0 && (
             <>
-              <Spacer h={13.5} />
+              <Spacer h={aire(13.5)} />
               <tr style={{ height: pt(15.75) }}>
                 <td colSpan={6} style={{ fontWeight: 700, textAlign: 'left', verticalAlign: 'middle' }}>
                   {origenes.length === 1 ? 'LIQUIDACIÓN QUE CUBRE:' : 'LIQUIDACIONES QUE CUBRE:'}
@@ -410,7 +439,21 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
               </tr>
               {origenes.map((o) => (
                 <tr key={o.id} style={{ height: pt(15.75) }}>
-                  <td colSpan={4} style={{ borderBottom: THIN, verticalAlign: 'middle', textAlign: 'left' }}>
+                  <td
+                    colSpan={4}
+                    style={{
+                      borderBottom: THIN,
+                      verticalAlign: 'middle',
+                      textAlign: 'left',
+                      // Un renglon por liquidacion: si el concepto se parte en
+                      // dos, la altura de la hoja deja de ser predecible y
+                      // vuelve la segunda pagina.
+                      maxWidth: 0,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
                     {o.resumen ?? '(sin detalle)'}
                   </td>
                   <td
@@ -452,8 +495,8 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
             </>
           )}
 
-          <Spacer h={22.5} />
-          <Spacer h={22.5} />
+          <Spacer h={aire(22.5)} />
+          <Spacer h={aire(22.5)} />
 
           <tr style={{ height: pt(15.75) }}>
             <td style={{ fontWeight: 700, textAlign: 'center', verticalAlign: 'middle' }}>FECHA:</td>
@@ -461,7 +504,7 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
             <td colSpan={3} />
           </tr>
 
-          <Spacer h={40.15} />
+          <Spacer h={aire(40.15)} />
 
           {/* ── Bloque de firmas ──────────────────────────────────────── */}
           <tr style={{ height: pt(70.9) }}>

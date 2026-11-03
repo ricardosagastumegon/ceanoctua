@@ -42,6 +42,29 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
+### DT-19 · Los 12 invitados migrados están «Por clasificar»
+
+- **Origen:** Fase 39 · al pasar los participantes de texto a catálogo.
+- **Impacto:** cosmético hoy, útil mañana. Los 12 invitados que salieron de los
+  seis viajes entraron con relación `Por clasificar` porque nadie puede
+  adivinar desde el dato si «Cristina Safié» es familia o socia. Cuando la
+  lista crezca, el desplegable de participantes se vuelve una pared de nombres
+  sin la relación que los agrupe.
+- **Estimado:** 10 min de la asistente en Admin → Invitados. No es trabajo de
+  código.
+- **Estado:** Pendiente · depende de ella, no del desarrollo.
+
+### DT-20 · La gerente no figura en ningún viaje
+
+- **Origen:** Fase 39 · al filtrar Arriaza T&T por participación.
+- **Impacto:** su Arriaza T&T se ve vacío y parece roto. No lo está: en los
+  seis viajes que hay, ella no es participante. Quien viaja hoy es Miguel
+  Angel Arriaza (6), Patricia Esquivel (5), y José Miguel, Javier y Alejandro
+  (1 cada uno).
+- **Estimado:** nada que programar. Se resuelve agregándola a un viaje, o
+  confirmando que así debe verse.
+- **Estado:** Avisado. Confirmar con ella antes de tratarlo como un bug.
+
 ### DT-17 · Cinco catálogos sin trigger de auditoría
 
 - **Origen:** Fase 38 · se descubrió al agregarle el trigger a `tarjetas_credito`.

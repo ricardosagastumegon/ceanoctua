@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
+import { supabase } from '@/lib/supabase';
 import type { Pago } from './api';
 import logoFz from './logo-fz.png';
 
@@ -76,7 +78,39 @@ function wrapLines(text: string, perLine: number, max: number): string[] {
   return out;
 }
 
+/**
+ * Los origenes que cubre la solicitud.
+ *
+ * Una solicitud puede pagar varias liquidaciones de la misma entidad. El
+ * concepto las nombra, pero sin los montos no se puede cuadrar contra el
+ * papel. Se leen por `pago_id`; las creadas antes de que eso se guardara
+ * tienen su unico origen en `origen_notificacion_id`.
+ */
+function useOrigenes(pago: Pago) {
+  return useQuery({
+    queryKey: ['pago_origenes', pago.id, pago.origen_notificacion_id],
+    enabled: !!pago.id,
+    queryFn: async () => {
+      const porPago = await supabase
+        .from('pagos_notificaciones')
+        .select('id, resumen, monto, moneda, origen_tipo, created_at')
+        .eq('pago_id', pago.id)
+        .order('created_at');
+      if (porPago.error) throw porPago.error;
+      if ((porPago.data ?? []).length > 0) return porPago.data ?? [];
+      if (!pago.origen_notificacion_id) return [];
+      const suelta = await supabase
+        .from('pagos_notificaciones')
+        .select('id, resumen, monto, moneda, origen_tipo, created_at')
+        .eq('id', pago.origen_notificacion_id);
+      if (suelta.error) throw suelta.error;
+      return suelta.data ?? [];
+    },
+  });
+}
+
 export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
+  const origenes = useOrigenes(pago).data ?? [];
   const moneda = pago.moneda;
   const monto = Number(pago.monto);
   const esAnticipo = (pago.tipo_label ?? '').includes('Anticipo');
@@ -335,6 +369,58 @@ export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
           <tr style={{ height: pt(22.5) }}>
             <Value colSpan={6}>{observaciones[1]}</Value>
           </tr>
+
+          {origenes.length > 0 && (
+            <>
+              <Spacer h={13.5} />
+              <tr style={{ height: pt(15.75) }}>
+                <td colSpan={6} style={{ fontWeight: 700, textAlign: 'left', verticalAlign: 'middle' }}>
+                  {origenes.length === 1 ? 'LIQUIDACIÓN QUE CUBRE:' : 'LIQUIDACIONES QUE CUBRE:'}
+                </td>
+              </tr>
+              {origenes.map((o) => (
+                <tr key={o.id} style={{ height: pt(15.75) }}>
+                  <td colSpan={4} style={{ borderBottom: THIN, verticalAlign: 'middle', textAlign: 'left' }}>
+                    {o.resumen ?? '(sin detalle)'}
+                  </td>
+                  <td
+                    colSpan={2}
+                    style={{
+                      borderBottom: THIN,
+                      verticalAlign: 'middle',
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {o.monto != null ? money(Number(o.monto), o.moneda ?? moneda) : ''}
+                  </td>
+                </tr>
+              ))}
+              {origenes.length > 1 && (
+                <tr style={{ height: pt(15.75) }}>
+                  <td colSpan={4} style={{ verticalAlign: 'middle', textAlign: 'right', fontWeight: 700 }}>
+                    Suma de las {origenes.length} liquidaciones
+                  </td>
+                  <td
+                    colSpan={2}
+                    style={{
+                      border: MEDIUM,
+                      verticalAlign: 'middle',
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {money(
+                      origenes.reduce((a, o) => a + (Number(o.monto) || 0), 0),
+                      moneda,
+                    )}
+                  </td>
+                </tr>
+              )}
+            </>
+          )}
 
           <Spacer h={22.5} />
           <Spacer h={22.5} />

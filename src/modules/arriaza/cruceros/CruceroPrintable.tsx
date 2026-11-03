@@ -67,6 +67,7 @@ export function CruceroPrintable({ open, onClose, crucero, tripNo }: Props) {
       open={open}
       onClose={onClose}
       serviceKey="crucero"
+      adjuntos={[{ path: crucero.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={
         crucero.salida_fecha || crucero.retorno_fecha ? (
           <span>

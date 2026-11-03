@@ -29,6 +29,7 @@ export function TourPrintable({ open, onClose, tour: t, tripNo }: Props) {
       open={open}
       onClose={onClose}
       serviceKey="tours"
+      adjuntos={[{ path: t.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={t.fecha ? <span>{fmtDate(t.fecha)}</span> : null}
       title={t.nombre || t.prestador}
       subtitle={[t.nombre ? t.prestador : null, t.ciudad, t.tipo_servicio]

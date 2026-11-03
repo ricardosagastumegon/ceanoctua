@@ -22,6 +22,7 @@ import {
 } from './full-api';
 import type { Database } from '@/types/database';
 import { invalidarViaje } from '../viajes/invalidar';
+import { VerAdjunto } from '../shared/VerAdjunto';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -420,6 +421,7 @@ function ConfirmacionBoton({ hotelId, actual }: { hotelId: string; actual?: stri
           {actual ? 'Cargada — subir otra la reemplaza' : 'Sin archivo'}
         </span>
       </button>
+      <VerAdjunto path={actual} etiqueta="Ver la confirmación" />
     </div>
   );
 }

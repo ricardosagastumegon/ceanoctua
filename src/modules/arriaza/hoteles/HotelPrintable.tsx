@@ -39,6 +39,7 @@ export function HotelPrintable({ open, onClose, hotel, tripNo }: Props) {
       open={open}
       onClose={onClose}
       serviceKey="hotel"
+      adjuntos={[{ path: hotel.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={
         hotel.checkin && hotel.checkout ? (
           <span>

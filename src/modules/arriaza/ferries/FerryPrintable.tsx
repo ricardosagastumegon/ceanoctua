@@ -30,6 +30,7 @@ export function FerryPrintable({ open, onClose, ferry: f, tripNo }: Props) {
       open={open}
       onClose={onClose}
       serviceKey="ferry"
+      adjuntos={[{ path: f.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={f.fecha ? <span>{fmtDate(f.fecha)}</span> : null}
       title={f.prestador}
       subtitle={[f.tipo_embarcacion, f.ciudad, tipoServicio].filter(Boolean).join(' · ')}

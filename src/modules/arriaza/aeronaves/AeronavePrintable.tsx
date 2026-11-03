@@ -28,6 +28,7 @@ export function AeronavePrintable({ open, onClose, aeronave: a, tripNo }: Props)
       open={open}
       onClose={onClose}
       serviceKey="aeronave"
+      adjuntos={[{ path: a.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={a.fecha ? <span>{fmtDate(a.fecha)}</span> : null}
       title={a.prestador}
       subtitle={[a.tipo_aeronave, a.ciudad, a.tipo_servicio].filter(Boolean).join(' · ')}

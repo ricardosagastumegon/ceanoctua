@@ -30,6 +30,7 @@ export function AcuaticoPrintable({ open, onClose, acuatico: a, tripNo }: Props)
       open={open}
       onClose={onClose}
       serviceKey="acuatico"
+      adjuntos={[{ path: a.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={a.fecha ? <span>{fmtDate(a.fecha)}</span> : null}
       title={a.prestador}
       subtitle={[a.tipo_embarcacion, a.ciudad, tipoServicio].filter(Boolean).join(' · ')}

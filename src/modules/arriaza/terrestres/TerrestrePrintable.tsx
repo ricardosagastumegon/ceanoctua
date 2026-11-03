@@ -30,6 +30,7 @@ export function TerrestrePrintable({ open, onClose, terrestre: t, tripNo }: Prop
       open={open}
       onClose={onClose}
       serviceKey="terrestre"
+      adjuntos={[{ path: t.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={t.fecha ? <span>{fmtDate(t.fecha)}</span> : null}
       title={t.prestador}
       subtitle={[t.tipo_veh, t.ciudad, tipoServicio].filter(Boolean).join(' · ')}

@@ -43,6 +43,11 @@ export function TicketPrintable({ open, onClose, ticket, tripNo }: Props) {
       open={open}
       onClose={onClose}
       serviceKey="tickets"
+      adjuntos={[
+        { path: ticket.pdf_boleto_path ?? '', titulo: 'Boleto' },
+        { path: ticket.pdf_boarding_path ?? '', titulo: 'Boarding pass' },
+        { path: ticket.pdf_sat_path ?? '', titulo: 'SAT' },
+      ]}
       title={ticket.titulo ?? `${ticket.origen ?? '?'} → ${ticket.destino ?? '?'}`}
       subtitle={ticket.aerolinea}
       titleSize="grande"

@@ -26,6 +26,7 @@ export function RentaPrintable({ open, onClose, renta: r, tripNo }: Props) {
       open={open}
       onClose={onClose}
       serviceKey="renta"
+      adjuntos={[{ path: r.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={
         r.recepcion_fecha ? (
           <span>

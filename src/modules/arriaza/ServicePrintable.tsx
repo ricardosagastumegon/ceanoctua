@@ -1,7 +1,10 @@
-import { type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { SERVICE_META, type ServiceKey } from './constants/serviceMeta';
 import { fmtMoney } from './utils';
+import { armarPdfConAdjuntos, type ArchivoAdjunto } from '@/lib/pdf-hojas';
+import { useToast } from '@/components/ui/Toast';
+import { describeError } from '@/modules/admin/hooks';
 import logoBlanco from './arriaza-logo-blanco.png';
 
 type Props = {
@@ -33,6 +36,11 @@ type Props = {
   rows: Array<{ label: string; value: ReactNode; destacado?: boolean }>;
   /** Bloques extra al final (pasajeros, habitaciones, tickets de actividad…). */
   extras?: ReactNode;
+  /**
+   * Lo que se subió de este servicio: la confirmación, el boleto, el boarding
+   * pass. Si hay alguno, la hoja ofrece bajarse con ellos pegados atrás.
+   */
+  adjuntos?: ArchivoAdjunto[];
   /**
    * Franja sobre el encabezado. El hotel la usa para el rango de fechas, que
    * es lo primero que se busca en la hoja de una reserva.
@@ -77,9 +85,12 @@ export function ServicePrintable({
   open, onClose, serviceKey, title, subtitle, tripNo, total, cargos, moneda,
   estadoPago, pagadoCon, confirmacion, cancelacion, rows, extras, band,
   headerRight, titleSize = 'normal', rowsLayout = 'normal',
+  adjuntos,
   pie = 'Arriaza Tour & Travel · Documento de uso interno',
 }: Props) {
   const meta = SERVICE_META[serviceKey];
+  const hoja = useRef<HTMLElement>(null);
+  const conArchivo = (adjuntos ?? []).filter((a) => !!a.path);
 
   // El número de confirmación va pegado a «Reservado a través de», que es su
   // contexto: quién hizo la reserva y con qué número.
@@ -104,8 +115,13 @@ export function ServicePrintable({
   }
 
   return (
-    <PrintableModal open={open} onClose={onClose} title={`${meta.icon} ${meta.label} — ${title}`}>
-      <article style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
+    <PrintableModal
+      open={open}
+      onClose={onClose}
+      title={`${meta.icon} ${meta.label} — ${title}`}
+      acciones={<BotonConAdjuntos hoja={hoja} adjuntos={conArchivo} titulo={title} />}
+    >
+      <article ref={hoja} style={{ fontFamily: 'Nunito, sans-serif', color: '#321201' }}>
         {band && (
           <div
             className="px-8 py-2 font-heading text-lg font-extrabold text-white"
@@ -266,5 +282,70 @@ export function ServicePrintable({
         </div>
       </article>
     </PrintableModal>
+  );
+}
+
+/**
+ * Bajar la hoja con sus adjuntos detrás.
+ *
+ * No es «imprimir»: el navegador solo imprime lo que dibuja, y un PDF que
+ * alguien subió --un boarding pass, la confirmación del hotel-- no se puede
+ * meter ahí. El documento se arma por programa, la hoja va de primera y los
+ * archivos atrás, y baja como un solo archivo listo para imprimir o mandar.
+ */
+function BotonConAdjuntos({
+  hoja,
+  adjuntos,
+  titulo,
+}: {
+  hoja: React.RefObject<HTMLElement | null>;
+  adjuntos: ArchivoAdjunto[];
+  titulo: string;
+}) {
+  const toast = useToast();
+  const [paso, setPaso] = useState<string | null>(null);
+
+  if (adjuntos.length === 0) return null;
+
+  async function bajar() {
+    if (!hoja.current) return;
+    setPaso('Preparando…');
+    try {
+      const { blob, fallidos } = await armarPdfConAdjuntos(
+        [hoja.current],
+        'tt-documentos',
+        adjuntos,
+        (p) => setPaso(p.paso),
+      );
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${titulo.replace(/[\\/:*?"<>|]/g, '-')}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+
+      if (fallidos.length > 0) {
+        // Se avisa cuál faltó en vez de dejar creer que el documento está
+        // completo: un adjunto perdido en silencio es peor que no tenerlo.
+        toast.error(`No se pudo incluir: ${fallidos.join(', ')}. El resto sí bajó.`);
+      } else {
+        toast.success('Documento listo, con sus adjuntos.');
+      }
+    } catch (e) {
+      toast.error(describeError(e));
+    } finally {
+      setPaso(null);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void bajar()}
+      disabled={paso !== null}
+      className="rounded-md border border-teal/50 bg-teal-l px-3 py-1.5 text-xs font-semibold text-teal-d hover:opacity-90 disabled:opacity-60"
+      title="Un solo PDF: esta hoja y los archivos que se le subieron"
+    >
+      {paso ?? `📎 Con adjuntos (${adjuntos.length})`}
+    </button>
   );
 }

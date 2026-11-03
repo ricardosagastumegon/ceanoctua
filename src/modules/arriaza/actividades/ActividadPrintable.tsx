@@ -33,6 +33,7 @@ export function ActividadPrintable({ open, onClose, actividad: a, entradas, trip
       open={open}
       onClose={onClose}
       serviceKey="actividades"
+      adjuntos={[{ path: a.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={a.fecha ? <span>{fmtDate(a.fecha)}</span> : null}
       title={a.evento}
       subtitle={[a.ciudad, a.duracion].filter(Boolean).join(' · ')}

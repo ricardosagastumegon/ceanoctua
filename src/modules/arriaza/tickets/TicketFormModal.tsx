@@ -29,6 +29,7 @@ import { cargoAInput, guardarCargos, sumaCargos, type CargoInput } from '../carg
 import { useCargosServicio } from '../cargos/hooks';
 import { useTarjetas } from '@/modules/admin/hooks';
 import type { Database } from '@/types/database';
+import { VerAdjunto } from '../shared/VerAdjunto';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -951,6 +952,7 @@ function AdjuntoBoton({
           {actual ? 'Cargado — subir otro lo reemplaza' : 'Sin archivo'}
         </span>
       </button>
+      <VerAdjunto path={actual} etiqueta={`Ver ${label}`} />
     </div>
   );
 }

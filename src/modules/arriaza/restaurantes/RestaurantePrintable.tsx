@@ -33,6 +33,7 @@ export function RestaurantePrintable({ open, onClose, restaurante: r, tripNo }: 
       open={open}
       onClose={onClose}
       serviceKey="restaurantes"
+      adjuntos={[{ path: r.confirmacion_path ?? '', titulo: 'Confirmación' }]}
       band={
         r.fecha ? (
           <span>

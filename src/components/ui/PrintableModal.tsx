@@ -7,13 +7,19 @@ type Props = {
   title?: string;
   /** A4/letter "page" rendered inside the modal and used by window.print(). */
   children: ReactNode;
+  /**
+   * Botones propios del documento, a la izquierda de Imprimir. La hoja de un
+   * servicio pone aquí la descarga con sus adjuntos: el navegador no sabe
+   * meter un PDF ajeno dentro de lo que imprime.
+   */
+  acciones?: ReactNode;
 };
 
 /**
  * Modal that wraps a printable document. The actions bar (Imprimir / Cerrar)
  * has `.no-print` so window.print() only outputs the document inside .printable.
  */
-export function PrintableModal({ open, onClose, title, children }: Props) {
+export function PrintableModal({ open, onClose, title, children, acciones }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -46,7 +52,8 @@ export function PrintableModal({ open, onClose, title, children }: Props) {
       >
         <div className="no-print flex shrink-0 items-center justify-between border-b border-sand bg-white px-6 py-3">
           <h2 className="font-heading text-base font-semibold text-dark">{title ?? 'Documento'}</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {acciones}
             <button
               type="button"
               onClick={() => window.print()}

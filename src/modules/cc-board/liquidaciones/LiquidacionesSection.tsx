@@ -21,6 +21,7 @@ import {
 import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
+import { useCancelarFirma, useFirmasPendientes } from '@/modules/cea/firmas/hooks';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { useEntidades } from '@/modules/admin/hooks';
 
@@ -55,6 +56,30 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
   const create = useCreateLiquidacion();
   const update = useUpdateLiquidacion();
   const [pidiendoFirma, setPidiendoFirma] = useState<Liquidacion | null>(null);
+  const pendientesQ = useFirmasPendientes();
+  const cancelarFirma = useCancelarFirma();
+
+  /** Retirar una firma ya pedida, para no duplicarla. */
+  async function retirarFirma(firmaId: string, titulo: string) {
+    const ok = await confirm({
+      title: 'Retirar la solicitud de firma',
+      message: (
+        <>
+          <strong>{titulo}</strong> ya está esperando firma. ¿Retirar esa solicitud? Desaparece
+          del tablero de quien tenía que firmarla.
+        </>
+      ),
+      danger: true,
+      confirmLabel: 'Retirar',
+    });
+    if (!ok) return;
+    try {
+      await cancelarFirma.mutateAsync(firmaId);
+      toast.success('Solicitud de firma retirada.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
   const replaceVales = useReplaceLinkedVales();
   const entidadesList = useEntidades();
   const [importerOpen, setImporterOpen] = useState(false);
@@ -371,14 +396,31 @@ export function LiquidacionesSection({ canEdit }: { canEdit: boolean }) {
               {/* Pedir firma sin pasar por Pagos: hay liquidaciones que se
                   firman antes de tramitarse, y el papel ya esta en CEA. */}
               {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => setPidiendoFirma(row)}
-                  className="rounded-md border border-gold/50 bg-gold-light px-2 py-1 text-xs font-semibold text-gold hover:opacity-90"
-                  title="Pedir firma de este documento"
-                >
-                  ✍️ FIRMA
-                </button>
+                (() => {
+                  const pendiente = pendientesQ.data?.porLiquidacion.get(row.id);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        pendiente
+                          ? void retirarFirma(pendiente, row.serial ?? row.motivo ?? '')
+                          : setPidiendoFirma(row)
+                      }
+                      className={
+                        pendiente
+                          ? 'rounded-md border border-gold bg-gold px-2 py-1 text-xs font-extrabold text-white hover:opacity-90'
+                          : 'rounded-md border border-gold/50 bg-gold-light px-2 py-1 text-xs font-semibold text-gold hover:opacity-90'
+                      }
+                      title={
+                        pendiente
+                          ? 'Ya está esperando firma. Tócalo para retirar la solicitud.'
+                          : 'Pedir firma de este documento'
+                      }
+                    >
+                      {pendiente ? '✍️ EN FIRMA' : '✍️ FIRMA'}
+                    </button>
+                  );
+                })()
               )}
               {/* A Pagos solo van las que paga una entidad: una solicitud de
                   pago es un trámite contable de la entidad, no de una

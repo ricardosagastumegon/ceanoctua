@@ -18,6 +18,7 @@ import {
 } from './hooks';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
+import { useCancelarFirma, useFirmasPendientes } from '@/modules/cea/firmas/hooks';
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
 import { SolicitudPagoPrintable } from './SolicitudPagoPrintable';
@@ -55,6 +56,36 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
   /** Notificación que originó el form abierto — se marca procesada al guardar. */
   const [fromNotifs, setFromNotifs] = useState<string[]>([]);
   const [pidiendoFirma, setPidiendoFirma] = useState<Pago | null>(null);
+  const pendientesQ = useFirmasPendientes();
+  const cancelarFirma = useCancelarFirma();
+
+  /**
+   * Retirar una firma ya pedida.
+   *
+   * Pedirla dos veces creaba dos documentos y quien firma veia el mismo pago
+   * repetido. Ahora el boton cambia de color cuando ya se pidio, y volver a
+   * tocarlo pregunta si se quiere retirar.
+   */
+  async function retirarFirma(firmaId: string, titulo: string) {
+    const ok = await confirm({
+      title: 'Retirar la solicitud de firma',
+      message: (
+        <>
+          <strong>{titulo}</strong> ya está esperando firma. ¿Retirar esa solicitud? Desaparece
+          del tablero de quien tenía que firmarla.
+        </>
+      ),
+      danger: true,
+      confirmLabel: 'Retirar',
+    });
+    if (!ok) return;
+    try {
+      await cancelarFirma.mutateAsync(firmaId);
+      toast.success('Solicitud de firma retirada.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
   const [verPagadas, setVerPagadas] = useState(false);
   const [buscaPagada, setBuscaPagada] = useState('');
   const [viewing, setViewing] = useState<Pago | null>(null);
@@ -436,14 +467,31 @@ export function PagosSection({ canEdit }: { canEdit: boolean }) {
                           → Siguiente
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setPidiendoFirma(p)}
-                        className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20 disabled:opacity-60"
-                        title="Crear solicitud de firma vinculada a este pago"
-                      >
-                        ✍️ Firma
-                      </button>
+                      {(() => {
+                        const pendiente = pendientesQ.data?.porPago.get(p.id);
+                        return (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              pendiente
+                                ? void retirarFirma(pendiente, p.serial ?? p.proveedor ?? '')
+                                : setPidiendoFirma(p)
+                            }
+                            className={
+                              pendiente
+                                ? 'rounded-md border border-gold bg-gold px-2 py-1 text-xs font-extrabold text-white hover:opacity-90'
+                                : 'rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20'
+                            }
+                            title={
+                              pendiente
+                                ? 'Ya está esperando firma. Tócalo para retirar la solicitud.'
+                                : 'Crear solicitud de firma vinculada a este pago'
+                            }
+                          >
+                            {pendiente ? '✍️ En firma' : '✍️ Firma'}
+                          </button>
+                        );
+                      })()}
                       {isLast && (
                         <span className="rounded-md bg-teal px-3 py-1 text-xs font-semibold text-white">✓ Pagado</span>
                       )}

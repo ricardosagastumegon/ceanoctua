@@ -12,6 +12,15 @@ import type { Afiliacion, Pasaporte, Visa } from '@/modules/admin/viajeros/api';
  * eso la misma persona quedó capturada con cuatro grafías y con dos números
  * de pasaporte distintos.
  *
+ * ── Se escoge la persona Y el pasaporte ──────────────────────────────────
+ *
+ * Casi todos tienen doble nacionalidad, y **cuál se usa depende de la ruta y
+ * el destino**: con un destino se entra mejor con el pasaporte europeo y con
+ * otro con el guatemalteco. Por eso la lista no ofrece personas sino
+ * pasaportes --«Miguel Angel Arriaza · España»--: elegir por la persona y
+ * dejar que el sistema escoja el documento seria decidir por quien emite el
+ * boleto, que es justo quien sabe.
+ *
  * Lo traído se puede corregir: a partir de ese momento el dato es del boleto.
  * Un boleto emitido es un documento, no una vista del catálogo, y si mañana
  * cambia el pasaporte el boleto viejo tiene que seguir diciendo con cuál se
@@ -28,11 +37,14 @@ export type DatosTraidos = {
   programa: string;
 };
 
-/** Vencido no sirve para volar: se prefiere el que esté vigente. */
+function estaVigente(d: { vencimiento: string | null }): boolean {
+  if (!d.vencimiento) return true;
+  return d.vencimiento >= new Date().toISOString().slice(0, 10);
+}
+
+/** Vencido no sirve para volar: entre varios se prefiere el que esté vigente. */
 function vigentePrimero<T extends { vencimiento: string | null }>(docs: T[]): T | undefined {
-  const hoy = new Date().toISOString().slice(0, 10);
-  const vigentes = docs.filter((d) => !d.vencimiento || d.vencimiento >= hoy);
-  return vigentes[0] ?? docs[0];
+  return docs.find(estaVigente) ?? docs[0];
 }
 
 /**
@@ -58,6 +70,15 @@ function afiliacionParaAerolinea(
   );
 }
 
+type Opcion = {
+  valor: string;
+  etiqueta: string;
+  grupo: string;
+  clavePersona: string;
+  pasaporte: Pasaporte | null;
+  nombrePersona: string;
+};
+
 export function TraerDelCatalogo({
   aerolinea,
   onTraer,
@@ -72,17 +93,48 @@ export function TraerDelCatalogo({
   const afiliacionesQ = useAfiliaciones();
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const gente = useMemo(() => {
-    const p = (personasQ.data ?? []).map((x) => ({
-      clave: `persona:${x.id}`,
-      nombre: x.nombre,
-      grupo: 'Personal JD',
-    }));
-    const i = (invitadosQ.data ?? [])
-      .filter((x) => x.activo !== false)
-      .map((x) => ({ clave: `invitado:${x.id}`, nombre: x.nombre, grupo: 'Invitados' }));
-    return [...p, ...i];
-  }, [personasQ.data, invitadosQ.data]);
+  const opciones = useMemo<Opcion[]>(() => {
+    const gente = [
+      ...(personasQ.data ?? []).map((x) => ({
+        clave: `persona:${x.id}`,
+        nombre: x.nombre,
+        grupo: 'Personal JD',
+      })),
+      ...(invitadosQ.data ?? [])
+        .filter((x) => x.activo !== false)
+        .map((x) => ({ clave: `invitado:${x.id}`, nombre: x.nombre, grupo: 'Invitados' })),
+    ];
+
+    const out: Opcion[] = [];
+    for (const g of gente) {
+      const [tipo, id] = g.clave.split(':');
+      const suyos = (pasaportesQ.data ?? []).filter((d) =>
+        tipo === 'persona' ? d.persona_id === id : d.invitado_id === id,
+      );
+      if (suyos.length === 0) {
+        out.push({
+          valor: g.clave,
+          etiqueta: `${g.nombre} — sin pasaporte`,
+          grupo: g.grupo,
+          clavePersona: g.clave,
+          pasaporte: null,
+          nombrePersona: g.nombre,
+        });
+        continue;
+      }
+      for (const ps of suyos) {
+        out.push({
+          valor: `${g.clave}|${ps.id}`,
+          etiqueta: `${g.nombre} · ${ps.pais_emisor}${estaVigente(ps) ? '' : ' (vencido)'}`,
+          grupo: g.grupo,
+          clavePersona: g.clave,
+          pasaporte: ps,
+          nombrePersona: g.nombre,
+        });
+      }
+    }
+    return out;
+  }, [personasQ.data, invitadosQ.data, pasaportesQ.data]);
 
   function suyos<T extends { persona_id: string | null; invitado_id: string | null }>(
     docs: T[],
@@ -92,21 +144,23 @@ export function TraerDelCatalogo({
     return docs.filter((d) => (tipo === 'persona' ? d.persona_id === id : d.invitado_id === id));
   }
 
-  function traer(clave: string) {
-    if (!clave) return;
-    const persona = gente.find((g) => g.clave === clave);
-    if (!persona) return;
+  function traer(valor: string) {
+    if (!valor) return;
+    const op = opciones.find((o) => o.valor === valor);
+    if (!op) return;
 
-    const pasaporte: Pasaporte | undefined = vigentePrimero(suyos(pasaportesQ.data ?? [], clave));
-    const visa: Visa | undefined = vigentePrimero(suyos(visasQ.data ?? [], clave));
-    const misAfiliaciones = suyos(afiliacionesQ.data ?? [], clave);
+    const pasaporte = op.pasaporte;
+    const misVisas = suyos(visasQ.data ?? [], op.clavePersona);
+    const visa: Visa | undefined = vigentePrimero(misVisas);
+    const misAfiliaciones = suyos(afiliacionesQ.data ?? [], op.clavePersona);
     const afiliacion = afiliacionParaAerolinea(misAfiliaciones, aerolinea);
 
     const iso = pasaporte?.pais_emisor ? isoForCountry(pasaporte.pais_emisor) : null;
 
     onTraer({
-      // El nombre del pasaporte manda: con ese se emite el boleto.
-      nombre: pasaporte?.nombre || persona.nombre,
+      // El nombre del pasaporte manda: con ese se emite el boleto, y cada
+      // pasaporte puede traer uno distinto.
+      nombre: pasaporte?.nombre || op.nombrePersona,
       nacionalidades: iso ? [iso] : [],
       pasaporte_num: pasaporte?.numero ?? '',
       libreta_num: pasaporte?.libreta_num ?? '',
@@ -115,20 +169,22 @@ export function TraerDelCatalogo({
       programa: afiliacion?.programa ?? '',
     });
 
-    const faltas: string[] = [];
-    if (!pasaporte) faltas.push('sin pasaporte en el catálogo');
-    if (!visa) faltas.push('sin visa');
+    const notas: string[] = [];
+    if (!pasaporte) notas.push('sin pasaporte en el catálogo');
+    else if (!estaVigente(pasaporte)) notas.push('ese pasaporte está vencido');
+    if (!visa) notas.push('sin visa');
+    else if (misVisas.length > 1) notas.push(`se trajo la visa de ${visa.pais_emisor}`);
     if (!afiliacion) {
-      faltas.push(
+      notas.push(
         misAfiliaciones.length > 0
           ? `ninguna afiliación corresponde a «${aerolinea || 'la aerolínea'}»`
           : 'sin afiliaciones',
       );
     }
-    setAviso(faltas.length > 0 ? faltas.join(' · ') : null);
+    setAviso(notas.length > 0 ? notas.join(' · ') : null);
   }
 
-  const grupos = [...new Set(gente.map((g) => g.grupo))];
+  const grupos = [...new Set(opciones.map((o) => o.grupo))];
 
   return (
     <div>
@@ -141,17 +197,17 @@ export function TraerDelCatalogo({
         <option value="">👤 Traer del catálogo…</option>
         {grupos.map((g) => (
           <optgroup key={g} label={g}>
-            {gente
-              .filter((x) => x.grupo === g)
-              .map((x) => (
-                <option key={x.clave} value={x.clave}>
-                  {x.nombre}
+            {opciones
+              .filter((o) => o.grupo === g)
+              .map((o) => (
+                <option key={o.valor} value={o.valor}>
+                  {o.etiqueta}
                 </option>
               ))}
           </optgroup>
         ))}
       </select>
-      {aviso && <p className="mt-1 text-[10px] text-rust">Se trajo lo que había: {aviso}.</p>}
+      {aviso && <p className="mt-1 text-[10px] text-rust">Ojo: {aviso}.</p>}
     </div>
   );
 }

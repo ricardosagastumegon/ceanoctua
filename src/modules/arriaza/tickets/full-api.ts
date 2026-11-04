@@ -75,6 +75,12 @@ export type PaxInput = {
   libreta_num: string;
   visa_num: string;
   ffn: string;
+  /**
+   * A que programa pertenece el `ffn`. Tiene columna propia porque sin ella
+   * termina metido dentro del numero: en los datos viejos hay un
+   * «9008112501 DELTA».
+   */
+  programa: string;
   numero_ticket: string;
   asiento: string;
   eq_personal: string;
@@ -199,6 +205,7 @@ export const ticketFullApi = {
         libreta_num: p.libreta_num ?? '',
         visa_num: p.visa_num ?? '',
         ffn: p.ffn ?? '',
+        programa: p.programa ?? '',
         numero_ticket: p.numero_ticket ?? '',
         asiento: p.asiento ?? '',
         eq_personal: p.eq_personal ?? '',
@@ -275,6 +282,7 @@ async function savePax(ticketId: string, pax: PaxInput[]) {
       libreta_num: p.libreta_num.trim() || null,
       visa_num: p.visa_num.trim() || null,
       ffn: p.ffn.trim() || null,
+      programa: p.programa.trim() || null,
       numero_ticket: p.numero_ticket.trim() || null,
       asiento: p.asiento.trim() || null,
       eq_personal: p.eq_personal.trim() || null,

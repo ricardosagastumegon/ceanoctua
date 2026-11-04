@@ -30,6 +30,7 @@ import { useCargosServicio } from '../cargos/hooks';
 import { useTarjetas } from '@/modules/admin/hooks';
 import type { Database } from '@/types/database';
 import { VerAdjunto } from '../shared/VerAdjunto';
+import { TraerDelCatalogo } from './TraerDelCatalogo';
 
 type Currency = Database['public']['Enums']['currency'];
 
@@ -75,6 +76,7 @@ const paxVacio = (): PaxInput => ({
   libreta_num: '',
   visa_num: '',
   ffn: '',
+  programa: '',
   numero_ticket: '',
   asiento: '',
   eq_personal: '',
@@ -395,6 +397,7 @@ export function TicketFormModal({ open, viajeId, ticketId, onClose }: Props) {
               <PaxCard
                 key={i}
                 idx={i}
+                aerolinea={aerolinea}
                 pax={p}
                 moneda={moneda}
                 onChange={(patch) => updPax(i, patch)}
@@ -795,11 +798,12 @@ function SegmentoCard({
 }
 
 function PaxCard({
-  idx, pax, moneda, onChange, onRemove,
+  idx, pax, moneda, aerolinea, onChange, onRemove,
 }: {
   idx: number;
   pax: PaxInput;
   moneda: string;
+  aerolinea: string;
   onChange: (patch: Partial<PaxInput>) => void;
   onRemove?: () => void;
 }) {
@@ -813,6 +817,10 @@ function PaxCard({
         >
           Pax {idx + 1}
         </span>
+        <div className="ml-3 w-56">
+          <TraerDelCatalogo aerolinea={aerolinea} onTraer={(d) => onChange(d)} />
+        </div>
+        <span className="flex-1" />
         {onRemove && (
           <button
             type="button"
@@ -865,7 +873,12 @@ function PaxCard({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <TextInput label="No. de libreta" value={pax.libreta_num} onChange={(e) => onChange({ libreta_num: e.target.value })} />
         <TextInput label="No. de visa" value={pax.visa_num} onChange={(e) => onChange({ visa_num: e.target.value })} />
-        <TextInput label="Frequent flyer" value={pax.ffn} onChange={(e) => onChange({ ffn: e.target.value })} />
+        <TextInput
+          label="Frequent flyer"
+          value={pax.ffn}
+          onChange={(e) => onChange({ ffn: e.target.value })}
+          hint={pax.programa || undefined}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

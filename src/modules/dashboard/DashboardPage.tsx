@@ -1,5 +1,4 @@
 import { useAuth } from '@/lib/auth';
-import { PersonalView } from './PersonalView';
 import { FullView } from './FullView';
 import { GerenteView } from './GerenteView';
 
@@ -70,26 +69,13 @@ export function DashboardPage() {
     );
   }
 
-  // board_member sees only personal view; admin/asistente/solo_lectura see full view.
-  if (profile.rol === 'board_member') {
-    if (!profile.miembro_codigo) {
-      return (
-        <section className="rounded-card border border-rust/40 bg-white p-8 shadow-sm">
-          <h1 className="font-heading text-2xl font-semibold text-dark">Sin miembro asignado</h1>
-          <p className="mt-2 text-sm text-dark-2">
-            Tu cuenta tiene rol <code>board_member</code> pero no está enlazada a un miembro del
-            board. Un administrador debe asignarte <code>miembro_id</code> en la tabla{' '}
-            <code>usuarios</code>.
-          </p>
-        </section>
-      );
-    }
-    return <PersonalView memberCode={profile.miembro_codigo} />;
-  }
-
   // Quien opera el sistema --admin y asistente-- ve el tablero completo. Quien
   // entra a supervisar y firmar ve el suyo: el tablero de operacion no es "lo
   // mismo con menos columnas", le estorba.
+  //
+  // Un `board_member` cae en el segundo grupo. Antes tenia su propia pantalla
+  // --PersonalView-- que resumia las tablas del modulo board; se fue con ellas
+  // en la fase 42. GerenteView hace lo mismo con los datos que si existen.
   if (profile.rol === 'admin' || profile.rol === 'asistente') {
     return <FullView rol={profile.rol} />;
   }

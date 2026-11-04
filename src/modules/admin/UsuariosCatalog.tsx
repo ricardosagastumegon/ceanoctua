@@ -26,13 +26,6 @@ const MODULOS: { key: Modulo; label: string; grupo: string }[] = [
   { key: 'caja_chica', label: 'Caja Chica', grupo: 'Módulos' },
   { key: 'miel_sj', label: 'Miel SJ', grupo: 'Módulos' },
   { key: 'dashboard', label: 'Dashboard', grupo: 'Módulos' },
-  { key: 'maa', label: 'MAA · Presidencia', grupo: 'Tableros del board' },
-  { key: 'ja', label: 'JA · Gerencia Agrícola', grupo: 'Tableros del board' },
-  { key: 'la', label: 'LA · Gerencia Administrativa', grupo: 'Tableros del board' },
-  { key: 'jm', label: 'JM · Gerencia LUM', grupo: 'Tableros del board' },
-  { key: 'aa', label: 'AA · Board', grupo: 'Tableros del board' },
-  { key: 'eg', label: 'EG · Gerente General', grupo: 'Tableros del board' },
-  { key: 'pe', label: 'PE · Board', grupo: 'Tableros del board' },
 ];
 
 const NIVELES: { key: Permiso; label: string; pie: string }[] = [

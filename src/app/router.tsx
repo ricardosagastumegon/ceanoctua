@@ -8,13 +8,9 @@ import NuevaClave from './NuevaClave';
 
 // Lazy-load every page so each lives in its own chunk.
 // Reduces initial bundle from ~880 KB to ~250 KB.
-const MaaPage = lazy(() => cargar(() => import('@/modules/maa/page')));
-const JaPage = lazy(() => cargar(() => import('@/modules/ja/page')));
-const LaPage = lazy(() => cargar(() => import('@/modules/la/page')));
-const JmPage = lazy(() => cargar(() => import('@/modules/jm/page')));
-const AaPage = lazy(() => cargar(() => import('@/modules/aa/page')));
-const EgPage = lazy(() => cargar(() => import('@/modules/eg/page')));
-const PePage = lazy(() => cargar(() => import('@/modules/pe/page')));
+// Los siete tableros por miembro --MAA, JA, LA, JM, AA, EG, PE-- se
+// eliminaron en la fase 42: resumian cinco tablas que nunca se usaron y
+// mostraban ceros. `miembros_board` se queda, que de ahi cuelgan las firmas.
 // CcBoardPage eliminada en Fase 16 · F-0 (mergeada con Finanzas).
 const ArriazaPage = lazy(() => cargar(() => import('@/modules/arriaza/page')));
 const ArriazaTripPage = lazy(() => cargar(() => import('@/modules/arriaza/detail-page')));
@@ -52,13 +48,6 @@ export const router = createBrowserRouter([
       // `Inicio` decide: quien administra ve el Dashboard; a quien solo se le
       // abrio un modulo lo manda directo a lo suyo.
       { index: true, element: <Inicio /> },
-      { path: 'maa', element: withSuspense(<MaaPage />) },
-      { path: 'ja', element: withSuspense(<JaPage />) },
-      { path: 'la', element: withSuspense(<LaPage />) },
-      { path: 'jm', element: withSuspense(<JmPage />) },
-      { path: 'aa', element: withSuspense(<AaPage />) },
-      { path: 'eg', element: withSuspense(<EgPage />) },
-      { path: 'pe', element: withSuspense(<PePage />) },
       // /cc-board redirige a /finanzas con hash a la sub-sección de vales,
       // ya que CC Board fue absorbida por Finanzas en Fase 16 · F-0.
       { path: 'cc-board', element: <Navigate to="/finanzas#vales" replace /> },

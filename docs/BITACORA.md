@@ -6,6 +6,58 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 42 · 2026-11-04 · Fuera los tableros por miembro, y el Dashboard deja de mentir
+
+**Objetivo:** la asistente pidió limpiar la barra superior —«cada vez le
+encuentro menos utilidad»— y que antes se revisara qué se llevaba por
+delante. Eran los siete botones de miembro: MAA, JA, LA, JM, AA, EG, PE.
+
+**Lo que se encontró al revisar:** los siete abrían la misma pantalla de
+solo lectura, que resumía cinco tablas —`tareas`, `viajes`, `eventos`,
+`notas`, `perfiles`—. **Las cinco con cero filas.** Nunca se usaron. Dos
+señales más de lo mismo: `BoardMemberPage` llevaba tiempo sin que nadie la
+importara, y `miembros_board.nombre` guardaba el cargo («Presidencia»), no
+el nombre de nadie.
+
+**El hallazgo que no se buscaba:** el Dashboard de quien administra leía
+esas mismas tablas vacías. Cuatro indicadores y dos tarjetas en cero
+permanente. Y «Viajes activos» salía de `viajes` (vacía) en vez de
+`att_viajes`, donde están los viajes de verdad: **el tablero de la gerente
+mostraba los viajes y el de la asistente decía 0.** Quitar los botones sin
+arreglar esto hubiera dejado el síntoma.
+
+**Lo que cambió:**
+
+- Fuera los siete tableros: 30 archivos, el módulo `board` completo,
+  `PersonalView` y el contador de urgencias de la barra. La barra pasa de
+  15 pestañas a 8.
+- El Dashboard se conecta a lo que sí existe: los indicadores leen
+  `cea_todos` —el TO DO que ella trabaja— y los viajes, `att_viajes`. Con
+  datos reales el día del cambio: 12 pendientes y 3 viajes vigentes, donde
+  antes decía 0 y 0.
+- Un `board_member` cae ahora en `GerenteView`, que es la pantalla que de
+  verdad funciona para quien entra a supervisar y firmar.
+
+**Lo que NO se tocó, y por qué:** `miembros_board` se queda con sus siete
+filas. No era parte de esos tableros: de ahí cuelga `firma_miembros` —el
+reparto de firmas digitales, con filas vivas— y `usuarios.miembro_id`.
+Borrarla apagaba las firmas. Las cinco tablas vacías también siguen en la
+base: no estorban, no cuestan, y un `drop table` no se deshace. Se retiran
+en una migración aparte cuando se confirme que nadie las extraña (DT-23).
+
+**Criterio de urgencia del TO DO:** el mismo de la pantalla de CEA —
+`prioridad_label === 'Alta'` o fecha vencida—. Se usa la etiqueta y no el
+enum a propósito: «Hold» mapea a `alta` en la base pero está detenido
+queriendo, y no es urgente.
+
+**Verificación:** migración probada con reversión antes de aplicar (dejaba
+0 permisos huérfanos y no escribió nada); después de aplicar, `firma_miembros`
+sigue en 5 y `miembros_board` en 7. `tsc` y `vite build` verdes. Tablero y
+barra revisados en pantalla, en escritorio y en teléfono, sin errores de
+consola.
+
+---
+
 ## Fase 41 · 2026-11-03 · Aeronaves · Estado de cuenta Aeroclub al 31 de octubre
 
 **Objetivo:** dejar el depósito de combustible al día para arrancar noviembre

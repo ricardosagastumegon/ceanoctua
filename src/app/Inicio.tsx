@@ -17,13 +17,6 @@ const DashboardPage = lazy(() => cargar(() => import('@/modules/dashboard/page')
  */
 const DESTINO: { modulo: Modulo; ruta: string }[] = [
   { modulo: 'tt', ruta: '/arriaza' },
-  { modulo: 'maa', ruta: '/maa' },
-  { modulo: 'ja', ruta: '/ja' },
-  { modulo: 'la', ruta: '/la' },
-  { modulo: 'jm', ruta: '/jm' },
-  { modulo: 'aa', ruta: '/aa' },
-  { modulo: 'eg', ruta: '/eg' },
-  { modulo: 'pe', ruta: '/pe' },
   { modulo: 'cea', ruta: '/cea' },
   { modulo: 'finanzas', ruta: '/finanzas' },
   { modulo: 'caja_chica', ruta: '/caja-chica' },

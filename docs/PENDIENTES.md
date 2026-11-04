@@ -42,6 +42,23 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
+### DT-23 · Cinco tablas vacías del módulo board, y `kit_items`
+
+- **Origen:** fase 42, al retirar los tableros por miembro.
+- **Qué son:** `tareas`, `viajes`, `viaje_checklist`, `perfiles`,
+  `perfil_vehiculos`, `perfil_fechas`, `perfil_familia`, `notas`, `eventos`
+  — todas con **cero filas** — más `kit_items`, que además no la toca ni una
+  línea de código.
+- **Impacto:** ninguno operativo. Sí suman superficie: diez tablas con RLS
+  que mantener y diez entradas en `src/types/database.ts`.
+- **Por qué no se borraron ya:** un `drop table` no se deshace, y el código
+  se retiró el mismo día. Conviene dejar pasar un tiempo con el sistema en
+  uso antes de quitarlas.
+- **Ojo:** `miembros_board` **no** entra aquí. Tiene siete filas vivas y de
+  ella cuelgan `firma_miembros` (firmas digitales) y `usuarios.miembro_id`.
+- **Estimado:** una migración de 15 min, más regenerar los types.
+- **Estado:** Pendiente. Revisar a partir de **diciembre 2026**.
+
 ### DT-22 · Aeronaves · lo que depende de terceros queda en pausa
 
 - **Origen:** 2026-11-03 · decisión de la asistente al cerrar el estado de

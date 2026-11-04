@@ -2,13 +2,6 @@ import type { Database } from './database';
 
 export type ModuleKey =
   | 'dashboard'
-  | 'maa'
-  | 'ja'
-  | 'la'
-  | 'jm'
-  | 'aa'
-  | 'eg'
-  | 'pe'
   | 'cc-board'
   | 'arriaza'
   | 'cea'
@@ -20,8 +13,7 @@ export type AppRol = Database['public']['Enums']['app_rol'];
 /** Los módulos a los que se le puede dar acceso a alguien. */
 export type Modulo =
   | 'dashboard' | 'tt' | 'aeronaves' | 'cea' | 'finanzas' | 'caja_chica'
-  | 'miel_sj' | 'admin'
-  | 'maa' | 'ja' | 'la' | 'jm' | 'aa' | 'eg' | 'pe';
+  | 'miel_sj' | 'admin';
 
 /** Observador ve; editor además crea y edita; super además borra. */
 export type Permiso = 'observador' | 'editor' | 'super';

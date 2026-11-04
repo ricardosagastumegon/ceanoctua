@@ -1,9 +1,6 @@
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
-import { useAllTareas } from '@/modules/board/tareas/hooks';
-import { useAllViajes } from '@/modules/board/viajes/hooks';
+import { useCeaTodos } from '@/modules/cea/todos/hooks';
+import { useAttViajes } from '@/modules/arriaza/viajes/hooks';
 import { useFirmas } from '@/modules/cea/firmas/hooks';
 import { usePagos } from '@/modules/finanzas/pagos/hooks';
 import { useReintegros } from '@/modules/finanzas/reintegros/hooks';
@@ -24,8 +21,8 @@ function fmt(n: number, currency: string): string {
 
 export function FullView({ rol }: { rol: AppRol }) {
   const { profile } = useAuth();
-  const tareasQ = useAllTareas();
-  const viajesQ = useAllViajes();
+  const todosQ = useCeaTodos();
+  const viajesQ = useAttViajes();
   const firmasQ = useFirmas();
   const pagosQ = usePagos();
   const reintegrosQ = useReintegros();
@@ -33,30 +30,24 @@ export function FullView({ rol }: { rol: AppRol }) {
   const valesQ = useVales();
   const liqsQ = useLiquidaciones();
 
-  const miembrosQ = useQuery({
-    queryKey: ['miembros_board', 'all'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('miembros_board')
-        .select('id, codigo, nombre, orden')
-        .order('orden', { nullsFirst: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const tareas = tareasQ.data ?? [];
-  const pendientes = tareas.filter((t) => !t.done);
+  // El TO DO de CEA. Hasta la fase 42 este tablero contaba las `tareas` del
+  // modulo board, que nunca se llenaron: los cuatro indicadores de arriba
+  // decian cero mientras el trabajo real estaba en CEA.
+  const todos = todosQ.data ?? [];
+  const pendientes = todos.filter((t) => !t.done);
+  // Mismo criterio que la pantalla de CEA: `prioridad_label` es lo que ella
+  // escoge --«Hold» no es urgente, esta detenido a proposito--.
   const urgentes = pendientes.filter(
-    (t) => t.prioridad === 'alta' || (t.fecha && isOverdue(t.fecha)),
+    (t) => t.prioridad_label === 'Alta' || (t.fecha && isOverdue(t.fecha)),
   );
   const hoy = new Date().toISOString().slice(0, 10);
-  const hechasHoy = tareas.filter((t) => t.done && t.updated_at?.slice(0, 10) === hoy);
+  const hechasHoy = todos.filter((t) => t.done && t.updated_at?.slice(0, 10) === hoy);
 
-  const viajes = viajesQ.data ?? [];
-  const viajesProximos = viajes
-    .filter((v) => v.fecha_ini && !isOverdue(v.fecha_ini) && v.estado !== 'cancelado')
-    .slice(0, 8);
+  // Los viajes de Arriaza T&T, que son los que existen. Un viaje sigue
+  // contando el dia que termina, por eso se mira `fecha_fin` primero.
+  const viajesProximos = (viajesQ.data ?? [])
+    .filter((v) => (v.fecha_fin ?? v.fecha_ini ?? '') >= hoy)
+    .sort((a, b) => (a.fecha_ini ?? '').localeCompare(b.fecha_ini ?? ''));
 
   const firmas = firmasQ.data ?? [];
   const firmasPendientes = firmas.filter((f) => f.status_firma === 'en_espera');
@@ -82,16 +73,6 @@ export function FullView({ rol }: { rol: AppRol }) {
   const liqs = liqsQ.data ?? [];
   const liqsAbiertas = liqs.filter((l) => l.estado !== 'Liquidada' && l.estado !== 'Anulada');
 
-  // Tareas por miembro
-  const tareasPorMiembro = new Map<string, { total: number; urgentes: number }>();
-  for (const t of pendientes) {
-    if (!t.miembro_id) continue;
-    const entry = tareasPorMiembro.get(t.miembro_id) ?? { total: 0, urgentes: 0 };
-    entry.total += 1;
-    if (t.prioridad === 'alta' || (t.fecha && isOverdue(t.fecha))) entry.urgentes += 1;
-    tareasPorMiembro.set(t.miembro_id, entry);
-  }
-
   return (
     <section className="space-y-6">
       <DashboardHero userName={profile?.nombre} activeTripsCount={viajesProximos.length} />
@@ -109,69 +90,31 @@ export function FullView({ rol }: { rol: AppRol }) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPI label="Tareas urgentes" value={urgentes.length} tone={urgentes.length > 0 ? 'danger' : 'default'} />
-        <KPI label="Tareas pendientes" value={pendientes.length} />
-        <KPI label="Hechas hoy" value={hechasHoy.length} tone="success" />
+        <KPI label="TO DO urgentes" value={urgentes.length} tone={urgentes.length > 0 ? 'danger' : 'default'} hint="prioridad Alta o vencidos" />
+        <KPI label="TO DO pendientes" value={pendientes.length} />
+        <KPI label="Hechos hoy" value={hechasHoy.length} tone="success" />
         <KPI label="Viajes activos" value={viajesProximos.length} tone={viajesProximos.length > 0 ? 'warn' : 'default'} />
       </div>
 
       {/* Operación + Finanzas */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Miembros del board */}
-        <Card title="Miembros del board" className="lg:col-span-3">
-          {miembrosQ.isLoading || tareasQ.isLoading ? (
+        {/* TO DO urgentes */}
+        <Card title="TO DO urgentes" className="lg:col-span-2" to="/cea">
+          {todosQ.isLoading ? (
             <LoadingLine />
-          ) : miembrosQ.isError ? (
-            <ErrorLine message={(miembrosQ.error as Error).message} />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-              {(miembrosQ.data ?? []).map((m) => {
-                const stats = tareasPorMiembro.get(m.id) ?? { total: 0, urgentes: 0 };
-                return (
-                  <Link
-                    key={m.id}
-                    to={`/${m.codigo.toLowerCase()}`}
-                    className="rounded-md border border-sand bg-sand-l/30 p-3 transition-colors hover:border-teal hover:bg-sand-l"
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-heading text-base font-bold text-dark">{m.codigo}</span>
-                      {stats.urgentes > 0 && (
-                        <span className="inline-flex h-2 w-2 rounded-full bg-rust" aria-label="urgente" />
-                      )}
-                    </div>
-                    <div className="mt-1 text-xs text-dark-2 line-clamp-1">{m.nombre}</div>
-                    <div className="mt-2 flex items-center gap-2 text-xs">
-                      <span className="text-dark">
-                        <strong>{stats.total}</strong> pend.
-                      </span>
-                      {stats.urgentes > 0 && (
-                        <span className="text-rust">
-                          <strong>{stats.urgentes}</strong> urg.
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* Tareas urgentes */}
-        <Card title="Tareas urgentes" className="lg:col-span-2">
-          {tareasQ.isLoading ? (
-            <LoadingLine />
-          ) : tareasQ.isError ? (
-            <ErrorLine message={(tareasQ.error as Error).message} />
+          ) : todosQ.isError ? (
+            <ErrorLine message={(todosQ.error as Error).message} />
           ) : urgentes.length === 0 ? (
-            <EmptyLine message="Sin tareas urgentes." />
+            <EmptyLine message="Sin pendientes urgentes." />
           ) : (
             <ul className="space-y-2">
               {urgentes.slice(0, 8).map((t) => (
                 <li key={t.id} className="flex items-start justify-between gap-2 text-sm">
                   <span className="flex-1">
-                    <span className="font-medium text-dark">{t.texto}</span>
-                    {t.lista && <span className="ml-2 text-xs text-dark-3">{t.lista}</span>}
+                    <span className="font-medium text-dark">{t.asunto}</span>
+                    {t.responsable && (
+                      <span className="ml-2 text-xs text-dark-3">{t.responsable}</span>
+                    )}
                   </span>
                   {t.fecha && (
                     <span className={isOverdue(t.fecha) ? 'text-xs font-semibold text-rust' : 'text-xs text-dark-3'}>
@@ -180,12 +123,15 @@ export function FullView({ rol }: { rol: AppRol }) {
                   )}
                 </li>
               ))}
+              {urgentes.length > 8 && (
+                <li className="text-xs text-dark-3">+{urgentes.length - 8} más</li>
+              )}
             </ul>
           )}
         </Card>
 
         {/* Viajes próximos */}
-        <Card title="Viajes próximos">
+        <Card title="Viajes próximos" to="/arriaza">
           {viajesQ.isLoading ? (
             <LoadingLine />
           ) : viajesQ.isError ? (
@@ -196,15 +142,23 @@ export function FullView({ rol }: { rol: AppRol }) {
             <ul className="space-y-2">
               {viajesProximos.slice(0, 6).map((v) => {
                 const d = v.fecha_ini ? businessDaysUntil(v.fecha_ini) : null;
+                const enCurso = d != null && d <= 0;
                 return (
                   <li key={v.id} className="text-sm">
-                    <div className="font-medium text-dark">{v.destino}</div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-dark-3">{v.fecha_ini ? formatDate(v.fecha_ini) : '—'}</span>
+                    <div className="font-medium text-dark">{v.titulo}</div>
+                    <div className="flex justify-between gap-2 text-xs">
+                      <span className="truncate text-dark-3">
+                        {[v.destino, v.pais].filter(Boolean).join(' · ') || '—'}
+                      </span>
                       {d != null && (
-                        <span className="text-teal-d">{d > 0 ? `${d}d` : d === 0 ? '¡hoy!' : `hace ${-d}d`}</span>
+                        <span className="shrink-0 font-semibold text-teal-d">
+                          {enCurso ? 'en curso' : `${d}d`}
+                        </span>
                       )}
                     </div>
+                    {v.fecha_ini && (
+                      <div className="text-xs text-dark-3">{formatDate(v.fecha_ini)}</div>
+                    )}
                   </li>
                 );
               })}

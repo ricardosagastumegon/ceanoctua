@@ -110,6 +110,18 @@ export type Database = {
         Update: AuditUpdate & { nombre?: string; puesto?: string | null; depto?: string | null; empresa?: string | null; email?: string | null; telefono?: string | null; notas?: string | null; activo?: boolean };
         Relationships: [];
       };
+      viajero_pasaportes: {
+        Row: AuditCols & { id: string; persona_id: string | null; invitado_id: string | null; nombre: string; pais_emisor: string; libreta_num: string | null; numero: string; emision: string | null; vencimiento: string | null; imagen_path: string | null; notas: string | null; deleted_at: string | null };
+        Insert: AuditInsert & { id?: string; persona_id?: string | null; invitado_id?: string | null; nombre: string; pais_emisor: string; libreta_num?: string | null; numero: string; emision?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };
+        Update: AuditUpdate & { persona_id?: string | null; invitado_id?: string | null; nombre?: string; pais_emisor?: string; libreta_num?: string | null; numero?: string; emision?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };
+        Relationships: [];
+      };
+      viajero_visas: {
+        Row: AuditCols & { id: string; persona_id: string | null; invitado_id: string | null; pais_emisor: string; numero_visa: string | null; numero_control: string | null; emision: string | null; vencimiento: string | null; imagen_path: string | null; notas: string | null; deleted_at: string | null };
+        Insert: AuditInsert & { id?: string; persona_id?: string | null; invitado_id?: string | null; pais_emisor: string; numero_visa?: string | null; numero_control?: string | null; emision?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };
+        Update: AuditUpdate & { persona_id?: string | null; invitado_id?: string | null; pais_emisor?: string; numero_visa?: string | null; numero_control?: string | null; emision?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };
+        Relationships: [];
+      };
       invitados: {
         Row: AuditCols & { id: string; nombre: string; relacion: string | null; empresa: string | null; telefono: string | null; email: string | null; notas: string | null; activo: boolean };
         Insert: AuditInsert & { id?: string; nombre: string; relacion?: string | null; empresa?: string | null; telefono?: string | null; email?: string | null; notas?: string | null; activo?: boolean };

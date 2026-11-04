@@ -12,6 +12,7 @@ import { EntidadForm } from './components/EntidadForm';
 import { PersonaForm } from './components/PersonaForm';
 import { EmpleadoForm } from './components/EmpleadoForm';
 import { InvitadoForm } from './components/InvitadoForm';
+import { ViajerosCatalog } from './viajeros/ViajerosCatalog';
 import { TipoPagoForm } from './components/TipoPagoForm';
 import { ProveedorForm } from './components/ProveedorForm';
 import { TarjetaForm } from './components/TarjetaForm';
@@ -73,6 +74,7 @@ type CatalogKey =
   | 'personas'
   | 'empleados'
   | 'invitados'
+  | 'viajeros'
   | 'tipos_pago'
   | 'proveedores'
   | 'tarjetas'
@@ -86,6 +88,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'personas', label: 'Personal JD' },
   { key: 'empleados', label: 'Empleados' },
   { key: 'invitados', label: 'Invitados' },
+  { key: 'viajeros', label: 'Documentos de viaje' },
   { key: 'tipos_pago', label: 'Tipos de pago' },
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
@@ -135,6 +138,7 @@ export default function AdminPage() {
       {tab === 'personas' && <PersonasCatalog canEdit={isAdmin} />}
       {tab === 'empleados' && <EmpleadosCatalog canEdit={isAdmin} />}
       {tab === 'invitados' && <InvitadosCatalog canEdit={isAdmin} />}
+      {tab === 'viajeros' && <ViajerosCatalog canEdit={isAdmin} />}
       {tab === 'tipos_pago' && <TiposPagoCatalog canEdit={isAdmin} />}
       {tab === 'proveedores' && <ProveedoresCatalog canEdit={isAdmin} />}
       {tab === 'tarjetas' && <TarjetasCatalog canEdit={isAdmin} />}

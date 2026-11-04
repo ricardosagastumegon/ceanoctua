@@ -3,6 +3,7 @@ import {
   viajerosApi,
   type AfiliacionInsert,
   type Duenio,
+  type LicenciaInsert,
   type PasaporteInsert,
   type VisaInsert,
 } from './api';
@@ -11,6 +12,7 @@ const keys = {
   pasaportes: ['viajero_pasaportes'] as const,
   visas: ['viajero_visas'] as const,
   afiliaciones: ['viajero_afiliaciones'] as const,
+  licencias: ['viajero_licencias'] as const,
 };
 
 export function usePasaportes() {
@@ -23,6 +25,10 @@ export function useVisas() {
 
 export function useAfiliaciones() {
   return useQuery({ queryKey: keys.afiliaciones, queryFn: () => viajerosApi.afiliaciones() });
+}
+
+export function useLicencias() {
+  return useQuery({ queryKey: keys.licencias, queryFn: () => viajerosApi.licencias() });
 }
 
 /**
@@ -38,6 +44,7 @@ function useRefrescar() {
     void qc.invalidateQueries({ queryKey: keys.pasaportes });
     void qc.invalidateQueries({ queryKey: keys.visas });
     void qc.invalidateQueries({ queryKey: keys.afiliaciones });
+    void qc.invalidateQueries({ queryKey: keys.licencias });
   };
 }
 
@@ -110,10 +117,37 @@ export function useBorrarAfiliacion() {
   });
 }
 
+export function useGuardarLicencia() {
+  const refrescar = useRefrescar();
+  return useMutation({
+    mutationFn: async (v: {
+      id?: string;
+      duenio: Duenio;
+      valores: Omit<LicenciaInsert, 'persona_id' | 'invitado_id'>;
+    }) => {
+      if (v.id) return viajerosApi.actualizarLicencia(v.id, v.valores);
+      return viajerosApi.crearLicencia(v.duenio, v.valores);
+    },
+    onSuccess: refrescar,
+  });
+}
+
+export function useBorrarLicencia() {
+  const refrescar = useRefrescar();
+  return useMutation({
+    mutationFn: (id: string) => viajerosApi.borrarLicencia(id),
+    onSuccess: refrescar,
+  });
+}
+
 export function useSubirImagen() {
   const refrescar = useRefrescar();
   return useMutation({
-    mutationFn: (v: { carpeta: 'pasaportes' | 'visas'; id: string; file: File }) =>
+    mutationFn: (v: {
+      carpeta: 'pasaportes' | 'visas' | 'licencias';
+      id: string;
+      file: File;
+    }) =>
       viajerosApi.subirImagen(v.carpeta, v.id, v.file),
     onSuccess: refrescar,
   });

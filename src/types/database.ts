@@ -116,6 +116,12 @@ export type Database = {
         Update: AuditUpdate & { persona_id?: string | null; invitado_id?: string | null; programa?: string; numero?: string; categoria?: string | null; email_cuenta?: string | null; notas?: string | null; deleted_at?: string | null };
         Relationships: [];
       };
+      viajero_licencias: {
+        Row: AuditCols & { id: string; persona_id: string | null; invitado_id: string | null; nombre: string; pais_emisor: string; tipo: string | null; numero_licencia: string; numero_documento: string | null; vencimiento: string | null; imagen_path: string | null; notas: string | null; deleted_at: string | null };
+        Insert: AuditInsert & { id?: string; persona_id?: string | null; invitado_id?: string | null; nombre: string; pais_emisor: string; tipo?: string | null; numero_licencia: string; numero_documento?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };
+        Update: AuditUpdate & { persona_id?: string | null; invitado_id?: string | null; nombre?: string; pais_emisor?: string; tipo?: string | null; numero_licencia?: string; numero_documento?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };
+        Relationships: [];
+      };
       viajero_pasaportes: {
         Row: AuditCols & { id: string; persona_id: string | null; invitado_id: string | null; nombre: string; pais_emisor: string; libreta_num: string | null; numero: string; emision: string | null; vencimiento: string | null; imagen_path: string | null; notas: string | null; deleted_at: string | null };
         Insert: AuditInsert & { id?: string; persona_id?: string | null; invitado_id?: string | null; nombre: string; pais_emisor: string; libreta_num?: string | null; numero: string; emision?: string | null; vencimiento?: string | null; imagen_path?: string | null; notas?: string | null; deleted_at?: string | null };

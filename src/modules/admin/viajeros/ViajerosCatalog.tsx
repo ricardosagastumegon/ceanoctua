@@ -8,16 +8,19 @@ import { describeError, useInvitados, usePersonas } from '@/modules/admin/hooks'
 import {
   useAfiliaciones,
   useBorrarAfiliacion,
+  useBorrarLicencia,
   useBorrarPasaporte,
   useBorrarVisa,
   useGuardarAfiliacion,
+  useGuardarLicencia,
   useGuardarPasaporte,
   useGuardarVisa,
+  useLicencias,
   usePasaportes,
   useSubirImagen,
   useVisas,
 } from './hooks';
-import type { Afiliacion, Duenio, Pasaporte, Visa } from './api';
+import type { Afiliacion, Duenio, Licencia, Pasaporte, Visa } from './api';
 
 /**
  * Los documentos de viaje de quien viaja.
@@ -56,6 +59,7 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
   const pasaportesQ = usePasaportes();
   const visasQ = useVisas();
   const afiliacionesQ = useAfiliaciones();
+  const licenciasQ = useLicencias();
 
   const [elegido, setElegido] = useState<string | null>(null);
 
@@ -76,19 +80,25 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
   const porDuenio = useMemo(() => {
     const m = new Map<
       string,
-      { pasaportes: Pasaporte[]; visas: Visa[]; afiliaciones: Afiliacion[] }
+      {
+        pasaportes: Pasaporte[];
+        visas: Visa[];
+        licencias: Licencia[];
+        afiliaciones: Afiliacion[];
+      }
     >();
     const pon = (k: string) => {
-      if (!m.has(k)) m.set(k, { pasaportes: [], visas: [], afiliaciones: [] });
+      if (!m.has(k)) m.set(k, { pasaportes: [], visas: [], licencias: [], afiliaciones: [] });
       return m.get(k)!;
     };
     const llave = (x: { persona_id: string | null; invitado_id: string | null }) =>
       x.persona_id ? `persona:${x.persona_id}` : `invitado:${x.invitado_id}`;
     for (const d of pasaportesQ.data ?? []) pon(llave(d)).pasaportes.push(d);
     for (const v of visasQ.data ?? []) pon(llave(v)).visas.push(v);
+    for (const l of licenciasQ.data ?? []) pon(llave(l)).licencias.push(l);
     for (const a of afiliacionesQ.data ?? []) pon(llave(a)).afiliaciones.push(a);
     return m;
-  }, [pasaportesQ.data, visasQ.data, afiliacionesQ.data]);
+  }, [pasaportesQ.data, visasQ.data, licenciasQ.data, afiliacionesQ.data]);
 
   // Los programas ya escritos, para sugerirlos al capturar el siguiente y que
   // no nazcan cuatro grafias de «American Airlines».
@@ -132,8 +142,13 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
                     const n =
                       (d?.pasaportes.length ?? 0) +
                       (d?.visas.length ?? 0) +
+                      (d?.licencias.length ?? 0) +
                       (d?.afiliaciones.length ?? 0);
-                    const alerta = [...(d?.pasaportes ?? []), ...(d?.visas ?? [])].some(
+                    const alerta = [
+                      ...(d?.pasaportes ?? []),
+                      ...(d?.visas ?? []),
+                      ...(d?.licencias ?? []),
+                    ].some(
                       (x) => estadoVencimiento(x.vencimiento) !== null,
                     );
                     return (
@@ -171,6 +186,7 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
               duenio={actual.duenio}
               pasaportes={docs?.pasaportes ?? []}
               visas={docs?.visas ?? []}
+              licencias={docs?.licencias ?? []}
               afiliaciones={docs?.afiliaciones ?? []}
               programas={programas}
               canEdit={canEdit}
@@ -187,6 +203,7 @@ function PanelPersona({
   duenio,
   pasaportes,
   visas,
+  licencias,
   afiliaciones,
   programas,
   canEdit,
@@ -195,6 +212,7 @@ function PanelPersona({
   duenio: Duenio;
   pasaportes: Pasaporte[];
   visas: Visa[];
+  licencias: Licencia[];
   afiliaciones: Afiliacion[];
   programas: string[];
   canEdit: boolean;
@@ -202,6 +220,7 @@ function PanelPersona({
   const [nuevoPasaporte, setNuevoPasaporte] = useState(false);
   const [nuevaVisa, setNuevaVisa] = useState(false);
   const [nuevaAfiliacion, setNuevaAfiliacion] = useState(false);
+  const [nuevaLicencia, setNuevaLicencia] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -264,6 +283,41 @@ function PanelPersona({
           <ul className="space-y-2">
             {visas.map((v) => (
               <FichaVisa key={v.id} doc={v} canEdit={canEdit} />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="border-t border-sand pt-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-dark-3">
+            Licencias de conducir · {licencias.length}
+          </h3>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setNuevaLicencia((v) => !v)}
+              className="rounded-md border border-rust/40 px-3 py-1.5 text-xs font-semibold text-rust hover:bg-rust-l"
+            >
+              {nuevaLicencia ? 'Cancelar' : '＋ Agregar licencia'}
+            </button>
+          )}
+        </div>
+        {nuevaLicencia && (
+          <FormLicencia
+            duenio={duenio}
+            nombreSugerido={nombre}
+            onListo={() => setNuevaLicencia(false)}
+          />
+        )}
+        {licencias.length === 0 && !nuevaLicencia ? (
+          <p className="text-xs italic text-dark-3">
+            Sin licencias. Las pide la agencia al rentar un carro.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {licencias.map((l) => (
+              <FichaLicencia key={l.id} doc={l} canEdit={canEdit} />
             ))}
           </ul>
         )}
@@ -591,7 +645,7 @@ function ImagenDoc({
   path,
   canEdit,
 }: {
-  carpeta: 'pasaportes' | 'visas';
+  carpeta: 'pasaportes' | 'visas' | 'licencias';
   id: string;
   path: string | null;
   canEdit: boolean;
@@ -862,6 +916,184 @@ function FormVisa({ duenio, onListo }: { duenio: Duenio; onListo: () => void }) 
           className="rounded-md bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
         >
           {guardar.isPending ? 'Guardando…' : 'Guardar visa'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FichaLicencia({ doc, canEdit }: { doc: Licencia; canEdit: boolean }) {
+  const estado = estadoVencimiento(doc.vencimiento);
+  const borrar = useBorrarLicencia();
+  const toast = useToast();
+  const confirmar = useConfirm();
+
+  async function quitar() {
+    const ok = await confirmar({
+      title: 'Quitar la licencia',
+      message: (
+        <>
+          ¿Quitar la licencia <strong>{doc.numero_licencia}</strong> de {doc.pais_emisor}?
+        </>
+      ),
+      danger: true,
+      confirmLabel: 'Quitar',
+    });
+    if (!ok) return;
+    try {
+      await borrar.mutateAsync(doc.id);
+      toast.success('Licencia retirada.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
+
+  return (
+    <li className="rounded-md border border-sand p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-rust-l px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-rust">
+          {doc.pais_emisor}
+        </span>
+        <span className="font-mono text-sm font-extrabold text-dark">{doc.numero_licencia}</span>
+        {doc.tipo && (
+          <span className="rounded-md border border-sand px-1.5 py-0.5 text-[10px] font-extrabold text-dark-2">
+            Tipo {doc.tipo}
+          </span>
+        )}
+        {estado && (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${estado.clase}`}>
+            {estado.texto}
+          </span>
+        )}
+        <span className="ml-auto flex gap-1">
+          <ImagenDoc carpeta="licencias" id={doc.id} path={doc.imagen_path} canEdit={canEdit} />
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => void quitar()}
+              className="rounded-md border border-rust/40 px-2 py-1 text-[11px] font-semibold text-rust hover:bg-rust-l"
+            >
+              Quitar
+            </button>
+          )}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Dato rotulo="Nombre en la licencia" valor={doc.nombre} />
+        <Dato rotulo="No. de documento" valor={doc.numero_documento} />
+        <Dato rotulo="Vencimiento" valor={doc.vencimiento ? formatDate(doc.vencimiento) : null} />
+      </div>
+    </li>
+  );
+}
+
+function FormLicencia({
+  duenio,
+  nombreSugerido,
+  onListo,
+}: {
+  duenio: Duenio;
+  nombreSugerido: string;
+  onListo: () => void;
+}) {
+  const guardar = useGuardarLicencia();
+  const toast = useToast();
+  const [v, setV] = useState({
+    nombre: nombreSugerido,
+    pais_emisor: '',
+    tipo: '',
+    numero_licencia: '',
+    numero_documento: '',
+    vencimiento: '',
+  });
+  const upd = (k: keyof typeof v, x: string) => setV((p) => ({ ...p, [k]: x }));
+
+  async function enviar() {
+    if (!v.nombre.trim() || !v.pais_emisor.trim() || !v.numero_licencia.trim()) {
+      toast.error('Nombre, país emisor y número de licencia son obligatorios.');
+      return;
+    }
+    try {
+      await guardar.mutateAsync({
+        duenio,
+        valores: {
+          nombre: v.nombre.trim(),
+          pais_emisor: v.pais_emisor.trim(),
+          tipo: v.tipo.trim() || null,
+          numero_licencia: v.numero_licencia.trim(),
+          numero_documento: v.numero_documento.trim() || null,
+          vencimiento: v.vencimiento || null,
+        },
+      });
+      toast.success('Licencia agregada.');
+      onListo();
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
+
+  return (
+    <div className="mb-3 rounded-md border border-rust/30 bg-rust-l/40 p-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <TextInput
+          name="pais_lic"
+          label="País emisor *"
+          value={v.pais_emisor}
+          onChange={(e) => upd('pais_emisor', e.target.value)}
+          placeholder="Guatemala"
+          autoFocus
+        />
+        <TextInput
+          name="tipo_lic"
+          label="Tipo"
+          value={v.tipo}
+          onChange={(e) => upd('tipo', e.target.value)}
+          placeholder="C, B, M1…"
+        />
+        <TextInput
+          name="numero_licencia"
+          label="No. de licencia *"
+          value={v.numero_licencia}
+          onChange={(e) => upd('numero_licencia', e.target.value)}
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <TextInput
+          name="nombre_lic"
+          label="Nombre en la licencia *"
+          value={v.nombre}
+          onChange={(e) => upd('nombre', e.target.value)}
+        />
+        <TextInput
+          name="numero_documento"
+          label="No. de documento"
+          value={v.numero_documento}
+          onChange={(e) => upd('numero_documento', e.target.value)}
+          hint="El DPI con que se emitió"
+        />
+        <TextInput
+          name="venc_lic"
+          label="Vencimiento"
+          type="date"
+          value={v.vencimiento}
+          onChange={(e) => upd('vencimiento', e.target.value)}
+        />
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onListo}
+          className="rounded-md border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-dark-2"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => void enviar()}
+          disabled={guardar.isPending}
+          className="rounded-md bg-rust px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+        >
+          {guardar.isPending ? 'Guardando…' : 'Guardar licencia'}
         </button>
       </div>
     </div>

@@ -17,6 +17,9 @@ export type VisaUpdate = Database['public']['Tables']['viajero_visas']['Update']
 export type Afiliacion = Database['public']['Tables']['viajero_afiliaciones']['Row'];
 export type AfiliacionInsert = Database['public']['Tables']['viajero_afiliaciones']['Insert'];
 export type AfiliacionUpdate = Database['public']['Tables']['viajero_afiliaciones']['Update'];
+export type Licencia = Database['public']['Tables']['viajero_licencias']['Row'];
+export type LicenciaInsert = Database['public']['Tables']['viajero_licencias']['Insert'];
+export type LicenciaUpdate = Database['public']['Tables']['viajero_licencias']['Update'];
 
 /** De quién es el documento: una persona de Personal JD o un invitado. */
 export type Duenio = { tipo: 'persona' | 'invitado'; id: string };
@@ -50,6 +53,36 @@ export const viajerosApi = {
       .order('vencimiento', { ascending: true, nullsFirst: false });
     if (error) throw error;
     return data ?? [];
+  },
+
+  async licencias(): Promise<Licencia[]> {
+    const { data, error } = await supabase
+      .from('viajero_licencias')
+      .select('*')
+      .is('deleted_at', null)
+      .order('vencimiento', { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async crearLicencia(duenio: Duenio, input: Omit<LicenciaInsert, 'persona_id' | 'invitado_id'>) {
+    const { error } = await supabase
+      .from('viajero_licencias')
+      .insert({ ...input, [columnaDe(duenio)]: duenio.id });
+    if (error) throw error;
+  },
+
+  async actualizarLicencia(id: string, patch: LicenciaUpdate) {
+    const { error } = await supabase.from('viajero_licencias').update(patch).eq('id', id);
+    if (error) throw error;
+  },
+
+  async borrarLicencia(id: string) {
+    const { error } = await supabase
+      .from('viajero_licencias')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
   },
 
   async afiliaciones(): Promise<Afiliacion[]> {
@@ -130,12 +163,21 @@ export const viajerosApi = {
   },
 
   /** El escaneo del documento, en el bucket que ya usa T&T. */
-  async subirImagen(carpeta: 'pasaportes' | 'visas', id: string, file: File): Promise<string> {
+  async subirImagen(
+    carpeta: 'pasaportes' | 'visas' | 'licencias',
+    id: string,
+    file: File,
+  ): Promise<string> {
     const ext = file.name.split('.').pop() ?? 'pdf';
     const path = `viajeros/${carpeta}/${id}.${Date.now()}.${ext}`;
     const up = await supabase.storage.from('tt-documentos').upload(path, file, { upsert: true });
     if (up.error) throw up.error;
-    const tabla = carpeta === 'pasaportes' ? 'viajero_pasaportes' : 'viajero_visas';
+    const tabla =
+      carpeta === 'pasaportes'
+        ? 'viajero_pasaportes'
+        : carpeta === 'visas'
+          ? 'viajero_visas'
+          : 'viajero_licencias';
     const { error } = await supabase.from(tabla).update({ imagen_path: path }).eq('id', id);
     if (error) throw error;
     return path;

@@ -42,6 +42,22 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 - **Estimado:** 15 min · migración `drop table if exists public.att_pins`.
 - **Estado:** Aceptar por ahora. Dropear cuando estemos ciertos de que nadie tiene planes de usarla (F19-5 · itinerario final decidirá si el mapa necesita pines por-servicio en vez de por-viaje).
 
+### DT-22 · Aeronaves · lo que depende de terceros queda en pausa
+
+- **Origen:** 2026-11-03 · decisión de la asistente al cerrar el estado de
+  cuenta de Aeroclub.
+- **Qué se pausa:** **Mantenimientos** (fase 3 del plan) y seguir alimentando
+  la **bitácora de vuelo** (fase 36, ya construida pero con un solo vuelo
+  capturado).
+- **Por qué:** esa información no la genera ella. Los mantenimientos los
+  lleva el taller y las horas las reporta el piloto, así que diseñar el
+  formulario antes de ver cómo se lo entregan es inventar campos. El módulo
+  sigue por el lado administrativo, que sí está en sus manos.
+- **Para retomarlo:** hace falta el documento o la hoja con que el taller
+  reporta un trabajo, y el formato en que el piloto entrega sus horas.
+- **Estado:** En pausa, no cancelado. La bitácora de vuelo ya funciona; solo
+  está esperando datos.
+
 ### DT-21 · `ConfirmacionBoton` está copiado nueve veces
 
 - **Origen:** Fase 40 · al agregarle el botón de «Ver» a los adjuntos de T&T.

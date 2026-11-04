@@ -14,6 +14,9 @@ export type PasaporteUpdate = Database['public']['Tables']['viajero_pasaportes']
 export type Visa = Database['public']['Tables']['viajero_visas']['Row'];
 export type VisaInsert = Database['public']['Tables']['viajero_visas']['Insert'];
 export type VisaUpdate = Database['public']['Tables']['viajero_visas']['Update'];
+export type Afiliacion = Database['public']['Tables']['viajero_afiliaciones']['Row'];
+export type AfiliacionInsert = Database['public']['Tables']['viajero_afiliaciones']['Insert'];
+export type AfiliacionUpdate = Database['public']['Tables']['viajero_afiliaciones']['Update'];
 
 /** De quién es el documento: una persona de Personal JD o un invitado. */
 export type Duenio = { tipo: 'persona' | 'invitado'; id: string };
@@ -47,6 +50,39 @@ export const viajerosApi = {
       .order('vencimiento', { ascending: true, nullsFirst: false });
     if (error) throw error;
     return data ?? [];
+  },
+
+  async afiliaciones(): Promise<Afiliacion[]> {
+    const { data, error } = await supabase
+      .from('viajero_afiliaciones')
+      .select('*')
+      .is('deleted_at', null)
+      .order('programa');
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async crearAfiliacion(
+    duenio: Duenio,
+    input: Omit<AfiliacionInsert, 'persona_id' | 'invitado_id'>,
+  ) {
+    const { error } = await supabase
+      .from('viajero_afiliaciones')
+      .insert({ ...input, [columnaDe(duenio)]: duenio.id });
+    if (error) throw error;
+  },
+
+  async actualizarAfiliacion(id: string, patch: AfiliacionUpdate) {
+    const { error } = await supabase.from('viajero_afiliaciones').update(patch).eq('id', id);
+    if (error) throw error;
+  },
+
+  async borrarAfiliacion(id: string) {
+    const { error } = await supabase
+      .from('viajero_afiliaciones')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
   },
 
   async crearPasaporte(duenio: Duenio, input: Omit<PasaporteInsert, 'persona_id' | 'invitado_id'>) {

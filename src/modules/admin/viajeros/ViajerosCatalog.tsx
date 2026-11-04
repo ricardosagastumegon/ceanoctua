@@ -6,15 +6,18 @@ import { formatDate, daysUntil } from '@/lib/dates';
 import { abrirAdjunto } from '@/lib/adjuntos';
 import { describeError, useInvitados, usePersonas } from '@/modules/admin/hooks';
 import {
+  useAfiliaciones,
+  useBorrarAfiliacion,
   useBorrarPasaporte,
   useBorrarVisa,
+  useGuardarAfiliacion,
   useGuardarPasaporte,
   useGuardarVisa,
   usePasaportes,
   useSubirImagen,
   useVisas,
 } from './hooks';
-import type { Duenio, Pasaporte, Visa } from './api';
+import type { Afiliacion, Duenio, Pasaporte, Visa } from './api';
 
 /**
  * Los documentos de viaje de quien viaja.
@@ -52,6 +55,7 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
   const invitadosQ = useInvitados();
   const pasaportesQ = usePasaportes();
   const visasQ = useVisas();
+  const afiliacionesQ = useAfiliaciones();
 
   const [elegido, setElegido] = useState<string | null>(null);
 
@@ -70,19 +74,28 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
   const clave = (d: Duenio) => `${d.tipo}:${d.id}`;
 
   const porDuenio = useMemo(() => {
-    const m = new Map<string, { pasaportes: Pasaporte[]; visas: Visa[] }>();
+    const m = new Map<
+      string,
+      { pasaportes: Pasaporte[]; visas: Visa[]; afiliaciones: Afiliacion[] }
+    >();
     const pon = (k: string) => {
-      if (!m.has(k)) m.set(k, { pasaportes: [], visas: [] });
+      if (!m.has(k)) m.set(k, { pasaportes: [], visas: [], afiliaciones: [] });
       return m.get(k)!;
     };
-    for (const d of pasaportesQ.data ?? []) {
-      pon(d.persona_id ? `persona:${d.persona_id}` : `invitado:${d.invitado_id}`).pasaportes.push(d);
-    }
-    for (const v of visasQ.data ?? []) {
-      pon(v.persona_id ? `persona:${v.persona_id}` : `invitado:${v.invitado_id}`).visas.push(v);
-    }
+    const llave = (x: { persona_id: string | null; invitado_id: string | null }) =>
+      x.persona_id ? `persona:${x.persona_id}` : `invitado:${x.invitado_id}`;
+    for (const d of pasaportesQ.data ?? []) pon(llave(d)).pasaportes.push(d);
+    for (const v of visasQ.data ?? []) pon(llave(v)).visas.push(v);
+    for (const a of afiliacionesQ.data ?? []) pon(llave(a)).afiliaciones.push(a);
     return m;
-  }, [pasaportesQ.data, visasQ.data]);
+  }, [pasaportesQ.data, visasQ.data, afiliacionesQ.data]);
+
+  // Los programas ya escritos, para sugerirlos al capturar el siguiente y que
+  // no nazcan cuatro grafias de «American Airlines».
+  const programas = useMemo(
+    () => [...new Set((afiliacionesQ.data ?? []).map((a) => a.programa))].sort(),
+    [afiliacionesQ.data],
+  );
 
   const actual = gente.find((g) => clave(g.duenio) === elegido) ?? null;
   const docs = elegido ? porDuenio.get(elegido) : undefined;
@@ -116,7 +129,10 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
                   {filas.map((f) => {
                     const k = clave(f.duenio);
                     const d = porDuenio.get(k);
-                    const n = (d?.pasaportes.length ?? 0) + (d?.visas.length ?? 0);
+                    const n =
+                      (d?.pasaportes.length ?? 0) +
+                      (d?.visas.length ?? 0) +
+                      (d?.afiliaciones.length ?? 0);
                     const alerta = [...(d?.pasaportes ?? []), ...(d?.visas ?? [])].some(
                       (x) => estadoVencimiento(x.vencimiento) !== null,
                     );
@@ -155,6 +171,8 @@ export function ViajerosCatalog({ canEdit }: { canEdit: boolean }) {
               duenio={actual.duenio}
               pasaportes={docs?.pasaportes ?? []}
               visas={docs?.visas ?? []}
+              afiliaciones={docs?.afiliaciones ?? []}
+              programas={programas}
               canEdit={canEdit}
             />
           )}
@@ -169,16 +187,21 @@ function PanelPersona({
   duenio,
   pasaportes,
   visas,
+  afiliaciones,
+  programas,
   canEdit,
 }: {
   nombre: string;
   duenio: Duenio;
   pasaportes: Pasaporte[];
   visas: Visa[];
+  afiliaciones: Afiliacion[];
+  programas: string[];
   canEdit: boolean;
 }) {
   const [nuevoPasaporte, setNuevoPasaporte] = useState(false);
   const [nuevaVisa, setNuevaVisa] = useState(false);
+  const [nuevaAfiliacion, setNuevaAfiliacion] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -245,6 +268,191 @@ function PanelPersona({
           </ul>
         )}
       </div>
+
+      <div className="border-t border-sand pt-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-dark-3">
+            Afiliaciones · {afiliaciones.length}
+          </h3>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setNuevaAfiliacion((v) => !v)}
+              className="rounded-md border border-gold/50 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold-light"
+            >
+              {nuevaAfiliacion ? 'Cancelar' : '＋ Agregar afiliación'}
+            </button>
+          )}
+        </div>
+        {nuevaAfiliacion && (
+          <FormAfiliacion
+            duenio={duenio}
+            programas={programas}
+            onListo={() => setNuevaAfiliacion(false)}
+          />
+        )}
+        {afiliaciones.length === 0 && !nuevaAfiliacion ? (
+          <p className="text-xs italic text-dark-3">
+            Sin afiliaciones. Aquí van los números de viajero frecuente y demás programas.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {afiliaciones.map((a) => (
+              <FichaAfiliacion key={a.id} doc={a} canEdit={canEdit} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FichaAfiliacion({ doc, canEdit }: { doc: Afiliacion; canEdit: boolean }) {
+  const borrar = useBorrarAfiliacion();
+  const toast = useToast();
+  const confirmar = useConfirm();
+
+  async function quitar() {
+    const ok = await confirmar({
+      title: 'Quitar la afiliación',
+      message: (
+        <>
+          ¿Quitar <strong>{doc.programa}</strong> · {doc.numero}?
+        </>
+      ),
+      danger: true,
+      confirmLabel: 'Quitar',
+    });
+    if (!ok) return;
+    try {
+      await borrar.mutateAsync(doc.id);
+      toast.success('Afiliación retirada.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
+
+  return (
+    <li className="flex flex-wrap items-center gap-2 rounded-md border border-sand px-3 py-2">
+      <span className="rounded-full bg-gold-light px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-gold">
+        {doc.programa}
+      </span>
+      <span className="font-mono text-sm font-extrabold text-dark">{doc.numero}</span>
+      {doc.categoria && <span className="text-xs text-dark-2">{doc.categoria}</span>}
+      {doc.email_cuenta && (
+        <span className="text-[11px] text-dark-3">{doc.email_cuenta}</span>
+      )}
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => void quitar()}
+          className="ml-auto rounded-md border border-rust/40 px-2 py-1 text-[11px] font-semibold text-rust hover:bg-rust-l"
+        >
+          Quitar
+        </button>
+      )}
+    </li>
+  );
+}
+
+function FormAfiliacion({
+  duenio,
+  programas,
+  onListo,
+}: {
+  duenio: Duenio;
+  programas: string[];
+  onListo: () => void;
+}) {
+  const guardar = useGuardarAfiliacion();
+  const toast = useToast();
+  const [v, setV] = useState({ programa: '', numero: '', categoria: '', email_cuenta: '' });
+  const upd = (k: keyof typeof v, x: string) => setV((p) => ({ ...p, [k]: x }));
+
+  async function enviar() {
+    if (!v.programa.trim() || !v.numero.trim()) {
+      toast.error('El programa y el número son obligatorios.');
+      return;
+    }
+    try {
+      await guardar.mutateAsync({
+        duenio,
+        valores: {
+          programa: v.programa.trim(),
+          numero: v.numero.trim(),
+          categoria: v.categoria.trim() || null,
+          email_cuenta: v.email_cuenta.trim() || null,
+        },
+      });
+      toast.success('Afiliación agregada.');
+      onListo();
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
+
+  return (
+    <div className="mb-3 rounded-md border border-gold/40 bg-gold-light/40 p-3">
+      <datalist id="programas-viajero">
+        {programas.map((x) => (
+          <option key={x} value={x} />
+        ))}
+      </datalist>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <TextInput
+          name="programa"
+          label="Programa *"
+          list="programas-viajero"
+          value={v.programa}
+          onChange={(e) => upd('programa', e.target.value)}
+          placeholder="American Airlines"
+          hint="Si ya lo escribiste antes, sale sugerido"
+          autoFocus
+        />
+        <TextInput
+          name="numero_afiliacion"
+          label="Número *"
+          value={v.numero}
+          onChange={(e) => upd('numero', e.target.value)}
+          placeholder="08HSDK6"
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <TextInput
+          name="categoria"
+          label="Categoría"
+          value={v.categoria}
+          onChange={(e) => upd('categoria', e.target.value)}
+          placeholder="Gold, Platinum…"
+        />
+        <TextInput
+          name="email_cuenta"
+          label="Correo de la cuenta"
+          type="email"
+          value={v.email_cuenta}
+          onChange={(e) => upd('email_cuenta', e.target.value)}
+        />
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onListo}
+          className="rounded-md border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-dark-2"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => void enviar()}
+          disabled={guardar.isPending}
+          className="rounded-md bg-gold px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+        >
+          {guardar.isPending ? 'Guardando…' : 'Guardar afiliación'}
+        </button>
+      </div>
+      <p className="mt-2 text-[11px] text-dark-3">
+        La contraseña de la cuenta <b>no</b> se guarda aquí, a propósito.
+      </p>
     </div>
   );
 }

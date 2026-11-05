@@ -6,6 +6,64 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 43 · 2026-11-05 · La firma avanza el pago, y el TO DO se ordena solo
+
+**Dos correcciones que la asistente reportó el mismo día.**
+
+### 1 · La firma no movía la solicitud
+
+Lissa firmó tres solicitudes desde su usuario. Desaparecieron de su tablero
+—correcto— pero en Finanzas las tres seguían en «En Solicitud de Firma».
+Firmar y avanzar eran dos actos separados y nada señalaba el atasco.
+
+Estaba anotado como hallazgo en la documentación para la revisión externa
+el día anterior; esta vez se manifestó en la operación real.
+
+**Por qué un trigger y no código del navegador:** quien firma puede ser
+alguien de sólo lectura —la gerente lo es— y las políticas de `pagos` solo
+dejan escribir a admin y asistente. Si el avance lo intentara su navegador,
+fallaría en silencio justo para quien más lo necesita. El trigger
+`avanzar_pago_al_firmar` corre con los privilegios de la función, así que el
+avance ocurre firme quien firme, y queda en `audit_log` a nombre de quien
+firmó porque `pagos` sí tiene auditoría.
+
+**La regla:** avanza del paso 1 al 2 cuando **todas** las firmas vivas de esa
+solicitud están firmadas. Con una de tres, el documento todavía no está
+listo. Las firmas canceladas (`deleted_at`) no cuentan. Del paso 2 en
+adelante el avance sigue siendo manual a propósito: son actos
+administrativos que ocurren fuera del sistema.
+
+**Backfill:** las tres solicitudes detenidas se pusieron al día con la fecha
+real de la firma, no la de hoy.
+
+### 2 · El orden del TO DO no se entendía
+
+«No logro entender cuál es la regla que rige cómo te aparecen.» Tenía razón,
+y había dos reglas distintas: la tabla de CEA ordenaba por fecha de
+vencimiento y el tablero de la gerente por el enum de prioridad de tres
+valores. La misma lista se veía diferente en cada sitio.
+
+**Ahora hay una sola regla, en `modules/cea/todos/orden.ts`:** bloques por
+prioridad, y dentro de cada bloque lo último agregado arriba. Lo hecho al
+final. Se fija al traer los datos, así que las tres pantallas que leen esa
+lista la heredan.
+
+Se mira `prioridad_label` y no `prioridad`: en el enum de tres valores
+«Hold» y «TKIM» caen ambos en 'alta' y quedarían revueltos con las urgentes
+de verdad.
+
+**Y los bloques se ven.** Ordenar sin más no resolvía la queja —seguía
+habiendo que adivinar la regla por el color de las etiquetas—, así que
+`DataTable` admite ahora `groupBy` y dibuja una cabecera cuando cambia el
+bloque. Desaparece si alguien ordena por una columna, donde los bloques
+dejarían de tener sentido. El tablero de la gerente lleva la misma división.
+
+**Verificación:** migración probada con reversión antes de aplicar,
+incluyendo desfirmar y volver a firmar para comprobar que el trigger
+dispara. Las dos pantallas revisadas en captura con datos reales.
+
+---
+
 ## Fase 42 · 2026-11-04 · Fuera los tableros por miembro, y el Dashboard deja de mentir
 
 **Objetivo:** la asistente pidió limpiar la barra superior —«cada vez le

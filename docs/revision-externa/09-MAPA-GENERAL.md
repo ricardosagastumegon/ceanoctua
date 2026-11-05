@@ -220,7 +220,7 @@ Son **tres**, y los tres convergen en la misma bandeja de CEA.
 │ 1 · SOLICITUD DE PAGO                                      │
 │     Finanzas → firmas.pago_id                              │
 │     Paso 1 del circuito: «En Solicitud de Firma»           │
-│     Se firma → la asistente avanza a «Firmado» a mano      │
+│     Se firma → la solicitud pasa sola a «Firmado»          │
 └────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────┐
@@ -260,7 +260,7 @@ Son **tres**, y los tres convergen en la misma bandeja de CEA.
 
 1. **No hay aviso automático.** Nadie recibe correo ni notificación al móvil. Quien firma se entera entrando a la aplicación. Está anotado como pendiente del proyecto.
 
-2. **La firma no avanza el pago.** Firmar y mover `step_idx` son acciones separadas. Una solicitud puede quedar firmada y detenida en el paso 1 sin que nada lo señale.
+2. ~~**La firma no avanza el pago.**~~ **Resuelto el 5 nov 2026 (fase 43).** Un trigger de base avanza la solicitud a «Firmado» cuando se completan todas sus firmas. Los pasos siguientes se avanzan a mano a propósito: son actos administrativos fuera del sistema.
 
 3. **La firma no deja rastro de auditoría.** `firmas` no tiene trigger. La evidencia vive en la propia fila, que es modificable por cualquier editor de CEA.
 

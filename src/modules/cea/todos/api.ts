@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { ordenarTodos } from './orden';
 import type { Database } from '@/types/database';
 
 export type CeaTodo = Database['public']['Tables']['cea_todos']['Row'];
@@ -37,13 +38,12 @@ export const CEA_TODO_ESTADO_COLOR: Record<string, string> = {
 
 export const ceaTodosApi = {
   async list(): Promise<CeaTodo[]> {
-    const { data, error } = await supabase
-      .from('cea_todos')
-      .select('*')
-      .order('done', { ascending: true })
-      .order('fecha', { ascending: true, nullsFirst: false });
+    const { data, error } = await supabase.from('cea_todos').select('*');
     if (error) throw error;
-    return data ?? [];
+    // El orden se decide aca y no en la consulta: Postgres no sabe que «Hold»
+    // va entre «Alta» y «Media», y asi todas las pantallas que leen esta
+    // lista --la tabla de CEA y los dos tableros-- heredan el mismo orden.
+    return ordenarTodos(data ?? []);
   },
   async create(input: CeaTodoInsert): Promise<CeaTodo> {
     const { data, error } = await supabase.from('cea_todos').insert(input).select('*').single();

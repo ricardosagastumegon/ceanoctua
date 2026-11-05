@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 
 export type DataTableColumn<T> = {
   key: string;
@@ -18,6 +18,15 @@ type DataTableProps<T> = {
   rowKey: (row: T) => string;
   actions?: (row: T) => ReactNode;
   onRetry?: () => void;
+  /**
+   * Parte la tabla en bloques con su propio renglon de titulo. Devuelve el
+   * nombre del bloque al que pertenece cada fila; cuando cambia respecto de
+   * la anterior, se dibuja la cabecera.
+   *
+   * Solo se aplica con el orden de origen: en cuanto alguien ordena por una
+   * columna los bloques dejarian de tener sentido, asi que desaparecen.
+   */
+  groupBy?: (row: T) => string;
 };
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null;
@@ -31,6 +40,7 @@ export function DataTable<T>({
   rowKey,
   actions,
   onRetry,
+  groupBy,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<SortState>(null);
 
@@ -123,20 +133,37 @@ export function DataTable<T>({
               </td>
             </tr>
           ) : (
-            sorted.map((row) => (
-              <tr key={rowKey(row)} className="hover:bg-sand-l/40">
-                {columns.map((col) => (
-                  <td key={col.key} className={`px-4 py-3 align-top text-dark ${col.className ?? ''}`}>
-                    {col.render
-                      ? col.render(row)
-                      : col.accessor
-                        ? (col.accessor(row) ?? '—')
-                        : '—'}
-                  </td>
-                ))}
-                {actions && <td className="px-4 py-3 text-right">{actions(row)}</td>}
-              </tr>
-            ))
+            sorted.map((row, i) => {
+              const grupo = !sort && groupBy ? groupBy(row) : null;
+              const abre = grupo !== null && (i === 0 || groupBy!(sorted[i - 1]) !== grupo);
+              return (
+                <Fragment key={rowKey(row)}>
+                  {abre && (
+                    <tr>
+                      <th
+                        colSpan={totalCols}
+                        scope="colgroup"
+                        className="border-y border-sand bg-sand-l/70 px-4 py-1.5 text-left text-[11px] font-extrabold uppercase tracking-wider text-dark-3"
+                      >
+                        {grupo}
+                      </th>
+                    </tr>
+                  )}
+                  <tr className="hover:bg-sand-l/40">
+                    {columns.map((col) => (
+                      <td key={col.key} className={`px-4 py-3 align-top text-dark ${col.className ?? ''}`}>
+                        {col.render
+                          ? col.render(row)
+                          : col.accessor
+                            ? (col.accessor(row) ?? '—')
+                            : '—'}
+                      </td>
+                    ))}
+                    {actions && <td className="px-4 py-3 text-right">{actions(row)}</td>}
+                  </tr>
+                </Fragment>
+              );
+            })
           )}
         </tbody>
       </table>

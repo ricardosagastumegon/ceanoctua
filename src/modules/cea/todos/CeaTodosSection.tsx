@@ -11,6 +11,7 @@ import {
   CEA_TODO_PRI_COLOR,
   type CeaTodo,
 } from './api';
+import { bloqueDe } from './orden';
 import { CeaTodoForm } from './CeaTodoForm';
 import { CeaTodosPrintable } from './CeaTodosPrintable';
 
@@ -158,6 +159,7 @@ export function CeaTodosSection({ canEdit }: { canEdit: boolean }) {
         modalSize="lg"
         columns={columns}
         rows={filtrados}
+        groupBy={bloqueDe}
         loading={query.isLoading}
         isError={query.isError}
         error={query.error}

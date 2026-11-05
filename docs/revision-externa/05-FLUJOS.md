@@ -49,10 +49,12 @@ flowchart TD
 | **Documentos que genera** | Solicitud SP-AAAA-#### · registro de firma FR-AAAA-#### · Formato Oficial FZ (imprimible) |
 | **Estados** | `step_idx` 0→5, con fecha sellada por paso |
 | **Quién interviene** | Asistente (crea y avanza) · firmante con `puede('cea','editor')` |
-| **Qué dispara el avance** | Acción manual en la interfaz. **No hay automatismo** entre la firma y el avance del paso |
+| **Qué dispara el avance** | Del paso 1 al 2, la firma: un trigger lo hace solo desde la fase 43. Del 2 en adelante, acción manual |
 | **Cómo termina** | Paso 5 con comprobante adjunto. No hay cierre contable posterior |
 
-⚠️ **Punto de atención:** firmar el documento y avanzar la solicitud son dos acciones independientes. Que una firma esté en `firmado` no mueve `step_idx` por sí sola; alguien tiene que avanzarla a mano. Es un punto donde el proceso puede quedarse detenido sin que nada lo señale.
+**Nota de actualización (5 nov 2026, fase 43):** hasta esa fecha firmar y avanzar la solicitud eran dos acciones independientes, y tres solicitudes llegaron a quedarse detenidas en el paso 1 con su firma ya puesta. Ahora un trigger de base (`avanzar_pago_al_firmar`) mueve la solicitud a «Firmado» en cuanto **todas** sus firmas vivas están firmadas. Se hace en la base y no en el navegador porque quien firma puede ser alguien de sólo lectura, sin permiso de escritura sobre `pagos`.
+
+Los pasos 2→3→4 siguen avanzándose a mano; son actos administrativos fuera del sistema.
 
 ---
 

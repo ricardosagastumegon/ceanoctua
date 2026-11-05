@@ -35,6 +35,8 @@ export type CatalogPageProps<TRow extends { id: string }, TInput> = {
   extraActions?: (row: TRow) => ReactNode;
   /** Optional extra button shown next to the "+ Nuevo" (e.g. CSV importer). */
   headerExtra?: ReactNode;
+  /** Parte la tabla en bloques con cabecera. Ver DataTable. */
+  groupBy?: (row: TRow) => string;
 };
 
 export function CatalogPage<TRow extends { id: string }, TInput>({
@@ -58,6 +60,7 @@ export function CatalogPage<TRow extends { id: string }, TInput>({
   modalSize = 'lg',
   extraActions,
   headerExtra,
+  groupBy,
 }: CatalogPageProps<TRow, TInput>) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -129,6 +132,7 @@ export function CatalogPage<TRow extends { id: string }, TInput>({
         onRetry={onRetry}
         emptyMessage={emptyMessage ?? 'Sin registros todavía.'}
         rowKey={(r) => r.id}
+        groupBy={groupBy}
         actions={
           (canEdit || extraActions)
             ? (row) => (

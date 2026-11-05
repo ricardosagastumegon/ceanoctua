@@ -251,7 +251,12 @@ Esto conviene señalarlo con claridad porque es el punto más confuso del modelo
 └───────────────────────┬─────────────────────────────────────┘
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 5. step_idx 2→3→4   Firmado · Presentado · Procesado        │
+│ 5. step_idx →2  FIRMADO                                     │
+│    AUTOMÁTICO desde la fase 43: el trigger                   │
+│    `avanzar_pago_al_firmar` mueve la solicitud cuando        │
+│    TODAS sus firmas vivas están firmadas                     │
+│                                                             │
+│    step_idx 3→4   Presentado · Procesado                     │
 │    Avance manual. Cada paso sella su fecha                  │
 └───────────────────────┬─────────────────────────────────────┘
                         ▼
@@ -287,3 +292,5 @@ Esto conviene señalarlo con claridad porque es el punto más confuso del modelo
 **El hueco más relevante:** las cabeceras financieras están auditadas, pero **el detalle y la firma no**. Se puede alterar el desglose de una liquidación, o modificar un registro de firma, sin que quede constancia en `audit_log`.
 
 Para una firma queda la evidencia en la propia fila (`fecha_firma`, `firmada_por`), pero esa fila es modificable por cualquier editor de CEA y el cambio no se registra. **Si la trazabilidad de la autorización es un requisito del negocio, este es el punto a atender primero.**
+
+**Matiz añadido en la fase 43:** desde que la firma avanza la solicitud, firmar provoca un cambio de estado financiero. Ese cambio **sí** queda en `audit_log`, porque `pagos` está auditada y el trigger corre bajo `auth.uid()` de quien firmó: se sabe quién movió la solicitud y cuándo. Lo que sigue sin registro es la fila de `firmas` en sí.

@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useFirmarDocumento, useFirmas } from '@/modules/cea/firmas/hooks';
@@ -8,6 +9,7 @@ import { describeError } from '@/modules/admin/hooks';
 import { usePagos } from '@/modules/finanzas/pagos/hooks';
 import { useLiquidaciones } from '@/modules/cc-board/liquidaciones/hooks';
 import { useCeaTodos } from '@/modules/cea/todos/hooks';
+import { bloqueDe } from '@/modules/cea/todos/orden';
 import { useAttViajes } from '@/modules/arriaza/viajes/hooks';
 import { formatMoney } from '@/lib/money';
 
@@ -27,7 +29,6 @@ import { formatMoney } from '@/lib/money';
  */
 
 const PESO_URGENCIA: Record<string, number> = { urgente: 0, importante: 1, programado: 2 };
-const PESO_PRIORIDAD: Record<string, number> = { alta: 0, media: 1, baja: 2 };
 
 const TONO_URGENCIA: Record<string, string> = {
   urgente: 'bg-rust text-white',
@@ -147,15 +148,12 @@ export function GerenteView() {
   // el equipo, que para quien supervisa es ruido: no sabe cuales atender.
   // Quien no tenga persona de Personal JD asociada no ve ninguno, que es
   // preferible a verlos todos.
+  // El orden ya viene dado --bloques por prioridad, lo ultimo agregado
+  // arriba-- y filtrar lo respeta. Antes ordenaba aparte y por eso esta
+  // pantalla y la tabla de CEA mostraban la misma lista de otra forma.
   const pendientes = (todosQ.data ?? [])
     .filter((t) => !t.done)
-    .filter((t) => !!profile?.persona_id && t.persona_id === profile.persona_id)
-    .sort(
-      (a, b) =>
-        (PESO_PRIORIDAD[a.prioridad ?? 'media'] ?? 1) -
-          (PESO_PRIORIDAD[b.prioridad ?? 'media'] ?? 1) ||
-        (a.fecha ?? '').localeCompare(b.fecha ?? ''),
-    );
+    .filter((t) => !!profile?.persona_id && t.persona_id === profile.persona_id);
 
   const hoy = new Date().toISOString().slice(0, 10);
   const viajes = (viajesQ.data ?? [])
@@ -294,11 +292,20 @@ export function GerenteView() {
         cargando={todosQ.isLoading}
         vacio="No hay tareas pendientes."
       >
-        {pendientes.slice(0, 8).map((t) => {
+        {pendientes.slice(0, 8).map((t, i, lista) => {
           const faltan = enDias(t.fecha);
+          // La misma division por bloques que la tabla de CEA, para que la
+          // lista se lea igual en los dos sitios.
+          const bloque = bloqueDe(t);
+          const abre = i === 0 || bloqueDe(lista[i - 1]) !== bloque;
           return (
+            <Fragment key={t.id}>
+              {abre && (
+                <li className="px-1 pb-0.5 pt-2 text-[10px] font-extrabold uppercase tracking-wider text-dark-3 first:pt-0">
+                  {bloque}
+                </li>
+              )}
             <Renglon
-              key={t.id}
               etiqueta={t.prioridad ?? 'media'}
               tono={TONO_PRIORIDAD[t.prioridad ?? 'media'] ?? TONO_PRIORIDAD.media}
               titulo={t.asunto}
@@ -313,6 +320,7 @@ export function GerenteView() {
               }
               alerta={faltan != null && faltan <= 0}
             />
+            </Fragment>
           );
         })}
         {pendientes.length > 8 && (

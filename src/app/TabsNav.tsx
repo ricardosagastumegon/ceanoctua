@@ -23,6 +23,9 @@ const tabs: Tab[] = [
   { to: '/cea',      label: 'CEA',         roles: ['admin', 'asistente'], modulo: 'cea' },
   { to: '/finanzas', label: '💰 Finanzas', roles: ['admin', 'asistente'], modulo: 'finanzas' },
   { to: '/caja-chica', label: '💵 Caja Chica', roles: ['admin', 'asistente'], modulo: 'caja_chica' },
+  { to: '/combustible', label: '⛽ Combustible', roles: ['admin', 'asistente'], modulo: 'combustible' },
+  // La bandeja del Tesorero. Solo la ve quien recibe algo.
+  { to: '/tesoreria', label: '🧾 Tesorería', roles: ['admin', 'tesoreria'], modulo: 'tesoreria' },
   { to: '/admin',    label: '⚙ Admin',     roles: ['admin'] },
   { to: '/miel-sj',  label: '🍯 Miel SJ',  roles: ['admin', 'asistente'], modulo: 'miel_sj' },
 ];

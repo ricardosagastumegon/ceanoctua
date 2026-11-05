@@ -1207,7 +1207,10 @@ export type Database = {
           notas?: string | null;
           deleted_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          { foreignKeyName: 'avn_documentos_aeronave_id_fkey'; columns: ['aeronave_id']; referencedRelation: 'avn_aeronaves'; referencedColumns: ['id'] },
+          { foreignKeyName: 'avn_documentos_tipo_id_fkey'; columns: ['tipo_id']; referencedRelation: 'avn_tipos_certificado'; referencedColumns: ['id'] },
+        ];
       };
 
       // ====================================================
@@ -4278,7 +4281,45 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      /** Personal JD marcado como firmante. La usa el modal de pedir firma. */
+      firmantes: {
+        Args: Record<string, never>;
+        Returns: { id: string; nombre: string | null }[];
+      };
+      /**
+       * Cierra un control de vales: calcula el total en el servidor y lo
+       * congela. Se niega si alguna solicitud no tiene monto de despacho.
+       */
+      comb_cerrar_reporte: {
+        Args: { p_reporte: string };
+        Returns: Database['public']['Tables']['comb_reportes']['Row'];
+      };
+      /** Emite el aviso a PAGOS de un control cerrado. */
+      comb_enviar_a_pagos: {
+        Args: { p_reporte: string };
+        Returns: Database['public']['Tables']['pagos_notificaciones']['Row'];
+      };
+      /**
+       * El destinatario acepta un envio. `security definer`: el no escribe
+       * tablas, solo ejecuta este acto, y la funcion corre la cascada que
+       * corresponda al tipo de documento.
+       */
+      envio_aceptar: {
+        Args: { p_envio: string; p_datos?: Json; p_nota?: string | null };
+        Returns: Database['public']['Tables']['envios']['Row'];
+      };
+      /** Devuelve un envio sin aceptarlo. No dispara ninguna cascada. */
+      envio_rechazar: {
+        Args: { p_envio: string; p_nota?: string | null };
+        Returns: Database['public']['Tables']['envios']['Row'];
+      };
+      /** El Tesorero marca pagada una SP que recibio. Cierra la cascada. */
+      pago_marcar_pagado: {
+        Args: { p_pago: string };
+        Returns: undefined;
+      };
+    };
     Enums: {
       app_rol: 'admin' | 'asistente' | 'board_member' | 'solo_lectura' | 'tesoreria';
       currency: 'USD' | 'GTQ' | 'EUR' | 'GBP';

@@ -18,6 +18,7 @@ import {
 } from './hooks';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
+import { EnviarATesoreriaModal } from '@/modules/tesoreria/EnviarATesoreria';
 import { useCancelarFirma, useFirmasPendientes } from '@/modules/cea/firmas/hooks';
 import { PagoForm } from './PagoForm';
 import { PagoPrintable } from './PagoPrintable';
@@ -74,6 +75,11 @@ export function PagosSection({
   /** Notificación que originó el form abierto — se marca procesada al guardar. */
   const [fromNotifs, setFromNotifs] = useState<string[]>([]);
   const [pidiendoFirma, setPidiendoFirma] = useState<Pago | null>(null);
+  /**
+   * La SP ya firmada se le baja al Tesorero. Antes era un viaje de papel; ahora
+   * tambien cruza por `envios`, que es lo unico que pasa entre dos usuarios.
+   */
+  const [enviandoATesoreria, setEnviandoATesoreria] = useState<Pago | null>(null);
   const pendientesQ = useFirmasPendientes();
   const cancelarFirma = useCancelarFirma();
 
@@ -519,6 +525,16 @@ export function PagosSection({
                           </button>
                         );
                       })()}
+                      {p.step_idx === 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setEnviandoATesoreria(p)}
+                          className="rounded-md border border-gold/50 bg-gold/15 px-2 py-1 text-xs font-semibold text-dark hover:bg-gold/25"
+                          title="Ya está firmada: mandarla a la bandeja del tesorero"
+                        >
+                          🧾 Al tesorero
+                        </button>
+                      )}
                       {isLast && (
                         <span className="rounded-md bg-teal px-3 py-1 text-xs font-semibold text-white">✓ Pagado</span>
                       )}
@@ -675,6 +691,47 @@ export function PagosSection({
             </div>
           )}
         </section>
+      )}
+
+      {enviandoATesoreria && (
+        <EnviarATesoreriaModal
+          open
+          onClose={() => setEnviandoATesoreria(null)}
+          docTipo="pago"
+          docId={enviandoATesoreria.id}
+          titulo="Enviar la solicitud de pago al tesorero"
+          snapshot={{
+            serial: enviandoATesoreria.serial ?? '',
+            fecha: enviandoATesoreria.fecha ?? '',
+            titulo: `Solicitud de pago ${enviandoATesoreria.serial ?? ''}`.trim(),
+            monto: enviandoATesoreria.monto ?? undefined,
+            moneda: enviandoATesoreria.moneda ?? 'GTQ',
+            detalle: enviandoATesoreria.concepto ?? '',
+            campos: [
+              { etiqueta: 'A favor de', valor: enviandoATesoreria.proveedor ?? '-' },
+              { etiqueta: 'NIT', valor: enviandoATesoreria.nit ?? '-' },
+              { etiqueta: 'Entidad que paga', valor: enviandoATesoreria.entidad ?? '-' },
+              { etiqueta: 'Tipo de pago', valor: enviandoATesoreria.tipo_label ?? '-' },
+              {
+                etiqueta: 'Firmada',
+                valor: enviandoATesoreria.step_dates?.[2] ?? 'si',
+              },
+            ],
+          }}
+          onEnviado={async () => {
+            // Mandarla ES el paso: la SP pasa a «Presentado». Dejarlo a mano
+            // garantiza que la linea de tiempo mienta en cuanto alguien se
+            // distraiga, que es lo que paso con la firma antes de la fase 43.
+            //
+            // Va por `advance` y no por un update directo porque esa funcion
+            // ademas escribe la fecha en `step_dates`; sin ella el paso queda
+            // marcado pero sin cuando.
+            await advance.mutateAsync({
+              id: enviandoATesoreria.id,
+              current: enviandoATesoreria,
+            });
+          }}
+        />
       )}
 
       {pidiendoFirma && (

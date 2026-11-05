@@ -1,0 +1,254 @@
+import { useState, type FormEvent } from 'react';
+import { CatalogPage, type CatalogFormProps } from '@/modules/admin/components/CatalogPage';
+import type { DataTableColumn } from '@/components/ui/DataTable';
+import { Select } from '@/components/ui/Select';
+import { TextInput } from '@/components/ui/TextInput';
+import { useEmpleados } from '@/modules/admin/hooks';
+import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
+import type { Responsable, ResponsableInsert } from '@/modules/combustible/api';
+import {
+  useActualizarResponsable,
+  useBorrarResponsable,
+  useCrearResponsable,
+  useResponsables,
+} from '@/modules/combustible/hooks';
+
+/**
+ * Los cuadros del control de vales OL-RG-0270.
+ *
+ * Es, literalmente, lo que la asistente marca EN ROJO en su hoja: lo que
+ * cambia de un cuadro a otro --marca, tipo, puesto, nombre y placa. Se
+ * comprobo celda por celda en el libro que entrego el 5 nov 2026.
+ *
+ * Es catalogo y no una seccion del reporte porque el cuadro ES un responsable
+ * con su vehiculo asignado. Asi ademas da igual que sean cinco, seis o siete:
+ * se administran los que haya.
+ */
+
+export function ResponsablesSection({ canEdit }: { canEdit: boolean }) {
+  const query = useResponsables();
+  const create = useCrearResponsable();
+  const update = useActualizarResponsable();
+  const remove = useBorrarResponsable();
+  const empleadosQ = useEmpleados();
+  const vehiculosQ = useVehiculos();
+
+  const empleado = (id: string | null) =>
+    id ? (empleadosQ.data ?? []).find((e) => e.id === id) : null;
+  const vehiculo = (id: string | null) =>
+    id ? (vehiculosQ.data ?? []).find((v) => v.id === id) : null;
+
+  const columns: DataTableColumn<Responsable>[] = [
+    {
+      key: 'orden',
+      header: '#',
+      className: 'w-10 text-right',
+      sortable: true,
+      accessor: (r) => r.orden,
+      render: (r) => <span className="text-dark-3">{r.orden}</span>,
+    },
+    {
+      key: 'titulo',
+      header: 'Cuadro',
+      sortable: true,
+      accessor: (r) => r.etiqueta ?? empleado(r.empleado_id)?.nombre ?? '',
+      render: (r) => (
+        <span className="font-medium text-dark">
+          {r.etiqueta ?? empleado(r.empleado_id)?.nombre ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'persona',
+      header: 'Responsable',
+      render: (r) => empleado(r.empleado_id)?.nombre ?? <span className="text-dark-3">—</span>,
+    },
+    {
+      key: 'puesto',
+      header: 'Puesto',
+      render: (r) =>
+        r.puesto_label ?? empleado(r.empleado_id)?.puesto ?? <span className="text-dark-3">—</span>,
+    },
+    {
+      key: 'vehiculo',
+      header: 'Vehículo',
+      render: (r) => {
+        const v = vehiculo(r.vehiculo_id);
+        if (!v) return <span className="text-dark-3">varios</span>;
+        return (
+          <span>
+            {v.marca} · <span className="font-mono text-xs text-teal-d">{v.placa}</span>
+          </span>
+        );
+      },
+    },
+    {
+      key: 'tipo_bloque',
+      header: 'Columnas',
+      sortable: true,
+      accessor: (r) => r.tipo_bloque,
+      render: (r) => (
+        <span className="rounded bg-sand-l px-2 py-0.5 text-xs text-dark-2">
+          {r.tipo_bloque === 'vehiculo_asignado' ? 'Con kilometraje' : 'Vehículos varios'}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <CatalogPage<Responsable, ResponsableInsert>
+      title="Responsables de combustible"
+      description="Los cuadros del control de vales. Cada uno imprime su propio bloque, en este orden."
+      newLabel="+ Nuevo cuadro"
+      modalSize="md"
+      columns={columns}
+      rows={query.data ?? []}
+      loading={query.isLoading}
+      isError={query.isError}
+      error={query.error}
+      onRetry={() => void query.refetch()}
+      onCreate={(values) => create.mutateAsync(values)}
+      onUpdate={(id, patch) => update.mutateAsync({ id, patch })}
+      onDelete={(id) => remove.mutateAsync(id)}
+      submitting={create.isPending || update.isPending}
+      Form={ResponsableForm}
+      rowLabel={(r) => r.etiqueta ?? empleado(r.empleado_id)?.nombre ?? 'el cuadro'}
+      canEdit={canEdit}
+    />
+  );
+}
+
+type Estado = {
+  empleado_id: string;
+  etiqueta: string;
+  puesto_label: string;
+  vehiculo_id: string;
+  tipo_bloque: 'vehiculo_asignado' | 'varios';
+  orden: string;
+};
+
+function ResponsableForm({
+  initial,
+  submitting,
+  onSubmit,
+  onCancel,
+}: CatalogFormProps<Responsable, ResponsableInsert>) {
+  const empleadosQ = useEmpleados();
+  const vehiculosQ = useVehiculos();
+
+  const [v, setV] = useState<Estado>({
+    empleado_id: initial?.empleado_id ?? '',
+    etiqueta: initial?.etiqueta ?? '',
+    puesto_label: initial?.puesto_label ?? '',
+    vehiculo_id: initial?.vehiculo_id ?? '',
+    tipo_bloque: (initial?.tipo_bloque as Estado['tipo_bloque']) ?? 'vehiculo_asignado',
+    orden: initial?.orden?.toString() ?? '',
+  });
+  const set = <K extends keyof Estado>(k: K, x: Estado[K]) => setV((s) => ({ ...s, [k]: x }));
+
+  const esVarios = v.tipo_bloque === 'varios';
+
+  function enviar(e: FormEvent) {
+    e.preventDefault();
+    onSubmit({
+      empleado_id: v.empleado_id || null,
+      etiqueta: v.etiqueta.trim() || null,
+      puesto_label: v.puesto_label.trim() || null,
+      // Un cuadro de «varios» no tiene carro fijo: la base lo exige asi.
+      vehiculo_id: esVarios ? null : v.vehiculo_id || null,
+      tipo_bloque: v.tipo_bloque,
+      orden: Number(v.orden) || 0,
+      activo: initial?.activo ?? true,
+    });
+  }
+
+  return (
+    <form onSubmit={enviar} className="space-y-4">
+      <Select
+        label="Tipo de cuadro"
+        hint="Decide qué columnas imprime en el control de vales."
+        value={v.tipo_bloque}
+        onChange={(e) => set('tipo_bloque', e.target.value as Estado['tipo_bloque'])}
+      >
+        <option value="vehiculo_asignado">
+          Con vehículo asignado — lleva kilometraje
+        </option>
+        <option value="varios">
+          Vehículos varios — lleva vehículo, propietario y placa por renglón
+        </option>
+      </Select>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Select
+          label="Responsable"
+          value={v.empleado_id}
+          onChange={(e) => set('empleado_id', e.target.value)}
+        >
+          <option value="">—</option>
+          {(empleadosQ.data ?? []).map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.nombre}
+            </option>
+          ))}
+        </Select>
+        <TextInput
+          label="Título del cuadro"
+          hint="Para los que no son de una persona: OTROS, DEPARTAMENTO DE COMPRAS…"
+          value={v.etiqueta}
+          onChange={(e) => set('etiqueta', e.target.value)}
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <TextInput
+          label="Puesto en el formato"
+          hint="Si está vacío, usa el del empleado."
+          value={v.puesto_label}
+          onChange={(e) => set('puesto_label', e.target.value)}
+        />
+        <TextInput
+          label="Orden"
+          inputMode="numeric"
+          hint="En qué posición se imprime."
+          value={v.orden}
+          onChange={(e) => set('orden', e.target.value)}
+        />
+      </div>
+
+      {!esVarios && (
+        <Select
+          label="Vehículo asignado"
+          hint="Obligatorio en los cuadros con kilometraje."
+          value={v.vehiculo_id}
+          onChange={(e) => set('vehiculo_id', e.target.value)}
+          required
+        >
+          <option value="">Escoge…</option>
+          {(vehiculosQ.data ?? []).map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.marca} · {x.placa}
+              {x.tipo ? ` · ${x.tipo}` : ''}
+            </option>
+          ))}
+        </Select>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-sand px-4 py-2 text-sm text-dark-2 hover:bg-sand-l"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-md bg-teal px-4 py-2 text-sm font-medium text-white hover:bg-teal/90 disabled:opacity-60"
+        >
+          {submitting ? 'Guardando…' : initial ? 'Guardar' : 'Crear'}
+        </button>
+      </div>
+    </form>
+  );
+}

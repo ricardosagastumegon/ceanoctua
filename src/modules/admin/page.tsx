@@ -8,6 +8,7 @@ import { UsuariosCatalog } from './UsuariosCatalog';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { CsvImporter, type ColumnMapping } from '@/components/ui/CsvImporter';
 import { VehiculosSection } from './vehiculos/VehiculosSection';
+import { ResponsablesSection } from './combustible/ResponsablesSection';
 import { EntidadForm } from './components/EntidadForm';
 import { PersonaForm } from './components/PersonaForm';
 import { EmpleadoForm } from './components/EmpleadoForm';
@@ -79,6 +80,7 @@ type CatalogKey =
   | 'proveedores'
   | 'tarjetas'
   | 'vehiculos'
+  | 'comb_responsables'
   | 'status_sp'
   | 'certificados_aereos'
   | 'usuarios';
@@ -93,6 +95,7 @@ const tabs: { key: CatalogKey; label: string }[] = [
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'tarjetas', label: 'Tarjetas de crédito' },
   { key: 'vehiculos', label: 'Vehículos' },
+  { key: 'comb_responsables', label: 'Responsables de combustible' },
   { key: 'status_sp', label: 'Status Solicitud de Pago' },
   { key: 'certificados_aereos', label: 'Certificados Aéreos' },
   { key: 'usuarios', label: 'Usuarios y accesos' },
@@ -143,6 +146,7 @@ export default function AdminPage() {
       {tab === 'proveedores' && <ProveedoresCatalog canEdit={isAdmin} />}
       {tab === 'tarjetas' && <TarjetasCatalog canEdit={isAdmin} />}
       {tab === 'vehiculos' && <VehiculosSection canEdit={isAdmin} />}
+      {tab === 'comb_responsables' && <ResponsablesSection canEdit={isAdmin} />}
       {tab === 'status_sp' && <StatusSpCatalog canEdit={isAdmin} />}
       {tab === 'certificados_aereos' && <CertificadosAereosCatalog canEdit={isAdmin} />}
     </section>

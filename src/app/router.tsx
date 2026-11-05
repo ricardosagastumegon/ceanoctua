@@ -21,6 +21,11 @@ const AdminPage = lazy(() => cargar(() => import('@/modules/admin/page')));
 const MielSjPage = lazy(() => cargar(() => import('@/modules/miel-sj/page')));
 const FinanzasPage = lazy(() => cargar(() => import('@/modules/finanzas/page')));
 const CajaChicaPage = lazy(() => cargar(() => import('@/modules/caja-chica/page')));
+const CombustiblePage = lazy(() => cargar(() => import('@/modules/combustible/page')));
+// La bandeja de quien recibe. Vive aparte del combustible a proposito: hoy le
+// llegan solicitudes de vale y solicitudes de pago, y cuando se enchufe caja
+// chica le llegaran vales de dinero y liquidaciones sin tocar esta pantalla.
+const TesoreriaPage = lazy(() => cargar(() => import('@/modules/tesoreria/page')));
 
 function withSuspense(node: ReactNode) {
   return (
@@ -65,6 +70,8 @@ export const router = createBrowserRouter([
       { path: 'miel-sj', element: withSuspense(<MielSjPage />) },
       { path: 'finanzas', element: withSuspense(<FinanzasPage />) },
       { path: 'caja-chica', element: withSuspense(<CajaChicaPage />) },
+      { path: 'combustible', element: withSuspense(<CombustiblePage />) },
+      { path: 'tesoreria', element: withSuspense(<TesoreriaPage />) },
     ],
   },
 ]);

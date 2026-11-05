@@ -13,7 +13,7 @@ export type AppRol = Database['public']['Enums']['app_rol'];
 /** Los módulos a los que se le puede dar acceso a alguien. */
 export type Modulo =
   | 'dashboard' | 'tt' | 'aeronaves' | 'cea' | 'finanzas' | 'caja_chica'
-  | 'miel_sj' | 'admin';
+  | 'miel_sj' | 'admin' | 'combustible' | 'tesoreria';
 
 /** Observador ve; editor además crea y edita; super además borra. */
 export type Permiso = 'observador' | 'editor' | 'super';

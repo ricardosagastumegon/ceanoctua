@@ -16,10 +16,14 @@ const DashboardPage = lazy(() => cargar(() => import('@/modules/dashboard/page')
  * suyo: abre el ícono del teléfono y ya está donde tiene que estar.
  */
 const DESTINO: { modulo: Modulo; ruta: string }[] = [
+  // Tesorería va primero: quien la tiene es porque su trabajo ES la bandeja.
+  // Si cayera en otra cosa tendría que ir a buscarla cada vez.
+  { modulo: 'tesoreria', ruta: '/tesoreria' },
   { modulo: 'tt', ruta: '/arriaza' },
   { modulo: 'cea', ruta: '/cea' },
   { modulo: 'finanzas', ruta: '/finanzas' },
   { modulo: 'caja_chica', ruta: '/caja-chica' },
+  { modulo: 'combustible', ruta: '/combustible' },
   { modulo: 'miel_sj', ruta: '/miel-sj' },
 ];
 

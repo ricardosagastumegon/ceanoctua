@@ -160,11 +160,38 @@ Pasaportes, visas y licencias escaneadas. Cualquier sesión válida los lee, ten
 
 Desarrollado en §2. El impacto depende de si la trazabilidad de la autorización es un requisito del negocio.
 
-### 5.3 · Catálogos sensibles legibles por cualquier usuario autenticado
+### 5.3 · El patrón «catálogo abierto» · parcialmente cerrado
 
-`tarjetas_credito` (titular, banco, límite, NIT), `personas` (NIT, dirección) y `empleados` (correo, teléfono) usan `auth.uid() IS NOT NULL`.
+`tarjetas_credito` (titular, banco, límite, NIT), `personas` (NIT, dirección) y `empleados` (correo, teléfono) usaban `auth.uid() IS NOT NULL`.
 
 **Mitigante verificado:** `tarjetas_credito` **no almacena el número completo de tarjeta**. Se comprobó la forma del dato: ninguno de los registros coincide con un patrón de PAN de 13-19 dígitos.
+
+> **Actualizado el 5 nov 2026 (fase 45).** Al crear el tercer usuario del sistema —el Tesorero, con un rol nuevo que no concede lectura financiera— se probó su aislamiento **con su sesión real y el rol `authenticated`**, no desde la interfaz. `firmas` y `tarjetas_credito` quedaron acotadas por módulo. Las demás siguen abiertas.
+
+### 5.3.1 · Lo que el barrido completo encontró
+
+Se consultaron **las 104 tablas** con la sesión del usuario más restringido del sistema, que sólo tiene el módulo `tesoreria`. Ve **19 tablas con datos, 249 filas**. Clasificadas:
+
+**Listas de valores — es su propósito, no es un hallazgo:**
+`tipos_pago` · `status_solicitud_pago` · `entidades` · `proveedores` · `miembros_board` · `avn_tipos_certificado`. Y `usuarios` / `usuario_modulos`, donde ve **sólo su propia fila**: la política es correcta.
+
+**Datos de personas — discutible:**
+`empleados` (35: nombre, puesto, correo, teléfono) · `personas` (10: NIT, dirección) · `invitados` (12) · `directorio` (5).
+
+**Contenido operativo ajeno — esto sí es el hallazgo:**
+
+| Tabla | Filas | Qué expone |
+|---|---|---|
+| `caja_chica_liq_rows` | 53 | **El detalle de los gastos de las liquidaciones** |
+| `cea_todos` | 40 | La lista de pendientes de la asistente |
+| `pagos_notificaciones` | 18 | Avisos de pago, **con monto y concepto** |
+| `liquidacion_vales` | 13 | Qué vale entra en qué liquidación |
+| `firma_miembros` | 5 | A quién iba dirigido cada documento de firma |
+| `cea_notas_entrega` | 2 | Entregas físicas |
+
+**La asimetría es el patrón, y es el mismo que el de la auditoría:** *la cabecera está protegida y el detalle no*. `caja_chica_liquidaciones` quedó acotada y sus 53 renglones no. `firmas` quedó acotada y `firma_miembros` no. `tc_consumos` está acotada y `consumo_renglones` sólo está vacía — el día que tenga datos, serán visibles.
+
+No parece una decisión de diseño. Parece que las políticas se escribieron tabla por tabla y las de detalle heredaron la regla permisiva por omisión.
 
 ### 5.4 · Dos sistemas de permisos conviviendo
 

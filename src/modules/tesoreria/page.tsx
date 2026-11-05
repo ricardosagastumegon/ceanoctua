@@ -4,8 +4,18 @@ import { Modal } from '@/components/ui/Modal';
 import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
+import {
+  BotonPrincipal,
+  Bloque,
+  Cabecera,
+  Renglon,
+  dia,
+  enDias,
+  money,
+} from '@/modules/dashboard/tablero';
 import {
   DOC_TIPO_LABEL,
   ENVIOS_KEY,
@@ -16,17 +26,21 @@ import {
 } from './api';
 
 /**
- * La bandeja de Tesoreria.
+ * El tablero de Tesoreria.
  *
- * No consulta las tablas de origen: lee `envios` y pinta su `snapshot`. Eso no
- * es una limitacion, es el diseño --la usuaria fijo que cada usuario es
- * independiente y que lo unico que cruza es lo que alguien manda a proposito.
- * Darle lectura sobre `pagos` para que viera la SP que se le envio seria darle
- * todos los pagos, porque RLS concede por tabla y no por fila.
+ * Mismo molde que el de quien firma, y a proposito: los dos son para alguien
+ * que entra desde el telefono, hace UNA cosa y se va. Comparten las piezas
+ * (`dashboard/tablero.tsx`), asi que no pueden separarse con el tiempo.
+ *
+ * No consulta las tablas de origen: lee `envios` y pinta su `snapshot`. No es
+ * una limitacion, es el diseño --la regla que fijo la dueña es que cada
+ * usuario es independiente y que lo unico que cruza es lo que alguien manda a
+ * proposito. Darle lectura sobre `pagos` para que viera la SP que se le envio
+ * seria darle TODOS los pagos, porque RLS concede por tabla y no por fila.
  *
  * Hoy le llegan solicitudes de vale y solicitudes de pago. Cuando se enchufe
- * caja chica le llegaran vales de dinero y liquidaciones, y esta pantalla no
- * cambia: aparecen solas.
+ * caja chica le llegaran vales de dinero y liquidaciones, y los bloques
+ * apareceran solos.
  */
 
 function usePendientes() {
@@ -43,37 +57,32 @@ function useResueltos() {
   });
 }
 
-const COLOR: Record<string, string> = {
-  comb_solicitud: 'bg-gold/20 text-dark',
-  comb_reporte: 'bg-purple/15 text-purple',
-  pago: 'bg-teal/15 text-teal',
-  cc_vale: 'bg-sand text-dark-2',
-  cc_liquidacion: 'bg-sand text-dark-2',
-};
+/** El tono del distintivo según cuánto lleva esperando. */
+function tonoEspera(diasEsperando: number | null): { etiqueta: string; tono: string } {
+  if (diasEsperando != null && diasEsperando <= -5) {
+    return { etiqueta: 'atrasado', tono: 'bg-rust text-white' };
+  }
+  if (diasEsperando != null && diasEsperando <= -2) {
+    return { etiqueta: 'espera', tono: 'bg-gold text-white' };
+  }
+  return { etiqueta: 'nuevo', tono: 'bg-sand text-dark-2' };
+}
 
 export default function TesoreriaPage() {
+  const { profile } = useAuth();
   const toast = useToast();
   const qc = useQueryClient();
   const pendientesQ = usePendientes();
   const resueltosQ = useResueltos();
   const [abierto, setAbierto] = useState<Envio | null>(null);
 
-  /**
-   * Aceptar una SP y pagarla son dos actos distintos, con semanas de por
-   * medio: el combustible es a credito 30 dias. Por eso las aceptadas no
-   * desaparecen -- se quedan en su propia pila hasta que se pagan.
-   */
-  const marcarPagado = useMutation({
-    mutationFn: (pagoId: string) => enviosApi.marcarPagado(pagoId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ENVIOS_KEY });
-      toast.success('Marcada como pagada.');
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const resolver = useMutation({
-    mutationFn: async (v: { envio: Envio; datos: Record<string, unknown>; nota: string; aceptar: boolean }) =>
+    mutationFn: async (v: {
+      envio: Envio;
+      datos: Record<string, unknown>;
+      nota: string;
+      aceptar: boolean;
+    }) =>
       v.aceptar
         ? enviosApi.aceptar(v.envio.id, v.datos, v.nota || undefined)
         : enviosApi.rechazar(v.envio.id, v.nota),
@@ -85,9 +94,26 @@ export default function TesoreriaPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const pendientes = pendientesQ.data ?? [];
+  /**
+   * Aceptar y pagar son dos actos distintos, con semanas de por medio: el
+   * combustible es a credito 30 dias. Por eso lo aceptado no desaparece.
+   */
+  const marcarPagado = useMutation({
+    mutationFn: (pagoId: string) => enviosApi.marcarPagado(pagoId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ENVIOS_KEY });
+      toast.success('Marcada como pagada.');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
+  const pendientes = pendientesQ.data ?? [];
   const porTipo = (t: DocTipo) => pendientes.filter((e) => e.doc_tipo === t);
+
+  const vales = porTipo('comb_solicitud');
+  const pagos = porTipo('pago');
+  const ccVales = porTipo('cc_vale');
+  const ccLiq = porTipo('cc_liquidacion');
 
   // El sello `pagado_at` lo pone la funcion al pagar, porque el Tesorero no
   // puede leer `pagos`: sin el, una SP aceptada y una pagada se le verian
@@ -99,129 +125,167 @@ export default function TesoreriaPage() {
       !(e.datos && typeof e.datos === 'object' && 'pagado_at' in e.datos),
   );
 
-  const pilas: { tipo: DocTipo; titulo: string; vacio: string }[] = [
-    {
-      tipo: 'comb_solicitud',
-      titulo: 'Vales de combustible por emitir',
-      vacio: 'Ninguna solicitud esperando vale.',
-    },
-    {
-      tipo: 'pago',
-      titulo: 'Solicitudes de pago firmadas',
-      vacio: 'Ninguna solicitud de pago pendiente.',
-    },
-    { tipo: 'cc_vale', titulo: 'Vales de caja chica', vacio: 'Nada pendiente.' },
-    { tipo: 'cc_liquidacion', titulo: 'Liquidaciones de caja chica', vacio: 'Nada pendiente.' },
-  ];
+  const totalPendiente = pendientes.length;
+  const montoPorPagar = porPagar.reduce((a, e) => a + (leerSnapshot(e).monto ?? 0), 0);
+
+  /** Un renglón a partir de un envío, igual en todos los bloques. */
+  const renglon = (e: Envio, accion?: React.ReactNode) => {
+    const s = leerSnapshot(e);
+    const espera = enDias(e.enviado_at);
+    const { etiqueta, tono } = tonoEspera(espera);
+    return (
+      <Renglon
+        key={e.id}
+        etiqueta={etiqueta}
+        tono={tono}
+        titulo={s.serial ?? DOC_TIPO_LABEL[e.doc_tipo as DocTipo]}
+        detalle={s.detalle ?? ''}
+        cifra={s.monto != null ? money(s.monto, s.moneda ?? 'GTQ') : null}
+        pie={
+          espera != null && espera <= -2
+            ? `${Math.abs(espera)} días esperando`
+            : dia(e.enviado_at)
+        }
+        alerta={espera != null && espera <= -5}
+        accion={accion}
+      />
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold text-dark">Tesorería</h1>
-        <p className="text-sm text-dark-3">
-          Lo que te han enviado. Al aceptar, el documento avanza solo del otro lado.
-        </p>
-      </header>
+    <section className="space-y-5">
+      <Cabecera
+        nombre={profile?.nombre}
+        resumen={
+          totalPendiente === 0
+            ? porPagar.length > 0
+              ? `Nada nuevo. Te quedan ${porPagar.length} ${porPagar.length === 1 ? 'pago' : 'pagos'} por ejecutar.`
+              : 'No tienes nada pendiente. Aquí te aparecerá lo que te envíen.'
+            : `Tienes ${totalPendiente} ${totalPendiente === 1 ? 'documento' : 'documentos'} esperándote.`
+        }
+      />
 
-      {pendientesQ.isLoading && <p className="text-sm text-dark-3">Cargando…</p>}
       {pendientesQ.error && (
         <p className="rounded-md border border-rust/40 bg-rust/10 px-3 py-2 text-sm text-rust">
           {pendientesQ.error.message}
         </p>
       )}
 
-      {pilas
-        // Las pilas que todavia no existen --caja chica-- no se muestran
-        // vacias: apareceran solas cuando empiecen a llegar.
-        .filter((p) => porTipo(p.tipo).length > 0 || p.tipo === 'comb_solicitud' || p.tipo === 'pago')
-        .map((p) => {
-          const items = porTipo(p.tipo);
-          return (
-            <section key={p.tipo}>
-              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-dark">
-                {p.titulo}
-                {items.length > 0 && (
-                  <span className="rounded-full bg-teal px-2 py-0.5 text-xs text-white">
-                    {items.length}
-                  </span>
-                )}
-              </h2>
-              {items.length === 0 ? (
-                <p className="text-sm text-dark-3">{p.vacio}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {items.map((e) => (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        onClick={() => setAbierto(e)}
-                        className="w-full rounded-md border border-sand bg-white px-3 py-2 text-left hover:border-teal"
-                      >
-                        <Resumen envio={e} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          );
-        })}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Bloque
+          titulo="Vales de combustible"
+          bajada="Esperan que entregues el vale de la gasolinera"
+          icono="⛽"
+          cuenta={vales.length}
+          color="#9e7a1a"
+          cargando={pendientesQ.isLoading}
+          vacio="Nadie te ha pedido un vale."
+        >
+          {vales.map((e) =>
+            renglon(
+              e,
+              <BotonPrincipal onClick={() => setAbierto(e)}>Emitir vale</BotonPrincipal>,
+            ),
+          )}
+        </Bloque>
 
-      {porPagar.length > 0 && (
-        <section>
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-dark">
-            Aceptadas, pendientes de pagar
-            <span className="rounded-full bg-gold px-2 py-0.5 text-xs text-white">
-              {porPagar.length}
-            </span>
-          </h2>
-          <ul className="space-y-2">
-            {porPagar.map((e) => {
-              const s = leerSnapshot(e);
-              return (
-                <li
-                  key={e.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-sand bg-white px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <span className="font-medium text-dark">{s.serial ?? '—'}</span>
-                    {s.detalle && (
-                      <p className="truncate text-sm text-dark-2">{s.detalle}</p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    {s.monto != null && (
-                      <span className="font-medium text-dark">{formatMoney(s.monto)}</span>
-                    )}
-                    <button
-                      type="button"
-                      disabled={marcarPagado.isPending}
-                      onClick={() => marcarPagado.mutate(e.doc_id)}
-                      className="rounded-md bg-teal px-3 py-1.5 text-xs font-medium text-white hover:bg-teal/90 disabled:opacity-60"
-                    >
-                      Marcar pagada
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        <Bloque
+          titulo="Solicitudes de pago"
+          bajada="Ya firmadas, esperando que las recibas"
+          icono="🧾"
+          cuenta={pagos.length}
+          color="#077e84"
+          cargando={pendientesQ.isLoading}
+          vacio="No hay solicitudes de pago esperándote."
+        >
+          {pagos.map((e) =>
+            renglon(e, <BotonPrincipal onClick={() => setAbierto(e)}>Recibir</BotonPrincipal>),
+          )}
+        </Bloque>
+      </div>
+
+      {/* Lo que ya recibiste y todavía no pagas. */}
+      <Bloque
+        titulo="Pendientes de pagar"
+        bajada={
+          montoPorPagar > 0
+            ? `Ya las recibiste. Suman ${formatMoney(montoPorPagar)}`
+            : 'Ya las recibiste, falta ejecutar el pago'
+        }
+        icono="💰"
+        cuenta={porPagar.length}
+        color="#bf4609"
+        cargando={resueltosQ.isLoading}
+        vacio="No tienes pagos pendientes de ejecutar."
+      >
+        {porPagar.map((e) =>
+          renglon(
+            e,
+            <BotonPrincipal
+              disabled={marcarPagado.isPending}
+              onClick={() => marcarPagado.mutate(e.doc_id)}
+            >
+              Marcar pagada
+            </BotonPrincipal>,
+          ),
+        )}
+      </Bloque>
+
+      {/* Caja chica todavía no está conectada: sus bloques aparecen solos
+          cuando empiecen a llegar documentos, no antes vacíos. */}
+      {ccVales.length > 0 && (
+        <Bloque
+          titulo="Vales de caja chica"
+          bajada="Adelantos de efectivo"
+          icono="💵"
+          cuenta={ccVales.length}
+          color="#6b4ea3"
+          cargando={false}
+          vacio=""
+        >
+          {ccVales.map((e) =>
+            renglon(e, <BotonPrincipal onClick={() => setAbierto(e)}>Recibir</BotonPrincipal>),
+          )}
+        </Bloque>
+      )}
+
+      {ccLiq.length > 0 && (
+        <Bloque
+          titulo="Liquidaciones de caja chica"
+          bajada="Rendiciones de gasto"
+          icono="📒"
+          cuenta={ccLiq.length}
+          color="#6b4ea3"
+          cargando={false}
+          vacio=""
+        >
+          {ccLiq.map((e) =>
+            renglon(e, <BotonPrincipal onClick={() => setAbierto(e)}>Recibir</BotonPrincipal>),
+          )}
+        </Bloque>
       )}
 
       {(resueltosQ.data ?? []).length > 0 && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold text-dark-2">Resueltos recientemente</h2>
-          <ul className="space-y-1">
-            {(resueltosQ.data ?? []).slice(0, 10).map((e) => {
+        <section className="rounded-card border border-sand bg-white p-4 shadow-sm sm:p-5">
+          <h2 className="mb-2 font-heading text-base font-extrabold text-dark">
+            📋 Lo último que resolviste
+          </h2>
+          <ul className="divide-y divide-sand-l">
+            {(resueltosQ.data ?? []).slice(0, 8).map((e) => {
               const s = leerSnapshot(e);
+              const pagado =
+                e.datos && typeof e.datos === 'object' && 'pagado_at' in e.datos;
               return (
-                <li key={e.id} className="flex justify-between border-b border-sand-l py-1 text-sm">
-                  <span className="text-dark-2">
-                    {s.titulo ?? DOC_TIPO_LABEL[e.doc_tipo as DocTipo]}
+                <li key={e.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                  <span className="min-w-0 truncate text-dark-2">
+                    {s.serial ?? s.titulo ?? DOC_TIPO_LABEL[e.doc_tipo as DocTipo]}
                   </span>
-                  <span className={e.estado === 'aceptado' ? 'text-teal' : 'text-rust'}>
-                    {e.estado === 'aceptado' ? 'Aceptado' : 'Devuelto'}
+                  <span
+                    className={`shrink-0 text-[11px] font-semibold ${
+                      e.estado === 'rechazado' ? 'text-rust' : pagado ? 'text-teal' : 'text-dark-3'
+                    }`}
+                  >
+                    {e.estado === 'rechazado' ? 'Devuelto' : pagado ? 'Pagado' : 'Recibido'}
                     {e.resuelto_at ? ` · ${formatDate(e.resuelto_at)}` : ''}
                   </span>
                 </li>
@@ -248,33 +312,7 @@ export default function TesoreriaPage() {
           />
         )}
       </Modal>
-    </div>
-  );
-}
-
-function Resumen({ envio }: { envio: Envio }) {
-  const s = leerSnapshot(envio);
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span
-            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-              COLOR[envio.doc_tipo] ?? 'bg-sand-l text-dark-2'
-            }`}
-          >
-            {s.serial ?? DOC_TIPO_LABEL[envio.doc_tipo as DocTipo]}
-          </span>
-          {s.fecha && <span className="text-xs text-dark-3">{formatDate(s.fecha)}</span>}
-        </div>
-        {s.detalle && <p className="mt-1 truncate text-sm text-dark-2">{s.detalle}</p>}
-      </div>
-      {s.monto != null && (
-        <span className="whitespace-nowrap text-sm font-medium text-dark">
-          {formatMoney(s.monto)}
-        </span>
-      )}
-    </div>
+    </section>
   );
 }
 
@@ -299,9 +337,11 @@ function Ficha({
     <div className="space-y-4">
       <div className="rounded-md border border-sand bg-sand-l/40 p-3">
         <div className="mb-2 flex items-baseline justify-between">
-          <span className="font-semibold text-dark">{s.serial ?? '—'}</span>
+          <span className="font-heading font-extrabold text-dark">{s.serial ?? '—'}</span>
           {s.monto != null && (
-            <span className="text-lg font-semibold text-dark">{formatMoney(s.monto)}</span>
+            <span className="font-mono text-lg font-extrabold text-dark">
+              {money(s.monto, s.moneda ?? 'GTQ')}
+            </span>
           )}
         </div>
         {s.detalle && <p className="mb-2 text-sm text-dark-2">{s.detalle}</p>}
@@ -375,7 +415,7 @@ function Ficha({
                 true,
               )
             }
-            className="rounded-md bg-teal px-4 py-2 text-sm font-medium text-white hover:bg-teal/90 disabled:opacity-60"
+            className="rounded-md bg-teal px-4 py-2 text-sm font-extrabold text-white hover:bg-teal-d disabled:opacity-60"
           >
             {trabajando ? 'Guardando…' : 'Aceptar'}
           </button>

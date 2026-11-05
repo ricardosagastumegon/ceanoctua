@@ -11,7 +11,15 @@ import { useLiquidaciones } from '@/modules/cc-board/liquidaciones/hooks';
 import { useCeaTodos } from '@/modules/cea/todos/hooks';
 import { bloqueDe } from '@/modules/cea/todos/orden';
 import { useAttViajes } from '@/modules/arriaza/viajes/hooks';
-import { formatMoney } from '@/lib/money';
+import {
+  BotonPrincipal,
+  Bloque,
+  Cabecera,
+  Renglon,
+  dia,
+  enDias,
+  money,
+} from './tablero';
 
 /**
  * El tablero de quien firma y supervisa.
@@ -41,49 +49,6 @@ const TONO_PRIORIDAD: Record<string, string> = {
   media: 'bg-gold-light text-gold',
   baja: 'bg-sand text-dark-2',
 };
-
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-
-/**
- * Una fecha legible, o nada.
- *
- * Hay registros con el año mal tecleado --20266-- que ordenan al final de
- * todo y se leen como un error. Se tratan como si no tuvieran fecha en vez de
- * mostrar un disparate.
- */
-function dia(valor: string | null | undefined): string | null {
-  if (!valor) return null;
-  const d = new Date(valor);
-  if (Number.isNaN(d.getTime())) return null;
-  const a = d.getFullYear();
-  if (a < 2000 || a > 2100) return null;
-  return `${d.getDate()} ${MESES[d.getMonth()]}${a === new Date().getFullYear() ? '' : ` ${a}`}`;
-}
-
-/** Días desde (negativo) o hasta (positivo) una fecha. */
-function enDias(valor: string | null | undefined): number | null {
-  if (!valor) return null;
-  const d = new Date(valor);
-  if (Number.isNaN(d.getTime())) return null;
-  const a = d.getFullYear();
-  if (a < 2000 || a > 2100) return null;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - hoy.getTime()) / 86_400_000);
-}
-
-function saludo(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Buenos días';
-  if (h < 19) return 'Buenas tardes';
-  return 'Buenas noches';
-}
-
-function money(n: number, moneda: string | null): string {
-  if (!moneda || moneda === 'GTQ') return formatMoney(Number(n));
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: moneda }).format(Number(n));
-}
 
 export function GerenteView() {
   const { profile } = useAuth();
@@ -164,23 +129,14 @@ export function GerenteView() {
   return (
     <section className="space-y-5">
       {/* ── Saludo ───────────────────────────────────────────────────── */}
-      <header
-        className="rounded-card px-5 py-6 text-white shadow-sm sm:px-7"
-        style={{ background: 'linear-gradient(135deg,#0d2b2e 0%,#077e84 55%,#00b4c5 100%)' }}
-      >
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-white/60">
-          CEA · Board Assistant
-        </p>
-        <h1 className="mt-1 font-heading text-2xl font-extrabold leading-tight sm:text-3xl">
-          {saludo()}
-          {profile?.nombre ? `, ${profile.nombre.split(' ')[0]}` : ''}
-        </h1>
-        <p className="mt-1 text-sm text-white/80">
-          {enEspera.length === 0
+      <Cabecera
+        nombre={profile?.nombre}
+        resumen={
+          enEspera.length === 0
             ? 'No tienes documentos esperando tu firma.'
-            : `Tienes ${enEspera.length} ${enEspera.length === 1 ? 'documento' : 'documentos'} esperando tu firma.`}
-        </p>
-      </header>
+            : `Tienes ${enEspera.length} ${enEspera.length === 1 ? 'documento' : 'documentos'} esperando tu firma.`
+        }
+      />
 
       <MiFirma />
 
@@ -238,7 +194,7 @@ export function GerenteView() {
                         Ver detalles
                       </Link>
                     )}
-                    <BotonFirmar onClick={() => void firmarDocumento(f.id, f.tipo)} />
+                    <BotonPrincipal onClick={() => void firmarDocumento(f.id, f.tipo)}>✍️ Firmar</BotonPrincipal>
                   </div>
                 }
               />
@@ -273,7 +229,7 @@ export function GerenteView() {
                 }
                 alerta={espera != null && espera <= -3}
                 accion={
-                  <BotonFirmar onClick={() => void firmarDocumento(f.id, f.tipo)} />
+                  <BotonPrincipal onClick={() => void firmarDocumento(f.id, f.tipo)}>✍️ Firmar</BotonPrincipal>
                 }
               />
             );
@@ -390,129 +346,5 @@ export function GerenteView() {
         )}
       </section>
     </section>
-  );
-}
-
-/** Bloque con encabezado, contador y lista. */
-function Bloque({
-  titulo,
-  bajada,
-  icono,
-  cuenta,
-  color,
-  verMas,
-  cargando,
-  vacio,
-  children,
-}: {
-  titulo: string;
-  bajada: string;
-  icono: string;
-  cuenta: number;
-  color: string;
-  verMas: string;
-  cargando: boolean;
-  vacio: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-card border border-sand bg-white p-4 shadow-sm sm:p-5">
-      <header className="mb-3 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="font-heading text-base font-extrabold text-dark">
-            {icono} {titulo}
-          </h2>
-          <p className="text-[11px] text-dark-3">{bajada}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span
-            className="font-heading text-2xl font-extrabold leading-none"
-            style={{ color: cuenta > 0 ? color : '#9a8f86' }}
-          >
-            {cuenta}
-          </span>
-          <Link
-            to={verMas}
-            className="shrink-0 rounded-md border border-teal/40 px-2 py-1 text-[11px] font-extrabold text-teal-d hover:bg-teal-l"
-          >
-            Ver todas →
-          </Link>
-        </div>
-      </header>
-
-      {cargando ? (
-        <p className="text-xs text-dark-3">Cargando…</p>
-      ) : cuenta === 0 ? (
-        <p className="text-sm italic text-dark-3">{vacio}</p>
-      ) : (
-        <ul className="space-y-1.5">{children}</ul>
-      )}
-    </section>
-  );
-}
-
-/**
- * El botón de firmar.
- *
- * Grande a propósito: se usa desde el teléfono y con el pulgar. Es la acción
- * por la que esta persona entra a la aplicación.
- */
-function BotonFirmar({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="shrink-0 rounded-md bg-teal px-3 py-1.5 text-xs font-extrabold text-white shadow-sm hover:bg-teal-d"
-    >
-      ✍️ Firmar
-    </button>
-  );
-}
-
-/** Un renglón de cualquiera de las listas. */
-function Renglon({
-  etiqueta,
-  tono,
-  titulo,
-  detalle,
-  cifra,
-  pie,
-  alerta,
-  accion,
-}: {
-  etiqueta: string;
-  tono: string;
-  titulo: string;
-  detalle: string;
-  cifra: string | null;
-  pie: string | null;
-  alerta: boolean;
-  accion?: React.ReactNode;
-}) {
-  return (
-    <li className="rounded-md border border-sand bg-sand-l/30 px-3 py-2">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${tono}`}
-        >
-          {etiqueta}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-extrabold text-dark">{titulo}</span>
-        {cifra && (
-          <span className="shrink-0 font-mono text-sm font-extrabold text-dark">{cifra}</span>
-        )}
-      </div>
-      {detalle && <p className="mt-0.5 line-clamp-2 text-[11px] text-dark-3">{detalle}</p>}
-      <div className="mt-1 flex items-end justify-between gap-2">
-        {pie ? (
-          <p className={`text-[10px] ${alerta ? 'font-extrabold text-rust' : 'text-dark-3'}`}>
-            {pie}
-          </p>
-        ) : (
-          <span />
-        )}
-        {accion}
-      </div>
-    </li>
   );
 }

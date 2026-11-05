@@ -173,7 +173,7 @@ flowchart TD
 
 ⚠️ **Funcionalidad NO implementada, declarada como pendiente:** no existe notificación por correo ni al móvil cuando un documento entra a la bandeja de firma. El destinatario se entera entrando a la aplicación o porque alguien se lo dice. Está anotado en la lista de pendientes del proyecto, a la espera de un buzón corporativo.
 
-⚠️ **Sin auditoría:** `firmas` y `firma_miembros` no tienen trigger. La firma deja constancia en la propia fila, pero esa fila es modificable sin registro.
+**Auditoría:** desde el 5 nov 2026 (fase 44) `firmas` y `firma_miembros` tienen trigger. Cualquier cambio sobre un documento ya firmado —o sobre sus destinatarios— queda en `audit_log` con el antes y el después.
 
 ---
 
@@ -278,6 +278,4 @@ flowchart TD
 | **Quién interviene** | Administrador |
 | **Cómo termina** | El usuario entra y ve lo que su rol y sus módulos permiten |
 
-⚠️ **Sin auditoría:** la tabla `usuarios` **no tiene trigger de auditoría**. Un cambio de rol no queda registrado en `audit_log`. `usuario_modulos` **sí** lo tiene.
-
-Es una asimetría llamativa: se registra quién recibió permiso sobre un módulo, pero no quién fue promovido a administrador.
+**Auditoría:** hasta el 5 nov 2026 `usuarios` no tenía trigger, así que un cambio de rol no quedaba registrado mientras `usuario_modulos` sí lo estaba — se sabía quién recibía permiso sobre un módulo, pero no quién se volvía dueño de todo. Corregido en la fase 44: ambas quedan registradas.

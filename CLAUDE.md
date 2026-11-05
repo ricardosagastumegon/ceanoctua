@@ -143,7 +143,7 @@ Lista corta y estricta. Cada una tuvo un incidente real que la justifica.
 
 El proyecto avanza en **fases numeradas**. Cada fase = 1 migración SQL + código correspondiente + commit(s) descriptivos + entrada en la bitácora.
 
-Estado actual: fase **43** (La firma avanza el pago · orden único del TO DO). Historial completo en [`docs/BITACORA.md`](docs/BITACORA.md).
+Estado actual: fase **44** (Auditoría en firmas, usuarios y el detalle financiero). Historial completo en [`docs/BITACORA.md`](docs/BITACORA.md).
 
 Cada fase sigue el ciclo:
 

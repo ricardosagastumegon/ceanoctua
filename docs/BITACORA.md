@@ -6,6 +6,50 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 44 · 2026-11-05 · Auditoría donde más falta hacía
+
+**Objetivo:** cerrar el hueco más serio que salió del levantamiento para la
+revisión externa. La Regla 0 dice que toda mutación queda en `audit_log`
+«sin excepciones»; en la práctica eran 70 de 104 tablas, y el patrón de las
+que faltaban era claro: **las cabeceras estaban auditadas y el detalle no**.
+
+**Seis tablas, elegidas por consecuencia y no por completitud:**
+
+| Tabla | Qué se podía cambiar sin rastro |
+|---|---|
+| `firmas` | El acto de autorizar |
+| `firma_miembros` | A quién iba dirigido un documento |
+| `usuarios` | **Un cambio de rol a administrador** |
+| `caja_chica_liq_rows` | El desglose de una rendición |
+| `liquidacion_vales` | Qué vale entra en qué liquidación |
+| `consumo_renglones` | El desglose de un consumo |
+
+**La más grave era `usuarios`.** Un admin pasa todos los controles por
+definición, así que promover a alguien es el cambio de privilegio más
+consecuente del sistema, y era el único que no se registraba. Llamaba la
+atención porque `usuario_modulos` sí estaba auditada: quedaba constancia de
+quién recibía permiso sobre un módulo, pero no de quién se volvía dueño de
+todo.
+
+**Una función nueva, `audit_trigger_union()`.** `firma_miembros` y
+`liquidacion_vales` no tienen columna `id` —son pares de llaves foráneas— y
+el trigger genérico, que hace `NEW.id`, revienta en ellas. La variante recibe
+como argumento qué columna usar de `registro_id` y toma la del padre, que es
+por donde se busca: «qué le pasó a la firma FR-2026-0004».
+
+**Verificación:** el ensayo con reversión no solo creó los triggers, también
+provocó escrituras reales en las dos clases de tabla —actualizar una firma,
+actualizar un usuario, e insertar y borrar un destinatario— y comprobó que
+`audit_log` crecía en cuatro filas con las acciones correctas. Después de
+aplicar: 76 triggers de auditoría, los seis en su sitio.
+
+**Lo que queda fuera a propósito:** catálogos y listas de valores
+(`tipos_pago`, `status_solicitud_pago`, `directorio`…), la operación de caja
+chica por periodos —de uso marginal— y las diez tablas vacías del módulo
+retirado en la fase 42. Ahí el riesgo no justifica el ruido en `audit_log`.
+
+---
+
 ## Fase 43 · 2026-11-05 · La firma avanza el pago, y el TO DO se ordena solo
 
 **Dos correcciones que la asistente reportó el mismo día.**

@@ -283,13 +283,13 @@ Esto conviene señalarlo con claridad porque es el punto más confuso del modelo
 | `caja_chica_liquidaciones` | ✅ |
 | `reintegros` | ✅ |
 | `vouchers` | ✅ |
-| `caja_chica_liq_rows` | ❌ |
-| `liquidacion_vales` | ❌ |
-| `consumo_renglones` | ❌ |
+| `caja_chica_liq_rows` | ✅ *(fase 44)* |
+| `liquidacion_vales` | ✅ *(fase 44)* |
+| `consumo_renglones` | ✅ *(fase 44)* |
+| **`firmas` / `firma_miembros`** | ✅ *(fase 44)* |
 | `caja_chica_op_*` (3 tablas) | ❌ |
-| **`firmas` / `firma_miembros`** | ❌ |
 
-**El hueco más relevante:** las cabeceras financieras están auditadas, pero **el detalle y la firma no**. Se puede alterar el desglose de una liquidación, o modificar un registro de firma, sin que quede constancia en `audit_log`.
+**El hueco más relevante, ya cerrado:** hasta la fase 44 las cabeceras financieras estaban auditadas pero **el detalle y la firma no** — se podía alterar el desglose de una rendición, o modificar un registro de firma, sin dejar constancia. Las seis tablas marcadas arriba se corrigieron el 5 nov 2026. Queda fuera la operación por periodos (`caja_chica_op_*`), de uso marginal.
 
 Para una firma queda la evidencia en la propia fila (`fecha_firma`, `firmada_por`), pero esa fila es modificable por cualquier editor de CEA y el cambio no se registra. **Si la trazabilidad de la autorización es un requisito del negocio, este es el punto a atender primero.**
 

@@ -144,7 +144,7 @@ firmada_por:  uuid del usuario de la sesión
 
 **Lo que falta:**
 
-- ❌ **No hay registro en `audit_log`.** La tabla `firmas` carece de trigger de auditoría.
+- ✅ **Queda registro en `audit_log`** desde la fase 44 (5 nov 2026). Antes no: `firmas` carecía de trigger.
 - ❌ **No hay firma criptográfica.** «Firmado» es un estado en una fila, no un documento firmado digitalmente en sentido legal. La columna `usuarios.firma_path` sugiere una firma gráfica (imagen), no criptográfica.
 - ❌ **La fila es modificable.** Cualquier editor de CEA puede cambiar `status_firma`, `fecha_firma` o `firmada_por` de un documento ya firmado, sin que quede rastro.
 

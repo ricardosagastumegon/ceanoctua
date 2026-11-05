@@ -44,7 +44,10 @@ end $$;
 
 ## 2 · Lo que NO se registra
 
-**33 tablas de negocio carecen del trigger.** Es la desviación más significativa respecto de la regla declarada del proyecto, que establece que toda mutación queda registrada «sin excepciones».
+**33 tablas de negocio carecían del trigger** en el momento del levantamiento. Era la desviación más significativa respecto de la regla declarada del proyecto, que establece que toda mutación queda registrada «sin excepciones».
+
+> **Actualizado el 5 nov 2026 (fase 44).** Los seis huecos que de verdad importaban quedaron cerrados: `firmas`, `firma_miembros`, `usuarios`, `caja_chica_liq_rows`, `liquidacion_vales` y `consumo_renglones` ya tienen trigger. La cobertura pasa de 70 a **76 de 104 tablas**. Lo que sigue sin auditoria son catalogos y listas de valores, donde el riesgo es bajo.
+
 
 ### Las ausencias que importan
 
@@ -153,7 +156,7 @@ Pasaportes, visas y licencias escaneadas. Cualquier sesión válida los lee, ten
 
 **El patrón correcto existe** en `avn-documentos`, que sí acota por módulo. Es una corrección de una línea por política.
 
-### 5.2 · 33 tablas sin auditoría, incluidas `firmas` y `usuarios`
+### 5.2 · ~~33 tablas sin auditoría, incluidas `firmas` y `usuarios`~~ · resuelto en lo esencial
 
 Desarrollado en §2. El impacto depende de si la trazabilidad de la autorización es un requisito del negocio.
 

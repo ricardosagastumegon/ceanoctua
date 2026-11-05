@@ -52,9 +52,13 @@ Es directamente relevante para el usuario de demostración que se pidió. Un usu
 
 Esto condiciona la propuesta de [10](10-ENTORNO-DEMO.md).
 
-### 3 · 33 tablas sin registro de auditoría
+### 3 · ~~33 tablas sin registro de auditoría~~ · en buena parte resuelto
 
-La regla declarada del proyecto es que toda mutación queda en `audit_log` «sin excepciones». En la práctica, 70 de 104 tablas tienen el trigger. Las 33 sin él incluyen algunas de peso:
+La regla declarada del proyecto es que toda mutación queda en `audit_log` «sin excepciones». El levantamiento encontró 70 de 104 tablas con el trigger, y un patrón claro en las que faltaban: las cabeceras estaban auditadas y el detalle no.
+
+> **Actualizado el 5 nov 2026 (fase 44).** Los seis huecos que de verdad importaban quedaron cerrados: `firmas`, `firma_miembros`, `usuarios`, `caja_chica_liq_rows`, `liquidacion_vales` y `consumo_renglones` ya tienen trigger. La cobertura pasa de 70 a **76 de 104 tablas**. Lo que sigue sin auditoria son catalogos y listas de valores, donde el riesgo es bajo.
+
+Las que se cerraron eran estas:
 
 - **`firmas` y `firma_miembros`** — el circuito de firmas no deja rastro inmutable.
 - **`usuarios`** — un cambio de rol no queda registrado.

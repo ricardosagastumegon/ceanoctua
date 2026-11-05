@@ -48,7 +48,9 @@ El sistema migró de un modelo por **rol global** a uno por **módulo y nivel**,
 
 ### 2 · No existe un rol de sólo lectura completo
 
-Es directamente relevante para el usuario de demostración que se pidió. Un usuario con rol `solo_lectura` **no puede leer** 13 tablas, entre ellas `caja_chica_liq_rows` — los renglones de las liquidaciones. La pantalla de Caja Chica se le vería incompleta. Tampoco `audit_log` ni `usuarios`, que son sólo de admin.
+Es directamente relevante para el usuario de demostración que se pidió. Un usuario con rol `solo_lectura` **no puede leer** 12 tablas: las tres del sub-módulo de **Caja Chica por periodos** (`caja_chica_op_*`) y nueve vacías, restos del módulo retirado. Tampoco `audit_log` ni `usuarios`, que son sólo de admin.
+
+> **Corregido el 5 nov 2026.** Una versión anterior decía 13 tablas e incluía `caja_chica_liq_rows`, concluyendo que «la pantalla de Caja Chica se le vería incompleta». Es incorrecto: esa tabla tiene una política de lectura `PERMISSIVE` con `USING (true)`, separada de la de escritura. El detalle de las liquidaciones sí se ve. Detalle en [03](03-ROLES-Y-PERMISOS.md) §4.
 
 Esto condiciona la propuesta de [10](10-ENTORNO-DEMO.md).
 

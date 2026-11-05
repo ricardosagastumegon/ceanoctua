@@ -14,9 +14,11 @@ Parece una petición sencilla y no lo es, por tres razones que se verificaron co
 
 ### 1.1 · El rol de sólo lectura no ve todo lo que haría falta
 
-Un usuario con rol `solo_lectura` **no puede leer 13 tablas**, entre ellas `caja_chica_liq_rows` — los renglones de las liquidaciones. También quedan fuera `audit_log` y `usuarios`, que son exclusivas del administrador.
+Un usuario con rol `solo_lectura` **no puede leer 12 tablas**: las tres del sub-módulo de **Caja Chica por periodos** (`caja_chica_op_*`) y nueve vacías del módulo retirado. También quedan fuera `audit_log` y `usuarios`, que son exclusivas del administrador.
 
-Resultado: la pantalla de Caja Chica se vería incompleta, Admin → Usuarios vacío, y no habría forma de mostrar el registro de auditoría, que es justamente uno de los apartados que se pidió documentar.
+Resultado: la Caja Chica por periodos se vería vacía, Admin → Usuarios vacío, y no habría forma de mostrar el registro de auditoría, que es justamente uno de los apartados que se pidió documentar.
+
+> **Corregido el 5 nov 2026.** Una versión anterior decía 13 tablas e incluía `caja_chica_liq_rows`, concluyendo que el detalle de las liquidaciones no se vería. Es incorrecto: su política de lectura es `PERMISSIVE USING (true)`. Ese detalle sí es visible.
 
 ### 1.2 · La lista de viajes le saldría vacía
 

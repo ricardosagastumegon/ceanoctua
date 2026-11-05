@@ -72,8 +72,8 @@ Construida por clasificación de las 104 tablas según la expresión de su polí
 | Clase de política | Tablas | Quién lee |
 |---|---|---|
 | `puede('tt','observador')` | **46** | Quien tenga el módulo de viajes |
-| `auth.uid() IS NOT NULL` | **24** | **Cualquier usuario autenticado** |
-| `auth_rol() IN ('admin','asistente')` | **13** | Sólo quien opera |
+| `auth.uid() IS NOT NULL` | **25** | **Cualquier usuario autenticado** |
+| `auth_rol() IN ('admin','asistente')` | **12** | Sólo quien opera |
 | `puede('aeronaves','observador')` | **12** | Quien tenga el módulo de aeronaves |
 | `auth_rol() IN ('admin','asistente','solo_lectura')` | **6** | Los tres roles, sin importar módulos |
 | `es_admin()` | **2** | Sólo el administrador |
@@ -81,31 +81,33 @@ Construida por clasificación de las 104 tablas según la expresión de su polí
 
 ### Detalle por clase
 
-**Cualquier usuario autenticado (24 tablas) — el grupo que más atención merece:**
+**Cualquier usuario autenticado (25 tablas) — el grupo que más atención merece:**
 
 ```
-avn_tipos_certificado   cea_notas_entrega   cea_todos        consumo_renglones
-directorio              documentos          empleados        entidades
-evento_religioso        firma_miembros      firmas           invitados
-kit_items               lavanderia          liquidacion_vales miel_constancias
-miembros_board          pagos_notificaciones personas        proveedores
-status_solicitud_pago   tarjetas_credito    tipos_pago       vehiculos
+avn_tipos_certificado   caja_chica_liq_rows  cea_notas_entrega  cea_todos
+consumo_renglones       directorio           documentos         empleados
+entidades               evento_religioso     firma_miembros     firmas
+invitados               kit_items            lavanderia         liquidacion_vales
+miel_constancias        miembros_board       pagos_notificaciones personas
+proveedores             status_solicitud_pago tarjetas_credito  tipos_pago
+vehiculos
 ```
 
 Cualquier persona con una sesión válida —tenga los módulos que tenga— puede leer estas tablas. Incluye `tarjetas_credito` (titular, banco, límite, NIT), `personas` (NIT, dirección), `empleados` (correo, teléfono), `firmas` y `cea_todos`.
 
 Es el **patrón C · catálogo** declarado en las convenciones del proyecto, aplicado con criterio amplio. Para catálogos como `tipos_pago` es razonable. Para `tarjetas_credito` y `personas` es discutible.
 
-**Sólo admin/asistente (13 tablas):**
+**Sólo admin/asistente (12 tablas):**
 
 ```
-caja_chica_liq_rows   caja_chica_op_lineas   caja_chica_op_periodos
-caja_chica_op_vale_facturas
+caja_chica_op_lineas   caja_chica_op_periodos   caja_chica_op_vale_facturas
 eventos  notas  perfiles  perfil_familia  perfil_fechas  perfil_vehiculos
 tareas   viajes  viaje_checklist
 ```
 
-Las nueve últimas están vacías (restos del módulo retirado). Las cuatro primeras son los **renglones de caja chica**: un usuario `solo_lectura` no puede verlos.
+Las nueve últimas están vacías (restos del módulo retirado). Las tres primeras son la **Caja Chica por periodos**: un usuario `solo_lectura` no puede verla.
+
+> **Corregido el 5 nov 2026.** Una versión anterior de este documento contaba 13 tablas e incluía `caja_chica_liq_rows` —los renglones de las liquidaciones— entre las que un `solo_lectura` no puede leer. Es incorrecto: esa tabla tiene **dos** políticas, una de escritura restringida a `admin`/`asistente` y una de lectura `PERMISSIVE` con `USING (true)`. El detalle de las liquidaciones **sí es legible** por cualquier usuario autenticado. Lo que queda fuera del alcance de `solo_lectura` en caja chica es únicamente el sub-módulo por periodos (`caja_chica_op_*`).
 
 **Sólo admin (2 tablas):** `audit_log`, `usuarios`.
 

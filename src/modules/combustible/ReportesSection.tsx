@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import { useEmpleados } from '@/modules/admin/hooks';
+import { useEmpleados, usePersonas } from '@/modules/admin/hooks';
 import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
 import { REPORTE_ESTADO_LABEL, type Reporte, type Solicitud } from './api';
 import {
@@ -51,6 +51,7 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
   const responsablesQ = useResponsables();
   const vehiculosQ = useVehiculos();
   const empleadosQ = useEmpleados();
+  const personasQ = usePersonas();
 
   const crear = useCrearReporte();
   const cerrar = useCerrarReporte();
@@ -69,6 +70,12 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
     () => new Map((empleadosQ.data ?? []).map((e) => [e.id, e])),
     [empleadosQ.data],
   );
+  // Los gerentes de junta viven en Personal JD y no en la planilla, asi que
+  // el cuadro puede apuntar a cualquiera de las dos listas.
+  const personaPorId = useMemo(
+    () => new Map((personasQ.data ?? []).map((p) => [p.id, p])),
+    [personasQ.data],
+  );
 
   /** Arma los cuadros de un reporte, en el orden del catalogo. */
   function bloquesDe(reporte: Reporte): Bloque[] {
@@ -77,17 +84,19 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
       .filter((r) => r.activo)
       .map((r) => {
         const emp = r.empleado_id ? empleadoPorId.get(r.empleado_id) : null;
+        const per = r.persona_id ? personaPorId.get(r.persona_id) : null;
         const veh = r.vehiculo_id ? vehiculoPorId.get(r.vehiculo_id) : null;
         const asignado = r.tipo_bloque === 'vehiculo_asignado';
+        // Personal JD no guarda puesto, asi que ahi manda `puesto_label`.
+        const quien = per?.nombre ?? emp?.nombre ?? null;
+        const cargo = r.puesto_label ?? emp?.puesto ?? '';
         return {
           responsable: r,
           // En los cuadros con carro la hoja pone el NOMBRE a la derecha y el
           // PUESTO a la izquierda. En los de varios, el nombre de la persona
           // va a la izquierda y la etiqueta del departamento a la derecha.
-          nombre: asignado ? (emp?.nombre ?? r.etiqueta ?? '') : (r.etiqueta ?? ''),
-          puesto: asignado
-            ? (r.puesto_label ?? emp?.puesto ?? '')
-            : (emp?.nombre ?? r.puesto_label ?? ''),
+          nombre: asignado ? (quien ?? r.etiqueta ?? '') : (r.etiqueta ?? ''),
+          puesto: asignado ? cargo : (quien ?? r.puesto_label ?? ''),
           vehiculo: veh ? { marca: veh.marca, placa: veh.placa, tipo: veh.tipo } : null,
           filas: filas.filter((s) => s.responsable_id === r.id),
         };

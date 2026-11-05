@@ -3,7 +3,7 @@ import { CatalogPage, type CatalogFormProps } from '@/modules/admin/components/C
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { Select } from '@/components/ui/Select';
 import { TextInput } from '@/components/ui/TextInput';
-import { useEmpleados } from '@/modules/admin/hooks';
+import { useEmpleados, usePersonas } from '@/modules/admin/hooks';
 import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
 import type { Responsable, ResponsableInsert } from '@/modules/combustible/api';
 import {
@@ -33,8 +33,21 @@ export function ResponsablesSection({ canEdit }: { canEdit: boolean }) {
   const empleadosQ = useEmpleados();
   const vehiculosQ = useVehiculos();
 
+  const personasQ = usePersonas();
+
   const empleado = (id: string | null) =>
     id ? (empleadosQ.data ?? []).find((e) => e.id === id) : null;
+  const persona = (id: string | null) =>
+    id ? (personasQ.data ?? []).find((p) => p.id === id) : null;
+
+  /**
+   * El nombre del cuadro, venga de donde venga. Los gerentes de junta estan
+   * en Personal JD y no en la planilla --se comprobo: de las 10 personas de
+   * JD, seis no estan en empleados-- asi que el cuadro apunta a una lista o
+   * a la otra, nunca a las dos.
+   */
+  const nombreDe = (r: Responsable) =>
+    persona(r.persona_id)?.nombre ?? empleado(r.empleado_id)?.nombre ?? null;
   const vehiculo = (id: string | null) =>
     id ? (vehiculosQ.data ?? []).find((v) => v.id === id) : null;
 
@@ -51,23 +64,35 @@ export function ResponsablesSection({ canEdit }: { canEdit: boolean }) {
       key: 'titulo',
       header: 'Cuadro',
       sortable: true,
-      accessor: (r) => r.etiqueta ?? empleado(r.empleado_id)?.nombre ?? '',
+      accessor: (r) => r.etiqueta ?? nombreDe(r) ?? '',
       render: (r) => (
-        <span className="font-medium text-dark">
-          {r.etiqueta ?? empleado(r.empleado_id)?.nombre ?? '—'}
-        </span>
+        <span className="font-medium text-dark">{r.etiqueta ?? nombreDe(r) ?? '—'}</span>
       ),
     },
     {
       key: 'persona',
       header: 'Responsable',
-      render: (r) => empleado(r.empleado_id)?.nombre ?? <span className="text-dark-3">—</span>,
+      render: (r) => {
+        const n = nombreDe(r);
+        if (!n) return <span className="text-dark-3">—</span>;
+        return (
+          <span>
+            {n}
+            {r.persona_id && (
+              <span className="ml-1.5 rounded bg-teal/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal-d">
+                JD
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: 'puesto',
       header: 'Puesto',
       render: (r) =>
         r.puesto_label ?? empleado(r.empleado_id)?.puesto ?? <span className="text-dark-3">—</span>,
+      // Personal JD no guarda puesto: en esos cuadros se escribe a mano.
     },
     {
       key: 'vehiculo',
@@ -112,14 +137,19 @@ export function ResponsablesSection({ canEdit }: { canEdit: boolean }) {
       onDelete={(id) => remove.mutateAsync(id)}
       submitting={create.isPending || update.isPending}
       Form={ResponsableForm}
-      rowLabel={(r) => r.etiqueta ?? empleado(r.empleado_id)?.nombre ?? 'el cuadro'}
+      rowLabel={(r) => r.etiqueta ?? nombreDe(r) ?? 'el cuadro'}
       canEdit={canEdit}
     />
   );
 }
 
 type Estado = {
-  empleado_id: string;
+  /**
+   * Una sola casilla para las dos listas: `jd:<uuid>` o `emp:<uuid>`.
+   * Dos selectores separados dejarian elegir a los dos a la vez, que la base
+   * rechaza --y descubrirlo al guardar es peor que no poder hacerlo.
+   */
+  responsable: string;
   etiqueta: string;
   puesto_label: string;
   vehiculo_id: string;
@@ -134,10 +164,15 @@ function ResponsableForm({
   onCancel,
 }: CatalogFormProps<Responsable, ResponsableInsert>) {
   const empleadosQ = useEmpleados();
+  const personasQ = usePersonas();
   const vehiculosQ = useVehiculos();
 
   const [v, setV] = useState<Estado>({
-    empleado_id: initial?.empleado_id ?? '',
+    responsable: initial?.persona_id
+      ? `jd:${initial.persona_id}`
+      : initial?.empleado_id
+        ? `emp:${initial.empleado_id}`
+        : '',
     etiqueta: initial?.etiqueta ?? '',
     puesto_label: initial?.puesto_label ?? '',
     vehiculo_id: initial?.vehiculo_id ?? '',
@@ -150,8 +185,10 @@ function ResponsableForm({
 
   function enviar(e: FormEvent) {
     e.preventDefault();
+    const [origen, id] = v.responsable.split(':');
     onSubmit({
-      empleado_id: v.empleado_id || null,
+      empleado_id: origen === 'emp' ? id : null,
+      persona_id: origen === 'jd' ? id : null,
       etiqueta: v.etiqueta.trim() || null,
       puesto_label: v.puesto_label.trim() || null,
       // Un cuadro de «varios» no tiene carro fijo: la base lo exige asi.
@@ -181,15 +218,26 @@ function ResponsableForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <Select
           label="Responsable"
-          value={v.empleado_id}
-          onChange={(e) => set('empleado_id', e.target.value)}
+          hint="Los gerentes de junta están en Personal JD, no en la planilla."
+          value={v.responsable}
+          onChange={(e) => set('responsable', e.target.value)}
         >
           <option value="">—</option>
-          {(empleadosQ.data ?? []).map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nombre}
-            </option>
-          ))}
+          <optgroup label="Personal JD">
+            {(personasQ.data ?? []).map((p) => (
+              <option key={p.id} value={`jd:${p.id}`}>
+                {p.nombre}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Empleados">
+            {(empleadosQ.data ?? []).map((e) => (
+              <option key={e.id} value={`emp:${e.id}`}>
+                {e.nombre}
+                {e.puesto ? ` · ${e.puesto}` : ''}
+              </option>
+            ))}
+          </optgroup>
         </Select>
         <TextInput
           label="Título del cuadro"
@@ -202,7 +250,7 @@ function ResponsableForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <TextInput
           label="Puesto en el formato"
-          hint="Si está vacío, usa el del empleado."
+          hint="Personal JD no guarda puesto: ahí hay que escribirlo."
           value={v.puesto_label}
           onChange={(e) => set('puesto_label', e.target.value)}
         />

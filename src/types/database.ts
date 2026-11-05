@@ -4053,6 +4053,7 @@ export type Database = {
         Row: {
           id: string;
           empleado_id: string | null;
+          persona_id: string | null;
           etiqueta: string | null;
           puesto_label: string | null;
           vehiculo_id: string | null;
@@ -4068,6 +4069,7 @@ export type Database = {
         Insert: {
           id?: string;
           empleado_id?: string | null;
+          persona_id?: string | null;
           etiqueta?: string | null;
           puesto_label?: string | null;
           vehiculo_id?: string | null;
@@ -4080,6 +4082,7 @@ export type Database = {
         };
         Update: {
           empleado_id?: string | null;
+          persona_id?: string | null;
           etiqueta?: string | null;
           puesto_label?: string | null;
           vehiculo_id?: string | null;

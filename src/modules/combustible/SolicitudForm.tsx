@@ -150,11 +150,23 @@ export function SolicitudForm({
           required
         >
           <option value="">Escoge…</option>
-          {responsables.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.etiqueta ?? r.puesto_label ?? 'Sin título'}
-            </option>
-          ))}
+          {responsables.map((r) => {
+            // El cuadro puede ser de Personal JD, de un empleado o de nadie
+            // (OTROS, DEPARTAMENTO DE COMPRAS). Se arma el titulo con lo que
+            // haya, para que al escoger se vea de quien es.
+            const quien =
+              personas.find((p) => p.id === r.persona_id)?.nombre ??
+              empleados.find((e) => e.id === r.empleado_id)?.nombre ??
+              null;
+            const titulo =
+              [quien ?? r.etiqueta, r.puesto_label].filter(Boolean).join(' · ') ||
+              'Sin título';
+            return (
+              <option key={r.id} value={r.id}>
+                {titulo}
+              </option>
+            );
+          })}
         </Select>
       </div>
 

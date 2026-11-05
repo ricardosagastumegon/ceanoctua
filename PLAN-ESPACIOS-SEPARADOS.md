@@ -98,3 +98,92 @@ trabajo, no un extra.
 El caso de la **Gerente Administrativa** no necesita espacios: ella no carga
 información propia, consume y firma. Se resolvió el 2026-11-03 con los permisos por
 módulo que ya existían más la bandeja de firmas del Dashboard.
+
+---
+
+## Actualización · 5 de noviembre de 2026
+
+La usuaria volvió sobre el tema al diseñar el módulo de Combustible y el usuario del
+Tesorero. Sus palabras:
+
+> *«cada usuario es independiente, como ya te he dicho, yo no tendría porque ver lo que
+> él tenga en su usuario ni lo que hace, lo mismo con el usuario de la Secretaria de
+> Presidencia… podremos enviarnos y recibir documentos o avisos, pero cada quien en su
+> rol y perfil.»*
+
+### Lo que esto decide
+
+**Pregunta 4 · «¿Qué pasa con el admin?» — contestada.** El administrador tampoco ve
+los espacios ajenos. «Privado» es privado a secas, no privado entre pares.
+
+Consecuencias que conviene tener escritas antes de implementarlo:
+
+| | |
+|---|---|
+| El `audit_log` sigue siendo del admin | Queda el **rastro** de que algo pasó; no el contenido del espacio ajeno |
+| Angeles no podrá ayudar a Victor con su caja chica | Un error suyo lo arregla él o nadie |
+| Recuperar algo borrado sale de la app | Pasa a ser una operación contra la base de datos |
+
+**Pregunta 2 · «¿Qué viaja cuando se comparte?» — hay respuesta concreta.** La tabla
+`envios` que propone [PLAN-COMBUSTIBLE.md](PLAN-COMBUSTIBLE.md) §3.1 **es** la «tabla
+de concesiones» que este borrador decía que haría falta, y resuelve el *qué viaja* de
+la forma más simple posible: el envío lleva un `snapshot jsonb` con una copia congelada
+de lo que el destinatario necesita ver. No se concede acceso al original.
+
+Es mejor que conceder permiso sobre el objeto vivo, por dos razones: el destinatario
+nunca toca la tabla ajena, y queda constancia inmutable de qué se le enseñó exactamente.
+
+### Habitantes conocidos de los espacios
+
+| Espacio | Persona | Estado |
+|---|---|---|
+| Angeles Quezada | Asistente de Gerencias | existe (es todo lo que hay hoy) |
+| **Victor Murillo** | Tesorero General | se crea en la fase 45, ya aislado |
+| **Zonia Orellana** | Asistente de Presidencia | pendiente; tendrá su propia caja chica |
+
+### Hallazgo que esto destapó
+
+Al verificar los permisos del Tesorero se comprobó que el rol `solo_lectura` concede
+lectura sobre **seis tablas financieras completas**: `pagos`, `caja_chica_vales`,
+`caja_chica_liquidaciones`, `tc_consumos`, `vouchers` y `reintegros`.
+
+**Lissa Arriaza tiene hoy ese rol.** Su pantalla muestra sólo su bandeja de firmas,
+pero su sesión puede leer por API todos los pagos, toda la caja chica y todos los
+consumos de tarjeta. No es un fallo de implementación —es coherente con el modelo de
+«una organización, permisos por módulo»— pero **sí contradice el modelo de espacios
+independientes** que se quiere.
+
+Por eso el usuario de Victor **no** se crea con `solo_lectura`. Se crea con un rol
+nuevo que no concede nada de eso, y su bandeja se alimenta sólo de `envios`. Es el
+primer usuario construido bajo el modelo nuevo.
+
+Queda pendiente decidir qué se hace con el rol de Lissa cuando lleguen los espacios.
+
+### El encuadre, en palabras de la usuaria · 5 nov 2026
+
+Al autorizar la fase 45 dejó clara la intención, que es lo que de verdad resuelve la
+pregunta 4:
+
+> *«por privacidad NO me interesa ver lo que ellos ingresarían en tema de información…
+> este sistema es para mí, y estoy dando acceso a las personas con las cuales tengo
+> comunicación más frecuente para agilizar los procedimientos. En el camino les ayudo
+> creándoles módulos para que ellos se faciliten el trabajo, pero no es algo que me
+> concierna ni que deba de ver. Solo les estoy dando la herramienta.»*
+
+Esto cambia la naturaleza del producto y conviene tenerlo presente al diseñar:
+
+**CEA no es el sistema de una organización con varios usuarios. Es la herramienta de
+una persona, que presta espacios a otras.** La dueña no es la administradora de los
+datos ajenos; es la anfitriona.
+
+Consecuencias de diseño que se siguen de ahí, y que ya no son discutibles:
+
+1. **El aislamiento es el comportamiento correcto, no una restricción.** No hay que
+   justificar por qué Angeles no ve la caja chica de Victor: es el propósito.
+2. **Los costos listados arriba** —no poder auditar contenido ajeno, no poder arreglarle
+   un error, tener que ir a la base de datos para recuperar algo— **son aceptados a
+   cambio de la privacidad.** No son deuda a resolver después.
+3. **Cada módulo nuevo que se construya «para alguien»** nace con dueño, no se le añade
+   después.
+4. **Lo único que cruza espacios es lo que alguien envía a propósito.** La tabla
+   `envios` no es una comodidad: es la frontera.

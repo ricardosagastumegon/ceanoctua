@@ -217,6 +217,7 @@ export function UsuariosCatalog({ canEdit }: { canEdit: boolean }) {
                     className="mt-1 rounded-md border border-sand bg-white px-3 py-2 text-sm disabled:opacity-60"
                   >
                     <option value="solo_lectura">solo_lectura</option>
+                    <option value="tesoreria">tesoreria</option>
                     <option value="board_member">board_member</option>
                     <option value="asistente">asistente</option>
                     <option value="admin">admin</option>

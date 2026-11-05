@@ -8,6 +8,7 @@ const rolLabel: Record<string, string> = {
   asistente: 'Asistente',
   board_member: 'Board',
   solo_lectura: 'Solo lectura',
+  tesoreria: 'Tesorería',
 };
 
 export function Topbar() {

@@ -16,7 +16,7 @@ type Tab = {
 };
 
 const tabs: Tab[] = [
-  { to: '/', label: 'Dashboard', end: true, roles: ['admin', 'asistente', 'board_member', 'solo_lectura'] },
+  { to: '/', label: 'Dashboard', end: true, roles: ['admin', 'asistente', 'board_member', 'solo_lectura', 'tesoreria'] },
   // CC Board pestaña eliminada en Fase 16 · F-0. Vales y Liquidaciones viven ahora dentro de Finanzas.
   { to: '/arriaza',  label: 'Arriaza T&T', roles: ['admin', 'asistente'], modulo: 'tt' },
   { to: '/aeronaves', label: '✈ Aeronaves', roles: ['admin', 'asistente'], modulo: 'aeronaves' },

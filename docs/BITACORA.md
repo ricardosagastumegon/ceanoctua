@@ -6,6 +6,79 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 45 · 2026-11-05 · Combustible de vehículos, y la frontera entre usuarios
+
+**Objetivo:** llevar en CEA la cadena del combustible, que vivía en papel y en un
+Excel — solicitud de vale, vale de la gasolinera, recibo de despacho, factura,
+contraseña y el control quincenal que sustenta la solicitud de pago.
+
+**La decisión que importa.** La usuaria describió cuatro veces la misma mecánica con
+cuatro documentos distintos y las mismas palabras: *«tal como Lissa recibe las
+solicitudes de firma digital»*. Es un solo acto — un documento viaja a un usuario, él
+lo acepta, y su aceptación mueve el estado de lo que está atrás. Se construyó **una
+vez**, como `envios`, que no pertenece a ningún módulo. Caja chica se enchufa después
+sin rehacer nada.
+
+Ese mismo día fijó la regla que gobierna el producto: *«cada usuario es independiente,
+yo no tendría porque ver lo que él tenga en su usuario… solo les estoy dando la
+herramienta»*. CEA deja de ser «una organización con varios usuarios» y pasa a ser «la
+herramienta de una persona que presta espacios a otras». Recogido en
+[`PLAN-ESPACIOS-SEPARADOS.md`](../PLAN-ESPACIOS-SEPARADOS.md), donde además queda
+contestada la pregunta que estaba abierta: el administrador tampoco ve los espacios
+ajenos.
+
+**Cambios de schema:**
+- `envios` — la única puerta entre espacios. Lleva un `snapshot` jsonb con una copia
+  congelada de lo que el destinatario debe ver, porque RLS concede por tabla y no por
+  fila enviada.
+- `comb_responsables` — los seis cuadros del control de vales. Es, literalmente, lo que
+  la usuaria marca en rojo en su hoja.
+- `comb_solicitudes` — el expediente que viaja. Una sola fila para los cuatro
+  documentos porque los ejemplos lo demuestran: recibo, factura y contraseña dicen
+  Q50.09 sobre el mismo consumo.
+- `comb_reportes` — el control quincenal. El total se calcula en el servidor y se
+  congela al cerrar.
+- Rol `tesoreria` en `app_rol`; módulos `combustible` y `tesoreria`; origen
+  `combustible_vehiculos` en `pagos_notificaciones`.
+
+**Cambios de UI:**
+- Módulo **Combustible** con solicitudes y control de vales.
+- **Tesorería** — la bandeja de quien recibe, en su propio módulo.
+- Réplicas exactas de `OL-RG-0175` y `OL-RG-0270`.
+- Admin → **Responsables de combustible**.
+- PAGOS gana «Al tesorero» cuando la SP ya está firmada.
+
+**Comentarios.** Las pruebas en seco destaparon dos agujeros propios, los dos
+introducidos en esta misma fase:
+
+1. `envio_aceptar` comparaba `destinatario_id <> auth.uid()` sin exigir sesión primero.
+   Con `auth.uid()` nulo eso da NULL, no TRUE, y un `if NULL` no entra: dejaba pasar
+   justo al que no se había identificado. Y `anon` tenía permiso por **dos vías** —
+   grant propio y herencia de PUBLIC — así que revocar una sola no servía.
+2. Las funciones de cascada quedaron abiertas a `authenticated`, que también tiene
+   grant propio. Son `security definer`: cualquier usuario con sesión podía fabricar un
+   `envios` falso y avanzar **cualquier** solicitud de pago a «Procesado».
+
+Ninguno era explotable sin adivinar un uuid v4 o tener cuenta, pero apoyarse en eso no
+es una defensa. La lección quedó en el SQL: mirar una vía de acceso y dar por cerradas
+las demás fue el error original, así que las comprobaciones revisan los tres roles.
+
+Dos cosas más que salieron al verificar:
+- El rol `solo_lectura` concede lectura sobre **seis tablas financieras completas**.
+  Lissa lo tiene hoy: su pantalla muestra su bandeja de firmas, pero su sesión puede
+  leer todos los pagos y toda la caja chica. Por eso Victor no se crea con ese rol.
+- Tipar las funciones RPC encendió la inferencia de relaciones de supabase-js, apagada
+  hasta ahora, y destapó que `avn_documentos` no declaraba sus llaves foráneas.
+
+**Pendiente de esta fase:** crear el usuario de Victor Murillo
+(`vmurillo@sion.com.gt`), que requiere autorización explícita, y adjuntar el expediente
+en PDF a la SP (fase 46). Plan completo en
+[`PLAN-COMBUSTIBLE.md`](../PLAN-COMBUSTIBLE.md).
+
+**Commits clave:** `d9cc008`, `c74a66c`, `f891904`.
+
+---
+
 ## Fase 44 · 2026-11-05 · Auditoría donde más falta hacía
 
 **Objetivo:** cerrar el hueco más serio que salió del levantamiento para la

@@ -10,7 +10,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/dates';
 import { formatMoney, parseNumero } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
-import { useEmpleados, usePersonas, useProveedores } from '@/modules/admin/hooks';
+import { useEmpleados, usePersonas } from '@/modules/admin/hooks';
 import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
 import { enviosApi } from '@/modules/tesoreria/api';
 import {
@@ -21,13 +21,17 @@ import {
   type SolicitudUpdate,
 } from './api';
 import {
+  mensajeDeError,
   useActualizarSolicitud,
   useBorrarSolicitud,
   useCrearSolicitud,
+  useFacturas,
+  useGuardarFactura,
   useInvalidarTrasEnvio,
   useResponsables,
   useSolicitudes,
 } from './hooks';
+import { FacturaForm } from './FacturaForm';
 import { SolicitudForm } from './SolicitudForm';
 import { SolicitudValePrintable } from './SolicitudValePrintable';
 
@@ -54,7 +58,7 @@ type Dialogo =
   | { tipo: 'imprimir'; s: Solicitud }
   | { tipo: 'enviar'; s: Solicitud }
   | { tipo: 'despacho'; s: Solicitud }
-  | { tipo: 'documentos'; s: Solicitud };
+  | { tipo: 'factura'; s: Solicitud };
 
 export function SolicitudesSection({
   canEdit,
@@ -72,13 +76,14 @@ export function SolicitudesSection({
   const vehiculosQ = useVehiculos();
   const empleadosQ = useEmpleados();
   const personasQ = usePersonas();
-  const proveedoresQ = useProveedores();
+  const facturasQ = useFacturas();
   const tesorerosQ = useTesoreros();
 
   const crear = useCrearSolicitud();
   const actualizar = useActualizarSolicitud();
   const borrar = useBorrarSolicitud();
   const invalidarTrasEnvio = useInvalidarTrasEnvio();
+  const { guardar: guardarFactura, guardando: guardandoFactura } = useGuardarFactura();
 
   const [dlg, setDlg] = useState<Dialogo>({ tipo: 'cerrado' });
   const [filtroEstado, setFiltroEstado] = useState('');
@@ -97,19 +102,24 @@ export function SolicitudesSection({
     () => new Map((empleadosQ.data ?? []).map((e) => [e.id, e.nombre])),
     [empleadosQ.data],
   );
+  const facturaPorId = useMemo(
+    () => new Map((facturasQ.data ?? []).map((f) => [f.id, f])),
+    [facturasQ.data],
+  );
 
   const filas = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return (solicitudesQ.data ?? []).filter((s) => {
       if (filtroEstado && s.estado !== filtroEstado) return false;
       if (!q) return true;
-      return [s.serial, s.vale_a, s.vale_num, s.recibo_num, s.factura_numero, s.justificacion]
+      const fac = s.factura_id ? facturaPorId.get(s.factura_id) : null;
+      return [s.serial, s.vale_a, s.vale_num, s.recibo_num, fac?.numero, s.justificacion]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(q);
     });
-  }, [solicitudesQ.data, filtroEstado, busca]);
+  }, [solicitudesQ.data, filtroEstado, busca, facturaPorId]);
 
   async function enviarAlTesorero(s: Solicitud, destinatarioId: string) {
     const veh = s.vehiculo_id ? vehiculoPorId.get(s.vehiculo_id) : null;
@@ -295,8 +305,16 @@ export function SolicitudesSection({
               </button>
             )}
             {canEdit && estadoAlcanzado(s.estado, 'despachada') && (
-              <button className={boton} onClick={() => setDlg({ tipo: 'documentos', s })}>
-                Factura
+              <button
+                className={boton}
+                title={
+                  s.factura_id
+                    ? 'Ver o cambiar la factura que lo cubre'
+                    : 'Registrar la factura. Puede cubrir varios vales a la vez.'
+                }
+                onClick={() => setDlg({ tipo: 'factura', s })}
+              >
+                {s.factura_id ? 'Factura ✓' : 'Factura'}
               </button>
             )}
             {canEdit && !estadoAlcanzado(s.estado, 'en_reporte') && (
@@ -414,25 +432,36 @@ export function SolicitudesSection({
         )}
       </Modal>
 
-      {/* ── Factura y contraseña ──────────────────────────────────── */}
+      {/* ── Factura · la misma de la pestaña Facturas ─────────────── */}
+      {/*
+        Se abre desde aqui porque es donde esta mirando cuando vuelve el
+        chofer, pero es la MISMA factura: si cubre dos despachos, los dos se
+        marcan en la misma pantalla y no hay que teclearla dos veces. Ese
+        tecleo doble era el que podia contradecirse consigo mismo.
+      */}
       <Modal
-        open={dlg.tipo === 'documentos'}
+        open={dlg.tipo === 'factura'}
         onClose={() => setDlg({ tipo: 'cerrado' })}
-        title="Factura y contraseña de pago"
-        size="md"
+        title={
+          dlg.tipo === 'factura' && dlg.s.factura_id ? 'Factura del vale' : 'Nueva factura'
+        }
+        size="lg"
       >
-        {dlg.tipo === 'documentos' && (
-          <FormDocumentos
-            solicitud={dlg.s}
-            proveedores={(proveedoresQ.data ?? []).map((p) => ({ id: p.id, nombre: p.nombre }))}
+        {dlg.tipo === 'factura' && (
+          <FacturaForm
+            inicial={dlg.s.factura_id ? (facturaPorId.get(dlg.s.factura_id) ?? null) : null}
+            preseleccion={dlg.s.id}
+            guardando={guardandoFactura}
             onCancel={() => setDlg({ tipo: 'cerrado' })}
-            onGuardar={(patch) =>
-              void guardarParche(
-                dlg.s,
-                { ...patch, estado: 'documentada' },
-                'Factura y contraseña registradas.',
-              )
-            }
+            onSubmit={async (valores, ids) => {
+              try {
+                await guardarFactura(dlg.s.factura_id ?? null, valores, ids);
+                toast.success('Factura registrada.');
+                setDlg({ tipo: 'cerrado' });
+              } catch (e) {
+                toast.error(mensajeDeError(e));
+              }
+            }}
           />
         )}
       </Modal>
@@ -636,130 +665,6 @@ function FormDespacho({
           onChange={(e) => set('manguera', e.target.value)}
         />
       </div>
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border border-sand px-4 py-2 text-sm text-dark-2 hover:bg-sand-l"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="rounded-md bg-teal px-4 py-2 text-sm font-medium text-white hover:bg-teal/90"
-        >
-          Guardar
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function FormDocumentos({
-  solicitud: s,
-  proveedores,
-  onGuardar,
-  onCancel,
-}: {
-  solicitud: Solicitud;
-  proveedores: { id: string; nombre: string }[];
-  onGuardar: (patch: SolicitudUpdate) => void;
-  onCancel: () => void;
-}) {
-  const [f, setF] = useState({
-    proveedor_id: s.proveedor_id ?? '',
-    factura_serie: s.factura_serie ?? '',
-    factura_numero: s.factura_numero ?? '',
-    factura_fecha: s.factura_fecha ?? '',
-    factura_monto: s.factura_monto?.toString() ?? '',
-    contrasena_num: s.contrasena_num ?? '',
-    contrasena_fecha: s.contrasena_fecha ?? '',
-    contrasena_vencimiento: s.contrasena_vencimiento ?? '',
-  });
-  const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
-
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onGuardar({
-          proveedor_id: f.proveedor_id || null,
-          factura_serie: f.factura_serie.trim() || null,
-          factura_numero: f.factura_numero.trim() || null,
-          factura_fecha: f.factura_fecha || null,
-          factura_monto: f.factura_monto.trim() === '' ? null : Number(f.factura_monto),
-          contrasena_num: f.contrasena_num.trim() || null,
-          contrasena_fecha: f.contrasena_fecha || null,
-          contrasena_vencimiento: f.contrasena_vencimiento || null,
-        });
-      }}
-    >
-      <Select
-        label="Proveedor"
-        value={f.proveedor_id}
-        onChange={(e) => set('proveedor_id', e.target.value)}
-      >
-        <option value="">—</option>
-        {proveedores.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.nombre}
-          </option>
-        ))}
-      </Select>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TextInput
-          label="Serie de la factura"
-          value={f.factura_serie}
-          onChange={(e) => set('factura_serie', e.target.value)}
-        />
-        <TextInput
-          label="Número"
-          value={f.factura_numero}
-          onChange={(e) => set('factura_numero', e.target.value)}
-        />
-        <TextInput
-          label="Fecha"
-          type="date"
-          value={f.factura_fecha}
-          onChange={(e) => set('factura_fecha', e.target.value)}
-        />
-        <TextInput
-          label="Monto de la factura"
-          inputMode="decimal"
-          hint="Referencia. El control de vales suma el despacho."
-          value={f.factura_monto}
-          onChange={(e) => set('factura_monto', e.target.value)}
-        />
-      </div>
-
-      <div className="rounded-md border border-sand bg-sand-l/40 p-3">
-        <p className="mb-2 text-xs text-dark-2">
-          La contraseña <strong>no sale en el control de vales</strong>. Se guarda para el
-          expediente y se adjunta en físico.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <TextInput
-            label="Contraseña #"
-            value={f.contrasena_num}
-            onChange={(e) => set('contrasena_num', e.target.value)}
-          />
-          <TextInput
-            label="Fecha"
-            type="date"
-            value={f.contrasena_fecha}
-            onChange={(e) => set('contrasena_fecha', e.target.value)}
-          />
-          <TextInput
-            label="Vence"
-            type="date"
-            value={f.contrasena_vencimiento}
-            onChange={(e) => set('contrasena_vencimiento', e.target.value)}
-          />
-        </div>
-      </div>
-
       <div className="flex justify-end gap-2">
         <button
           type="button"

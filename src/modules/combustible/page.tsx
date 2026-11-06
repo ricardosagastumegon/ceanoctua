@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { SolicitudesSection } from './SolicitudesSection';
+import { FacturasSection } from './FacturasSection';
 import { ReportesSection } from './ReportesSection';
 
 /**
  * Control de combustible de vehiculos.
  *
- * Dos pestañas y no una porque son dos ritmos distintos: las solicitudes se
- * crean todos los dias, segun llegan los choferes; el control se arma cada 15.
+ * Tres pestañas, que son tres ritmos distintos: las solicitudes se crean
+ * todos los dias, segun llegan los choferes; las facturas llegan por
+ * despacho, o por dos del mismo dia; y el control se arma cada 15.
  */
 export default function CombustiblePage() {
   const { profile } = useAuth();
@@ -15,7 +17,7 @@ export default function CombustiblePage() {
   // Borrar una solicitud de vale es del administrador. La base lo vuelve a
   // comprobar en `comb_borrar_solicitud`: esto solo esconde el boton.
   const canDelete = profile?.rol === 'admin';
-  const [tab, setTab] = useState<'solicitudes' | 'control'>('solicitudes');
+  const [tab, setTab] = useState<'solicitudes' | 'facturas' | 'control'>('solicitudes');
 
   const btn = (activo: boolean) =>
     `rounded-md px-3 py-1.5 text-sm font-medium ${
@@ -35,16 +37,17 @@ export default function CombustiblePage() {
         <button className={btn(tab === 'solicitudes')} onClick={() => setTab('solicitudes')}>
           Solicitudes de vale
         </button>
+        <button className={btn(tab === 'facturas')} onClick={() => setTab('facturas')}>
+          Facturas
+        </button>
         <button className={btn(tab === 'control')} onClick={() => setTab('control')}>
           Control de vales
         </button>
       </nav>
 
-      {tab === 'solicitudes' ? (
-        <SolicitudesSection canEdit={canEdit} canDelete={canDelete} />
-      ) : (
-        <ReportesSection canEdit={canEdit} canDelete={canDelete} />
-      )}
+      {tab === 'solicitudes' && <SolicitudesSection canEdit={canEdit} canDelete={canDelete} />}
+      {tab === 'facturas' && <FacturasSection canEdit={canEdit} canDelete={canDelete} />}
+      {tab === 'control' && <ReportesSection canEdit={canEdit} canDelete={canDelete} />}
     </div>
   );
 }

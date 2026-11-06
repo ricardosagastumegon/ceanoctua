@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  facturasApi,
   reportesApi,
   responsablesApi,
   solicitudesApi,
   type Reporte,
   type ReporteInsert,
   type ReporteUpdate,
+  type Factura,
+  type FacturaInsert,
+  type FacturaUpdate,
   type Responsable,
   type ResponsableInsert,
   type ResponsableUpdate,
@@ -18,6 +22,7 @@ import { ENVIOS_KEY } from '@/modules/tesoreria/api';
 export const SOLICITUDES_KEY = ['comb_solicitudes'];
 export const REPORTES_KEY = ['comb_reportes'];
 export const RESPONSABLES_KEY = ['comb_responsables'];
+export const FACTURAS_KEY = ['comb_facturas'];
 
 export function useSolicitudes() {
   return useQuery<Solicitud[], Error>({
@@ -128,6 +133,93 @@ export function useAsignarAReporte() {
       void qc.invalidateQueries({ queryKey: REPORTES_KEY });
     },
   });
+}
+
+export function useFacturas() {
+  return useQuery<Factura[], Error>({ queryKey: FACTURAS_KEY, queryFn: () => facturasApi.list() });
+}
+
+/**
+ * Crear, cambiar o borrar una factura mueve tambien los vales: su
+ * `factura_id` y, por el trigger, su estado. Las dos listas se invalidan
+ * juntas o la pantalla ensena un vale «documentada» colgando de una factura
+ * que ya no esta.
+ */
+function invalidarFacturaYVales(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: FACTURAS_KEY });
+  void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+}
+
+export function useCrearFactura() {
+  const qc = useQueryClient();
+  return useMutation<Factura, Error, FacturaInsert>({
+    mutationFn: (input) => facturasApi.create(input),
+    onSuccess: () => invalidarFacturaYVales(qc),
+  });
+}
+
+export function useActualizarFactura() {
+  const qc = useQueryClient();
+  return useMutation<Factura, Error, { id: string; patch: FacturaUpdate }>({
+    mutationFn: ({ id, patch }) => facturasApi.update(id, patch),
+    onSuccess: () => invalidarFacturaYVales(qc),
+  });
+}
+
+export function useBorrarFactura() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => facturasApi.remove(id),
+    onSuccess: () => invalidarFacturaYVales(qc),
+  });
+}
+
+export function useFijarValesDeFactura() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, { facturaId: string; solicitudIds: string[] }>({
+    mutationFn: ({ facturaId, solicitudIds }) => facturasApi.fijarVales(facturaId, solicitudIds),
+    onSuccess: () => invalidarFacturaYVales(qc),
+  });
+}
+
+/**
+ * Guardar una factura son siempre dos cosas: la factura y los vales que
+ * cubre. Va junto en un hook porque se guarda desde dos pantallas --la lista
+ * de facturas y la de vales-- y tener la pareja escrita dos veces es como se
+ * acaba guardando la factura sin sus vales en una de las dos.
+ */
+export function useGuardarFactura() {
+  const crear = useCrearFactura();
+  const actualizar = useActualizarFactura();
+  const fijar = useFijarValesDeFactura();
+
+  async function guardar(
+    id: string | null,
+    valores: FacturaInsert,
+    solicitudIds: string[],
+  ): Promise<Factura> {
+    const f = id
+      ? await actualizar.mutateAsync({ id, patch: valores })
+      : await crear.mutateAsync(valores);
+    await fijar.mutateAsync({ facturaId: f.id, solicitudIds });
+    return f;
+  }
+
+  return {
+    guardar,
+    guardando: crear.isPending || actualizar.isPending || fijar.isPending,
+  };
+}
+
+/**
+ * El índice único de `comb_facturas` da un mensaje de Postgres que no le dice
+ * nada a nadie. Lo que pasó es sencillo y se puede decir con palabras.
+ */
+export function mensajeDeError(e: unknown): string {
+  const m = e instanceof Error ? e.message : 'No se pudo guardar.';
+  return m.includes('comb_facturas_unica')
+    ? 'Esa factura ya está registrada. Búscala en la lista y edítala.'
+    : m;
 }
 
 export function useResponsables() {

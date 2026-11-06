@@ -20,6 +20,10 @@ export type Reporte = Database['public']['Tables']['comb_reportes']['Row'];
 export type ReporteInsert = Database['public']['Tables']['comb_reportes']['Insert'];
 export type ReporteUpdate = Database['public']['Tables']['comb_reportes']['Update'];
 
+export type Factura = Database['public']['Tables']['comb_facturas']['Row'];
+export type FacturaInsert = Database['public']['Tables']['comb_facturas']['Insert'];
+export type FacturaUpdate = Database['public']['Tables']['comb_facturas']['Update'];
+
 export type Responsable = Database['public']['Tables']['comb_responsables']['Row'];
 export type ResponsableInsert = Database['public']['Tables']['comb_responsables']['Insert'];
 export type ResponsableUpdate = Database['public']['Tables']['comb_responsables']['Update'];
@@ -243,6 +247,83 @@ export const reportesApi = {
       .update({ reporte_id: reporteId, excluir_del_control: reporteId == null })
       .in('id', solicitudIds);
     if (error) throw error;
+  },
+};
+
+/**
+ * La factura, con los vales que cubre.
+ *
+ * Nunca se guarda su total como «la suma»: se guarda lo que dice el papel, y
+ * la suma de los despachos se calcula al mostrarla. Si los dos numeros se
+ * separan es que hay algo que mirar, y eso solo se ve si son dos numeros
+ * distintos y no uno copiado encima del otro.
+ */
+export const facturasApi = {
+  async list(): Promise<Factura[]> {
+    const { data, error } = await supabase
+      .from('comb_facturas')
+      .select('*')
+      .is('deleted_at', null)
+      .order('fecha', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async create(input: FacturaInsert): Promise<Factura> {
+    const { data, error } = await supabase
+      .from('comb_facturas')
+      .insert(stripServerGenerated(input, ['id', 'created_at', 'updated_at']) as FacturaInsert)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, patch: FacturaUpdate): Promise<Factura> {
+    const { data, error } = await supabase
+      .from('comb_facturas')
+      .update(patch)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /** El trigger `comb_facturas_suelta_vales` libera los vales que cubria. */
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('comb_facturas')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  /**
+   * Deja la factura cubriendo exactamente estos vales.
+   *
+   * Dos pasos y no uno: primero suelta los que ya no van --si no, quitar un
+   * vale de una factura no tendria forma de expresarse-- y luego engancha los
+   * que si. El estado de cada vale lo mueve el trigger.
+   */
+  async fijarVales(facturaId: string, solicitudIds: string[]): Promise<void> {
+    const sueltos = supabase
+      .from('comb_solicitudes')
+      .update({ factura_id: null })
+      .eq('factura_id', facturaId)
+      .is('deleted_at', null);
+    const { error } = solicitudIds.length
+      ? await sueltos.not('id', 'in', `(${solicitudIds.join(',')})`)
+      : await sueltos;
+    if (error) throw error;
+
+    if (solicitudIds.length === 0) return;
+    const { error: e2 } = await supabase
+      .from('comb_solicitudes')
+      .update({ factura_id: facturaId })
+      .in('id', solicitudIds);
+    if (e2) throw e2;
   },
 };
 

@@ -129,11 +129,31 @@ export const solicitudesApi = {
     return data;
   },
 
-  /** Borrado suave: en una tabla financiera no se borra de verdad. */
+  /**
+   * Borrado suave, y solo para el administrador.
+   *
+   * Va por RPC y no por un update desde aqui porque hay dos cosas que el
+   * cliente no puede garantizar: que se retire el envio que este en la
+   * bandeja del Tesorero --un envio sin documento detras no se puede
+   * resolver-- y que no se le quite un renglon a un control ya cerrado, cuyo
+   * total ya viajo a Pagos.
+   */
   async remove(id: string): Promise<void> {
+    const { error } = await supabase.rpc('comb_borrar_solicitud', { p_solicitud: id });
+    if (error) throw error;
+  },
+
+  /**
+   * Saca o devuelve un vale al control de su quincena.
+   *
+   * La marca es lo que distingue «todavia no le toco» de «la saque yo»: sin
+   * ella, el automatismo que mete los vales en su control volveria a meter
+   * cada cosa que se saca a mano.
+   */
+  async excluirDelControl(id: string, excluir: boolean): Promise<void> {
     const { error } = await supabase
       .from('comb_solicitudes')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ excluir_del_control: excluir, ...(excluir ? { reporte_id: null } : {}) })
       .eq('id', id);
     if (error) throw error;
   },
@@ -171,12 +191,24 @@ export const reportesApi = {
     return data;
   },
 
+  /**
+   * Borrado suave. Despues suelta sus vales, en ese orden: con el control ya
+   * marcado como borrado, el trigger que los reparte no se lo devuelve y
+   * quedan libres para la quincena que les toque.
+   */
   async remove(id: string): Promise<void> {
     const { error } = await supabase
       .from('comb_reportes')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw error;
+
+    const { error: e2 } = await supabase
+      .from('comb_solicitudes')
+      .update({ reporte_id: null })
+      .eq('reporte_id', id)
+      .is('deleted_at', null);
+    if (e2) throw e2;
   },
 
   /**
@@ -198,11 +230,17 @@ export const reportesApi = {
     if (error) throw error;
   },
 
-  /** Mete o saca una solicitud del control. Solo mientras esta abierto. */
+  /**
+   * Mete o saca vales del control a mano. Solo mientras esta abierto.
+   *
+   * El caso normal no pasa por aqui: un vale entra en el control de su
+   * quincena solo, por la fecha. Esto es la correccion --el vale que se
+   * quedo sin despacho y hay que pasar a la quincena siguiente.
+   */
   async asignar(solicitudIds: string[], reporteId: string | null): Promise<void> {
     const { error } = await supabase
       .from('comb_solicitudes')
-      .update({ reporte_id: reporteId })
+      .update({ reporte_id: reporteId, excluir_del_control: reporteId == null })
       .in('id', solicitudIds);
     if (error) throw error;
   },

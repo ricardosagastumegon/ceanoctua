@@ -4103,7 +4103,10 @@ export type Database = {
           responsable_id: string | null;
           vehiculo_id: string | null;
           vale_a: string | null;
+          vale_a_empleado_id: string | null;
+          vale_a_persona_id: string | null;
           solicitado_por_id: string | null;
+          solicitado_por_persona_id: string | null;
           departamento: string | null;
           justificacion: string | null;
           autorizado_por_id: string | null;
@@ -4135,6 +4138,7 @@ export type Database = {
           observaciones: string | null;
           estado: string;
           reporte_id: string | null;
+          excluir_del_control: boolean;
           created_at: string;
           updated_at: string;
           created_by: string | null;
@@ -4148,7 +4152,10 @@ export type Database = {
           responsable_id?: string | null;
           vehiculo_id?: string | null;
           vale_a?: string | null;
+          vale_a_empleado_id?: string | null;
+          vale_a_persona_id?: string | null;
           solicitado_por_id?: string | null;
+          solicitado_por_persona_id?: string | null;
           departamento?: string | null;
           justificacion?: string | null;
           autorizado_por_id?: string | null;
@@ -4180,6 +4187,7 @@ export type Database = {
           observaciones?: string | null;
           estado?: string;
           reporte_id?: string | null;
+          excluir_del_control?: boolean;
           created_by?: string | null;
           updated_by?: string | null;
           deleted_at?: string | null;
@@ -4189,7 +4197,10 @@ export type Database = {
           responsable_id?: string | null;
           vehiculo_id?: string | null;
           vale_a?: string | null;
+          vale_a_empleado_id?: string | null;
+          vale_a_persona_id?: string | null;
           solicitado_por_id?: string | null;
+          solicitado_por_persona_id?: string | null;
           departamento?: string | null;
           justificacion?: string | null;
           autorizado_por_id?: string | null;
@@ -4221,6 +4232,7 @@ export type Database = {
           observaciones?: string | null;
           estado?: string;
           reporte_id?: string | null;
+          excluir_del_control?: boolean;
           created_by?: string | null;
           updated_by?: string | null;
           deleted_at?: string | null;
@@ -4292,11 +4304,19 @@ export type Database = {
       };
       /**
        * Cierra un control de vales: calcula el total en el servidor y lo
-       * congela. Se niega si alguna solicitud no tiene monto de despacho.
+       * congela. Si falta algun despacho, el error nombra los correlativos.
        */
       comb_cerrar_reporte: {
         Args: { p_reporte: string };
         Returns: Database['public']['Tables']['comb_reportes']['Row'];
+      };
+      /**
+       * Borrado suave de una solicitud de vale. Solo admin. Retira el envio
+       * pendiente y se niega si ya entro en un control cerrado.
+       */
+      comb_borrar_solicitud: {
+        Args: { p_solicitud: string };
+        Returns: void;
       };
       /** Emite el aviso a PAGOS de un control cerrado. */
       comb_enviar_a_pagos: {

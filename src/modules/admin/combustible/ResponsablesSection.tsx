@@ -191,8 +191,7 @@ function ResponsableForm({
       persona_id: origen === 'jd' ? id : null,
       etiqueta: v.etiqueta.trim() || null,
       puesto_label: v.puesto_label.trim() || null,
-      // Un cuadro de «varios» no tiene carro fijo: la base lo exige asi.
-      vehiculo_id: esVarios ? null : v.vehiculo_id || null,
+      vehiculo_id: v.vehiculo_id || null,
       tipo_bloque: v.tipo_bloque,
       orden: Number(v.orden) || 0,
       activo: initial?.activo ?? true,
@@ -263,23 +262,31 @@ function ResponsableForm({
         />
       </div>
 
-      {!esVarios && (
-        <Select
-          label="Vehículo asignado"
-          hint="Obligatorio en los cuadros con kilometraje."
-          value={v.vehiculo_id}
-          onChange={(e) => set('vehiculo_id', e.target.value)}
-          required
-        >
-          <option value="">Escoge…</option>
-          {(vehiculosQ.data ?? []).map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.marca} · {x.placa}
-              {x.tipo ? ` · ${x.tipo}` : ''}
-            </option>
-          ))}
-        </Select>
-      )}
+      {/*
+        Se ofrece tambien en los cuadros de «varios»: en la hoja original, el
+        del mensajero lleva columnas de varios Y su moto en la cabecera
+        (YAMAHA / MOTOCICLETA). Las dos cosas son independientes --el tipo de
+        cuadro decide QUE COLUMNAS imprime; el vehiculo, que sale arriba.
+      */}
+      <Select
+        label="Vehículo del encabezado"
+        hint={
+          esVarios
+            ? 'Opcional. Si lo dejas vacío, arriba dice «varios».'
+            : 'Obligatorio en los cuadros con kilometraje.'
+        }
+        value={v.vehiculo_id}
+        onChange={(e) => set('vehiculo_id', e.target.value)}
+        required={!esVarios}
+      >
+        <option value="">{esVarios ? 'varios' : 'Escoge…'}</option>
+        {(vehiculosQ.data ?? []).map((x) => (
+          <option key={x.id} value={x.id}>
+            {x.marca} · {x.placa}
+            {x.tipo ? ` · ${x.tipo}` : ''}
+          </option>
+        ))}
+      </Select>
 
       <div className="flex justify-end gap-2 pt-2">
         <button

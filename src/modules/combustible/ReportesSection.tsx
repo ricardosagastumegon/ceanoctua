@@ -12,6 +12,7 @@ import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
 import { REPORTE_ESTADO_LABEL, type Reporte, type Solicitud } from './api';
 import {
   useAsignarAReporte,
+  useBorrarReporte,
   useCerrarReporte,
   useCrearReporte,
   useEnviarAPagos,
@@ -28,6 +29,10 @@ import { ControlValesPrintable, type Bloque } from './ControlValesPrintable';
  * periodo por responsable. Por eso el total impreso y el congelado en la base
  * siempre coinciden --y si no coincidieran, seria senal de que alguien edito
  * una solicitud ya cerrada, que es justo lo que hay que poder notar.
+ *
+ * LOS VALES ENTRAN SOLOS, por la fecha, en el control abierto de su quincena
+ * (trigger `comb_solicitudes_al_control`). Esta pantalla no asigna nada en el
+ * uso normal: ensena lo que hay, y deja corregirlo.
  */
 
 /** Por omision, la quincena en curso. */
@@ -42,7 +47,7 @@ function quincenaActual(): { ini: string; fin: string } {
     : { ini: p(new Date(a, m, 16)), fin: p(new Date(a, m + 1, 0)) };
 }
 
-export function ReportesSection({ canEdit }: { canEdit: boolean }) {
+export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canDelete: boolean }) {
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -57,6 +62,7 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
   const cerrar = useCerrarReporte();
   const enviar = useEnviarAPagos();
   const asignar = useAsignarAReporte();
+  const borrar = useBorrarReporte();
 
   const [nuevo, setNuevo] = useState(false);
   const [imprimir, setImprimir] = useState<Reporte | null>(null);
@@ -77,26 +83,39 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
     [personasQ.data],
   );
 
+  const valesDe = (r: Reporte) => (solicitudesQ.data ?? []).filter((s) => s.reporte_id === r.id);
+
   /** Arma los cuadros de un reporte, en el orden del catalogo. */
   function bloquesDe(reporte: Reporte): Bloque[] {
-    const filas = (solicitudesQ.data ?? []).filter((s) => s.reporte_id === reporte.id);
+    const filas = valesDe(reporte);
     return (responsablesQ.data ?? [])
       .filter((r) => r.activo)
       .map((r) => {
         const emp = r.empleado_id ? empleadoPorId.get(r.empleado_id) : null;
         const per = r.persona_id ? personaPorId.get(r.persona_id) : null;
         const veh = r.vehiculo_id ? vehiculoPorId.get(r.vehiculo_id) : null;
-        const asignado = r.tipo_bloque === 'vehiculo_asignado';
         // Personal JD no guarda puesto, asi que ahi manda `puesto_label`.
         const quien = per?.nombre ?? emp?.nombre ?? null;
         const cargo = r.puesto_label ?? emp?.puesto ?? '';
+
+        /**
+         * QUE VA A CADA LADO DEL «Responsable:». No depende del tipo de
+         * cuadro --eso decide las columnas-- sino de si el cuadro tiene
+         * titulo propio. Se comprobo contra los cuatro casos de la hoja:
+         *
+         *   Lissa      sin etiqueta  -> izq «Gerente Administrativo», der «LISSA ARRIAZA»
+         *   Mensajero  sin etiqueta  -> izq «Mensajero»,              der «JOSE RUIZ»
+         *   Compras    con etiqueta  -> izq «VERONICA PEREZ»,         der «DEPARTAMENTO DE COMPRAS»
+         *   OTROS      con etiqueta  -> izq «ASISTENTE DE GERENCIAS», der «OTROS»
+         *
+         * O sea: a la derecha, de quien es el cuadro; a la izquierda, lo que
+         * lo describe. Cuando hay etiqueta, el cuadro es del departamento y
+         * la persona pasa a ser la descripcion.
+         */
         return {
           responsable: r,
-          // En los cuadros con carro la hoja pone el NOMBRE a la derecha y el
-          // PUESTO a la izquierda. En los de varios, el nombre de la persona
-          // va a la izquierda y la etiqueta del departamento a la derecha.
-          nombre: asignado ? (quien ?? r.etiqueta ?? '') : (r.etiqueta ?? ''),
-          puesto: asignado ? cargo : (quien ?? r.puesto_label ?? ''),
+          nombre: r.etiqueta ?? quien ?? '',
+          puesto: r.etiqueta ? (quien ?? r.puesto_label ?? '') : cargo,
           vehiculo: veh ? { marca: veh.marca, placa: veh.placa, tipo: veh.tipo } : null,
           filas: filas.filter((s) => s.responsable_id === r.id),
         };
@@ -122,8 +141,24 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
       key: 'renglones',
       header: 'Vales',
       className: 'text-right',
-      render: (r) =>
-        (solicitudesQ.data ?? []).filter((s) => s.reporte_id === r.id).length || '—',
+      render: (r) => {
+        const v = valesDe(r);
+        if (v.length === 0) return <span className="text-dark-3">—</span>;
+        const sinMonto = v.filter((s) => s.monto == null).length;
+        return (
+          <span>
+            {v.length}
+            {sinMonto > 0 && (
+              <span
+                className="ml-1.5 rounded bg-gold/25 px-1.5 py-0.5 text-[10px] font-semibold text-dark"
+                title="Vales sin despacho capturado. El control no cierra hasta tenerlos."
+              >
+                {sinMonto} sin despacho
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: 'total',
@@ -131,7 +166,18 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
       className: 'text-right',
       sortable: true,
       accessor: (r) => r.total,
-      render: (r) => (r.total != null ? formatMoney(r.total) : '—'),
+      // Mientras esta abierto el total se suma al vuelo; al cerrarlo se
+      // congela el del servidor. Son el mismo numero, pero el congelado es
+      // el que respalda la solicitud de pago.
+      render: (r) => {
+        if (r.total != null) return formatMoney(r.total);
+        const vivo = valesDe(r).reduce((a, s) => a + (s.monto ?? 0), 0);
+        return vivo > 0 ? (
+          <span className="text-dark-2">{formatMoney(vivo)}</span>
+        ) : (
+          <span className="text-dark-3">—</span>
+        );
+      },
     },
     {
       key: 'estado',
@@ -146,16 +192,28 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
     },
   ];
 
-  const botonChico =
-    'rounded border border-sand px-2 py-1 text-xs text-dark-2 hover:bg-sand-l disabled:opacity-40';
+  const boton =
+    'rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l disabled:opacity-40';
+  const botonRojo =
+    'rounded-md border border-rust/40 px-3 py-1 text-xs font-semibold text-rust hover:bg-rust-l disabled:opacity-40';
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-dark-2">
-          Cada 15 días: se agrupan los vales documentados, se cierra el control y se manda
-          el aviso a Pagos.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <ol className="space-y-1 text-sm text-dark-2">
+          <li>
+            <strong className="text-dark">1.</strong> Abres el control de la quincena. Los vales
+            de esas fechas entran solos, según los vas creando.
+          </li>
+          <li>
+            <strong className="text-dark">2.</strong> <strong>Cerrar</strong> congela el total
+            —ya no entran ni salen vales— y deja el documento listo para imprimir.
+          </li>
+          <li>
+            <strong className="text-dark">3.</strong> <strong>Enviar a Pagos</strong> manda el
+            aviso para que se le genere la solicitud de pago.
+          </li>
+        </ol>
         {canEdit && (
           <button
             type="button"
@@ -176,29 +234,40 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
         onRetry={() => void reportesQ.refetch()}
         emptyMessage="Todavía no hay controles de vales."
         actions={(r) => (
-          <div className="flex flex-wrap justify-end gap-1">
+          <div className="flex flex-wrap justify-end gap-2">
             {canEdit && r.estado === 'abierto' && (
-              <button className={botonChico} onClick={() => setGestionar(r)}>
-                Renglones
+              <button
+                className={boton}
+                title="Qué vales trae, y sacar o devolver alguno a mano"
+                onClick={() => setGestionar(r)}
+              >
+                Vales
               </button>
             )}
-            <button className={botonChico} onClick={() => setImprimir(r)}>
+            <button className={boton} onClick={() => setImprimir(r)}>
               Imprimir
             </button>
             {canEdit && r.estado === 'abierto' && (
               <button
-                className={botonChico}
+                className={boton}
                 disabled={cerrar.isPending}
+                title="Congela el total de la quincena. Después ya no entran ni salen vales."
                 onClick={async () => {
+                  const v = valesDe(r);
+                  const sinMonto = v.filter((s) => s.monto == null);
                   const ok = await confirm({
-                    title: 'Cerrar el control de vales',
+                    title: `Cerrar ${r.serial ?? 'el control'}`,
                     message:
-                      'El total se calcula y se congela. Después no se le pueden mover renglones.',
+                      sinMonto.length > 0
+                        ? `Faltan ${sinMonto.length} despacho(s): ${sinMonto
+                            .map((s) => s.serial)
+                            .join(', ')}. Captúralos, o sácalos del control desde «Vales».`
+                        : `Se congela el total de ${v.length} vale(s) y el control queda listo para enviar a Pagos. Después ya no entran ni salen vales.`,
                   });
                   if (!ok) return;
                   try {
                     await cerrar.mutateAsync(r.id);
-                    toast.success('Control cerrado.');
+                    toast.success('Control cerrado. Ya puedes enviarlo a Pagos.');
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : 'No se pudo cerrar.');
                   }
@@ -209,7 +278,7 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
             )}
             {canEdit && r.estado === 'cerrado' && (
               <button
-                className={botonChico}
+                className={boton}
                 disabled={enviar.isPending}
                 onClick={async () => {
                   try {
@@ -223,6 +292,33 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
                 Enviar a Pagos
               </button>
             )}
+            {/* Solo mientras esta abierto: uno cerrado ya respalda un pago. */}
+            {canDelete && r.estado === 'abierto' && (
+              <button
+                className={botonRojo}
+                disabled={borrar.isPending}
+                onClick={async () => {
+                  const n = valesDe(r).length;
+                  const ok = await confirm({
+                    title: `Borrar ${r.serial ?? 'el control'}`,
+                    message:
+                      n > 0
+                        ? `Sus ${n} vale(s) quedan sueltos y entrarán en el siguiente control que cubra sus fechas. Los vales no se borran.`
+                        : 'El control desaparece de la lista. Queda el rastro en auditoría.',
+                    danger: true,
+                  });
+                  if (!ok) return;
+                  try {
+                    await borrar.mutateAsync(r.id);
+                    toast.success('Control borrado.');
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'No se pudo borrar.');
+                  }
+                }}
+              >
+                Borrar
+              </button>
+            )}
           </div>
         )}
       />
@@ -234,7 +330,7 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
           onCrear={async (ini, fin) => {
             try {
               await crear.mutateAsync({ periodo_ini: ini, periodo_fin: fin });
-              toast.success('Control creado. Ahora asígnale sus vales.');
+              toast.success('Control creado con los vales de esas fechas.');
               setNuevo(false);
             } catch (e) {
               toast.error(e instanceof Error ? e.message : 'No se pudo crear.');
@@ -243,15 +339,15 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
         />
       </Modal>
 
-      {/* ── Qué vales entran ──────────────────────────────────────── */}
+      {/* ── Qué vales trae, y la correccion a mano ────────────────── */}
       <Modal
         open={gestionar != null}
         onClose={() => setGestionar(null)}
-        title={`Renglones de ${gestionar?.serial ?? ''}`}
+        title={`Vales de ${gestionar?.serial ?? ''}`}
         size="lg"
       >
         {gestionar && (
-          <Renglones
+          <Vales
             reporte={gestionar}
             solicitudes={solicitudesQ.data ?? []}
             onAsignar={async (ids, reporteId) => {
@@ -286,6 +382,13 @@ export function ReportesSection({ canEdit }: { canEdit: boolean }) {
           />
         )}
       </PrintableModal>
+
+      {responsablesQ.data?.length === 0 && (
+        <p className="rounded-md border border-gold/40 bg-gold/10 px-3 py-2 text-sm text-dark-2">
+          No hay cuadros definidos, así que el documento sale vacío aunque el control tenga
+          vales. Se configuran en <strong>Admin → Responsables de combustible</strong>.
+        </p>
+      )}
     </section>
   );
 }
@@ -308,7 +411,10 @@ function FormPeriodo({
         onCrear(ini, fin);
       }}
     >
-      <p className="text-sm text-dark-2">Viene propuesta la quincena en curso.</p>
+      <p className="text-sm text-dark-2">
+        Viene propuesta la quincena en curso. Los vales con fecha dentro del periodo —los que ya
+        existen y los que crees después— entran solos.
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <TextInput
           label="Del"
@@ -344,7 +450,13 @@ function FormPeriodo({
   );
 }
 
-function Renglones({
+/**
+ * Lo que trae el control, y la correccion a mano.
+ *
+ * El caso normal no pasa por aqui. Esto es para el vale que se quedo sin
+ * despacho al cerrar la quincena: se saca, y entra en la siguiente.
+ */
+function Vales({
   reporte,
   solicitudes,
   onAsignar,
@@ -355,15 +467,18 @@ function Renglones({
 }) {
   const dentro = solicitudes.filter((s) => s.reporte_id === reporte.id);
 
-  // Candidatas: documentadas, sin control, y dentro del periodo. El filtro por
-  // fecha evita meter por error un vale de la quincena pasada.
+  // Lo que podria entrar y no esta: vales del periodo que alguien saco a
+  // mano. Los que no estan por no existir todavia entran solos al crearlos.
   const fuera = solicitudes.filter(
     (s) =>
       s.reporte_id == null &&
-      (s.estado === 'documentada' || s.estado === 'despachada') &&
+      s.estado !== 'anulada' &&
       (s.fecha ?? '') >= reporte.periodo_ini &&
       (s.fecha ?? '') <= reporte.periodo_fin,
   );
+
+  const total = dentro.reduce((a, s) => a + (s.monto ?? 0), 0);
+  const sinMonto = dentro.filter((s) => s.monto == null).length;
 
   const linea = (s: Solicitud) => (
     <div className="flex items-center justify-between gap-2 border-b border-sand-l py-1.5 text-sm">
@@ -375,61 +490,76 @@ function Renglones({
         </span>
       </span>
       <span className="whitespace-nowrap">
-        {s.monto != null ? formatMoney(s.monto) : <span className="text-rust">sin monto</span>}
+        {s.monto != null ? formatMoney(s.monto) : <span className="text-rust">sin despacho</span>}
       </span>
     </div>
   );
 
   return (
     <div className="space-y-5">
+      <p className="rounded-md border border-sand bg-sand-l/40 px-3 py-2 text-xs text-dark-2">
+        Los vales entran aquí solos, por su fecha. Saca uno solo si no va a entrar en esta
+        quincena —el que se quedó sin despacho, por ejemplo—; pasará al control siguiente que
+        cubra su fecha.
+      </p>
+
       <div>
-        <h4 className="mb-1 text-sm font-semibold text-dark">En este control ({dentro.length})</h4>
-        {dentro.length === 0 && <p className="text-sm text-dark-3">Todavía ninguno.</p>}
+        <h4 className="mb-1 flex items-baseline justify-between text-sm font-semibold text-dark">
+          <span>En este control ({dentro.length})</span>
+          <span className="font-normal text-dark-2">
+            {formatMoney(total)}
+            {sinMonto > 0 && <span className="ml-2 text-rust">· {sinMonto} sin despacho</span>}
+          </span>
+        </h4>
+        {dentro.length === 0 && (
+          <p className="text-sm text-dark-3">
+            Ninguno todavía: no hay vales con fecha entre {formatDate(reporte.periodo_ini)} y{' '}
+            {formatDate(reporte.periodo_fin)}.
+          </p>
+        )}
         {dentro.map((s) => (
           <div key={s.id} className="flex items-center gap-3">
             <div className="flex-1">{linea(s)}</div>
             <button
               type="button"
               onClick={() => onAsignar([s.id], null)}
-              className="rounded border border-sand px-2 py-1 text-xs text-rust hover:bg-sand-l"
+              className="rounded-md border border-rust/40 px-3 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
             >
-              Quitar
+              Sacar
             </button>
           </div>
         ))}
       </div>
 
-      <div>
-        <div className="mb-1 flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-dark">Disponibles ({fuera.length})</h4>
-          {fuera.length > 0 && (
+      {fuera.length > 0 && (
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-dark">Sacados a mano ({fuera.length})</h4>
             <button
               type="button"
-              onClick={() => onAsignar(fuera.map((s) => s.id), reporte.id)}
-              className="rounded border border-sand px-2 py-1 text-xs text-teal hover:bg-sand-l"
+              onClick={() => onAsignar(
+                fuera.map((s) => s.id),
+                reporte.id,
+              )}
+              className="rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
             >
-              Agregar todos
-            </button>
-          )}
-        </div>
-        {fuera.length === 0 && (
-          <p className="text-sm text-dark-3">
-            No hay vales documentados sin control dentro del periodo.
-          </p>
-        )}
-        {fuera.map((s) => (
-          <div key={s.id} className="flex items-center gap-3">
-            <div className="flex-1">{linea(s)}</div>
-            <button
-              type="button"
-              onClick={() => onAsignar([s.id], reporte.id)}
-              className="rounded border border-sand px-2 py-1 text-xs text-teal hover:bg-sand-l"
-            >
-              Agregar
+              Devolver todos
             </button>
           </div>
-        ))}
-      </div>
+          {fuera.map((s) => (
+            <div key={s.id} className="flex items-center gap-3">
+              <div className="flex-1">{linea(s)}</div>
+              <button
+                type="button"
+                onClick={() => onAsignar([s.id], reporte.id)}
+                className="rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l"
+              >
+                Devolver
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

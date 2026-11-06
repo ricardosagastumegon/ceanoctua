@@ -56,7 +56,14 @@ type Dialogo =
   | { tipo: 'despacho'; s: Solicitud }
   | { tipo: 'documentos'; s: Solicitud };
 
-export function SolicitudesSection({ canEdit }: { canEdit: boolean }) {
+export function SolicitudesSection({
+  canEdit,
+  canDelete,
+}: {
+  canEdit: boolean;
+  /** Borrar es del administrador y de nadie mas. La base lo vuelve a exigir. */
+  canDelete: boolean;
+}) {
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -220,8 +227,13 @@ export function SolicitudesSection({ canEdit }: { canEdit: boolean }) {
     },
   ];
 
-  const botonChico =
-    'rounded border border-sand px-2 py-1 text-xs text-dark-2 hover:bg-sand-l disabled:opacity-40';
+  // El mismo molde que usan los catalogos y Caja Chica. Tener un boton con
+  // otra forma en una sola pantalla se nota, y lo unico que dice es que esa
+  // pantalla se escribio aparte.
+  const boton =
+    'rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l disabled:opacity-40';
+  const botonRojo =
+    'rounded-md border border-rust/40 px-3 py-1 text-xs font-semibold text-rust hover:bg-rust-l disabled:opacity-40';
 
   return (
     <section className="space-y-4">
@@ -268,45 +280,64 @@ export function SolicitudesSection({ canEdit }: { canEdit: boolean }) {
         onRetry={() => void solicitudesQ.refetch()}
         emptyMessage="Todavía no hay solicitudes de vale."
         actions={(s) => (
-          <div className="flex flex-wrap justify-end gap-1">
-            <button className={botonChico} onClick={() => setDlg({ tipo: 'imprimir', s })}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button className={boton} onClick={() => setDlg({ tipo: 'imprimir', s })}>
               Imprimir
             </button>
             {canEdit && s.estado === 'borrador' && (
-              <button className={botonChico} onClick={() => setDlg({ tipo: 'enviar', s })}>
-                Enviar al tesorero
+              <button className={boton} onClick={() => setDlg({ tipo: 'enviar', s })}>
+                Al tesorero
               </button>
             )}
             {canEdit && estadoAlcanzado(s.estado, 'vale_emitido') && (
-              <button className={botonChico} onClick={() => setDlg({ tipo: 'despacho', s })}>
+              <button className={boton} onClick={() => setDlg({ tipo: 'despacho', s })}>
                 Despacho
               </button>
             )}
             {canEdit && estadoAlcanzado(s.estado, 'despachada') && (
-              <button className={botonChico} onClick={() => setDlg({ tipo: 'documentos', s })}>
+              <button className={boton} onClick={() => setDlg({ tipo: 'documentos', s })}>
                 Factura
               </button>
             )}
             {canEdit && !estadoAlcanzado(s.estado, 'en_reporte') && (
-              <button className={botonChico} onClick={() => setDlg({ tipo: 'editar', s })}>
+              <button className={boton} onClick={() => setDlg({ tipo: 'editar', s })}>
                 Editar
               </button>
             )}
-            {canEdit && s.estado === 'borrador' && (
+            {/*
+              Borrar no depende del estado, a proposito: hace falta justamente
+              para lo ya enviado --las pruebas que hay que limpiar. La base
+              pone los dos frenos que si importan: solo admin, y nunca un
+              renglon de un control ya cerrado.
+            */}
+            {canDelete && (
               <button
-                className={`${botonChico} text-rust`}
+                className={botonRojo}
+                disabled={borrar.isPending}
                 onClick={async () => {
+                  const enControl = s.reporte_id != null;
+                  const conTesorero = s.estado === 'enviada_tesorero';
                   const ok = await confirm({
-                    title: 'Anular la solicitud',
-                    message: `${s.serial ?? 'Esta solicitud'} dejará de verse. Queda el registro en auditoría.`,
+                    title: `Borrar ${s.serial ?? 'la solicitud'}`,
+                    message: [
+                      'Desaparece de la lista. Queda el rastro en auditoría.',
+                      enControl && 'Sale del control de vales de su quincena y el total baja.',
+                      conTesorero && 'Se retira de la bandeja del tesorero.',
+                    ]
+                      .filter(Boolean)
+                      .join(' '),
                     danger: true,
                   });
                   if (!ok) return;
-                  await borrar.mutateAsync(s.id);
-                  toast.success('Solicitud anulada.');
+                  try {
+                    await borrar.mutateAsync(s.id);
+                    toast.success('Solicitud borrada.');
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'No se pudo borrar.');
+                  }
                 }}
               >
-                Anular
+                Borrar
               </button>
             )}
           </div>
@@ -420,7 +451,13 @@ export function SolicitudesSection({ canEdit }: { canEdit: boolean }) {
               dlg.s.autorizado_por_id ? (personaPorId.get(dlg.s.autorizado_por_id) ?? null) : null
             }
             solicitante={
-              dlg.s.solicitado_por_id ? (empleadoPorId.get(dlg.s.solicitado_por_id) ?? null) : null
+              // Puede venir de cualquiera de las dos listas: los gerentes que
+              // piden vales estan en Personal JD, no en la planilla.
+              dlg.s.solicitado_por_persona_id
+                ? (personaPorId.get(dlg.s.solicitado_por_persona_id) ?? null)
+                : dlg.s.solicitado_por_id
+                  ? (empleadoPorId.get(dlg.s.solicitado_por_id) ?? null)
+                  : null
             }
           />
         )}

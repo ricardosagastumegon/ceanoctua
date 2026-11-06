@@ -1,16 +1,35 @@
-import { Fragment, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, type CSSProperties, type ReactNode } from 'react';
 import { formatDateShort } from '@/lib/dates';
 import type { Reporte, Responsable, Solicitud } from './api';
 import logoOl from './logo-ol.png';
 
 /**
  * Replica del formato oficial OL-RG-0270 v02 · Operaciones (hoja «Control de
- * Vales»). Es el documento que sustenta la solicitud de pago de la quincena.
+ * Vales» del libro que entrego la usuaria). Es el documento que sustenta la
+ * solicitud de pago de la quincena.
  *
- * LA NOTA AL PIE DE LA HOJA manda: «una hoja debe de llevar 6 cuadros para
- * registrar los vales». Los cuadros no se guardan en la base: se derivan
- * agrupando las solicitudes del periodo por responsable, en el orden del
- * catalogo. Asi el total siempre cuadra con sus renglones.
+ * SE RECONSTRUYO CELDA POR CELDA desde el .xlsx, no de memoria: anchos de
+ * columna, altos de fila, combinaciones y que lado de cada celda lleva linea.
+ * Las tres cosas que estaban mal y se notaban al imprimir:
+ *
+ *   1. SALIA EN VERTICAL. La hoja es horizontal («landscape» en el page
+ *      setup). Nueve columnas en una letter vertical no caben, y de ahi
+ *      venia el descuadre entero. El `@page` global del proyecto es vertical,
+ *      asi que este documento se trae el suyo mientras esta abierto.
+ *
+ *   2. LA HOJA NO EMPIEZA EN LA COLUMNA B. El area de impresion es A1:K107:
+ *      A (2.1 de ancho) y K (3.3) son margenes interiores, no columnas con
+ *      datos. Sin ellas el cuadro se pega a los bordes del papel.
+ *
+ *   3. EL «Totalizado» ES UNA BANDA CERRADA de lado a lado, no tres celdas
+ *      sueltas con una raya encima.
+ *
+ * GEOMETRIA. Once columnas. El ancho de Excel se pasa a pixeles con la
+ * formula de Calibri 11 (px = ancho*7 + 5) y de ahi a porcentaje, que es lo
+ * que aguanta el cambio de tamano de papel:
+ *
+ *   A 2.11  B 9.55  C 9.55  D 20.0  E 9.55  F 9.55
+ *   G 20.0  H 12.66 I 14.0  J 9.55  K 3.33   = 894 px
  *
  * DOS DISPOSICIONES DE COLUMNAS, y la diferencia es de fondo:
  *
@@ -19,28 +38,28 @@ import logoOl from './logo-ol.png';
  *   · varios -- el carro cambia en cada renglon, asi que en lugar del
  *     kilometraje se anotan vehiculo, propietario, observaciones y placa.
  *
- * GEOMETRIA. Nueve columnas, B..J, con el ancho que tienen en el Excel
- * (9.55 9.55 20.0 9.55 9.55 20.0 12.66 14.0 9.55 = 114.41). Horizontal, que
- * es como esta configurada la hoja.
+ * Los dos son independientes de que el cuadro tenga vehiculo: en la hoja
+ * original, el del mensajero lleva columnas de «varios» y aun asi su moto
+ * sale en la cabecera.
  */
 
-const K = 1;
-const SHEET_W = '255mm';
-const pt = (v: number) => `${+(v * K).toFixed(2)}pt`;
+const pt = (v: number) => `${+v.toFixed(2)}pt`;
 
-const LINEA = '1px solid #000000';
-const GRUESA = '1.5px solid #000000';
+const LINEA = '0.75pt solid #000000';
 
+/** Porcentaje de cada columna sobre los 894 px del area de impresion. */
 const COL_W = [
-  '8.35%', // B · Fecha
-  '8.35%', // C · Vale #
-  '17.48%', // D · Solicitado por / Responsable
-  '8.35%', // E · Galones
-  '8.35%', // F · Monto
-  '17.48%', // G · Km x Gl anterior | Vehiculo
-  '11.07%', // H · Km x Gl actual   | Propietario
-  '12.24%', // I · Kms recorridos   | Observaciones
-  '8.35%', // J · Km x Gl           | Placa
+  '2.211%', //  A · margen interior
+  '8.039%', //  B · Fecha
+  '8.039%', //  C · Vale #
+  '16.217%', // D · Solicitado por / Responsable
+  '8.039%', //  E · Galones
+  '8.039%', //  F · Monto
+  '16.217%', // G · Km x Gl ANTERIOR | Vehiculo
+  '10.473%', // H · Km x Gl ACTUAL   | Propietario
+  '11.519%', // I · Kms recorridos   | Observaciones
+  '8.039%', //  J · Km x Gl          | Placa
+  '3.167%', //  K · margen interior
 ];
 const NCOL = COL_W.length;
 
@@ -49,7 +68,7 @@ const MESES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
-/** Cuantos renglones en blanco deja cada cuadro para escribir a mano. */
+/** Cuantos renglones deja cada cuadro como minimo, para escribir a mano. */
 const RENGLONES_MINIMOS = 4;
 
 function num(n: number | null | undefined, dec = 2): string {
@@ -57,14 +76,20 @@ function num(n: number | null | undefined, dec = 2): string {
   return n.toLocaleString('es-GT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
+/** Que lados llevan linea. Por omision los cuatro. */
+type Lados = { l?: boolean; t?: boolean; r?: boolean; b?: boolean };
+
 function Td({
   children,
   colSpan,
   rowSpan,
   style,
   alto,
-  al = 'left',
+  al = 'center',
+  lados,
   sinBorde,
+  tam,
+  negrita,
 }: {
   children?: ReactNode;
   colSpan?: number;
@@ -72,18 +97,29 @@ function Td({
   style?: CSSProperties;
   alto?: number;
   al?: 'left' | 'center' | 'right';
+  lados?: Lados;
   sinBorde?: boolean;
+  tam?: number;
+  negrita?: boolean;
 }) {
+  const s: Lados = sinBorde
+    ? { l: false, t: false, r: false, b: false }
+    : { l: true, t: true, r: true, b: true, ...lados };
   return (
     <td
       colSpan={colSpan}
       rowSpan={rowSpan}
       style={{
-        border: sinBorde ? 'none' : LINEA,
-        padding: '0.5pt 3pt',
+        borderLeft: s.l ? LINEA : 'none',
+        borderTop: s.t ? LINEA : 'none',
+        borderRight: s.r ? LINEA : 'none',
+        borderBottom: s.b ? LINEA : 'none',
+        padding: '0.5pt 2pt',
         height: alto ? pt(alto) : undefined,
         textAlign: al,
         verticalAlign: 'middle',
+        fontSize: tam ? pt(tam) : undefined,
+        fontWeight: negrita ? 700 : undefined,
         ...style,
       }}
     >
@@ -91,6 +127,9 @@ function Td({
     </td>
   );
 }
+
+/** Las columnas A y K son margen: van siempre, vacias y sin linea. */
+const Margen = () => <Td sinBorde />;
 
 export type Bloque = {
   responsable: Responsable;
@@ -108,18 +147,18 @@ type Props = {
   realizadoPor?: { nombre: string; puesto: string } | null;
 };
 
+/** Los kilometros de un renglon son la RESTA, no la lectura del odometro. */
+const recorridos = (f: Solicitud) =>
+  f.kilometraje_actual != null && f.km_ultima_llenada != null
+    ? f.kilometraje_actual - f.km_ultima_llenada
+    : 0;
+
 function Cuadro({ bloque }: { bloque: Bloque }) {
   const { responsable, nombre, puesto, vehiculo, filas } = bloque;
   const asignado = responsable.tipo_bloque === 'vehiculo_asignado';
 
   const totalGalones = filas.reduce((a, f) => a + (f.galones ?? 0), 0);
   const totalMonto = filas.reduce((a, f) => a + (f.monto ?? 0), 0);
-  // Los kilometros recorridos de un renglon son la resta, no la lectura del
-  // odometro. Sumar `kilometraje_actual` daria cientos de miles.
-  const recorridos = (f: Solicitud) =>
-    f.kilometraje_actual != null && f.km_ultima_llenada != null
-      ? f.kilometraje_actual - f.km_ultima_llenada
-      : 0;
   const totalKms = filas.reduce((a, f) => a + recorridos(f), 0);
 
   const vacias = Math.max(0, RENGLONES_MINIMOS - filas.length);
@@ -128,138 +167,171 @@ function Cuadro({ bloque }: { bloque: Bloque }) {
     <>
       {/* separador entre cuadros */}
       <tr>
-        <Td colSpan={NCOL} alto={8} sinBorde />
+        <Td colSpan={NCOL} alto={10} sinBorde />
       </tr>
 
-      {/* ── Encabezado del cuadro · lo que va en rojo en la hoja ─── */}
+      {/* ── Marca y tipo de vehiculo (fila 9 del original) ────────── */}
       <tr>
-        <Td colSpan={3} alto={16.9} style={{ fontWeight: 600 }}>
+        <Margen />
+        <Td colSpan={3} alto={16.9} al="left" negrita>
           Marca del Vehículo
         </Td>
-        <Td colSpan={3} al="center" style={{ fontWeight: 700 }}>
+        <Td colSpan={3} tam={11} negrita>
           {vehiculo?.marca ?? 'varios'}
         </Td>
-        <Td style={{ fontWeight: 600 }}>Tipo de Vehículo</Td>
-        <Td colSpan={2} al="center" style={{ fontWeight: 700 }}>
+        <Td lados={{ r: false }} al="left" negrita>
+          Tipo de Vehículo
+        </Td>
+        <Td colSpan={2} lados={{ l: false }} tam={10} negrita>
           {vehiculo?.tipo ?? 'VEHÍCULOS VARIOS'}
         </Td>
-      </tr>
-      <tr>
-        <Td colSpan={2} alto={16.9} style={{ fontWeight: 600 }}>
-          Responsable:
-        </Td>
-        <Td al="center" style={{ fontWeight: 700 }}>
-          {puesto}
-        </Td>
-        <Td colSpan={3} al="center" style={{ fontWeight: 700 }}>
-          {nombre}
-        </Td>
-        <Td style={{ fontWeight: 600 }}>{asignado ? 'PLACA' : ''}</Td>
-        <Td colSpan={2} al="center" style={{ fontWeight: 700 }}>
-          {vehiculo?.placa ?? ''}
-        </Td>
+        <Margen />
       </tr>
 
-      {/* ── Cabecera de columnas ──────────────────────────────────── */}
-      <tr style={{ fontWeight: 600 }}>
-        <Td alto={24} al="center">Fecha</Td>
-        <Td al="center">Vale #</Td>
-        <Td al="center">{asignado ? 'Solicitado por' : 'Responsable'}</Td>
-        <Td al="center">Galones</Td>
-        <Td al="center">{asignado ? 'Monto fact.' : 'Monto'}</Td>
+      {/* ── Responsable (fila 10) ─────────────────────────────────── */}
+      {/*
+        El reparto de columnas cambia entre los dos tipos de cuadro, tal como
+        en la hoja: con vehiculo asignado la etiqueta ocupa B:C y el cargo va
+        en D; en los de varios la etiqueta es solo B y el cargo ocupa C:D,
+        que es mas largo --ahi caben «DEPARTAMENTO DE COMPRAS».
+      */}
+      <tr>
+        <Margen />
+        <Td colSpan={asignado ? 2 : 1} alto={16.9} lados={{ r: false }} al="left" negrita>
+          Responsable:
+        </Td>
+        <Td colSpan={asignado ? 1 : 2} tam={11} negrita al={asignado ? 'left' : 'center'}>
+          {puesto}
+        </Td>
+        <Td colSpan={3} lados={{ l: false }} tam={11} negrita>
+          {nombre}
+        </Td>
+        {/* La placa solo sale aqui en los cuadros de vehiculo asignado; en
+            los de varios va por renglon, en su propia columna. */}
+        <Td lados={{ r: false }} tam={10} negrita>
+          {asignado ? 'PLACA' : ''}
+        </Td>
+        <Td colSpan={2} lados={{ l: false }} tam={11} negrita>
+          {asignado ? (vehiculo?.placa ?? '') : ''}
+        </Td>
+        <Margen />
+      </tr>
+
+      {/* ── Cabecera de columnas (fila 11, alto 24) ───────────────── */}
+      <tr>
+        <Margen />
+        <Td alto={24} negrita>Fecha</Td>
+        <Td negrita>Vale #</Td>
+        <Td negrita>{asignado ? 'Solicitado por' : 'Responsable'}</Td>
+        <Td negrita>Galones</Td>
+        <Td negrita style={{ lineHeight: 1.05 }}>
+          {asignado ? (
+            <>
+              Monto
+              <br />
+              fact.
+            </>
+          ) : (
+            'Monto'
+          )}
+        </Td>
         {asignado ? (
           <>
-            <Td colSpan={2} al="center" style={{ lineHeight: 1.1 }}>
+            <Td colSpan={2} negrita style={{ lineHeight: 1.05 }}>
               Km X Gl
               <br />
-              <span style={{ fontSize: pt(7) }}>ANTERIOR&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ACTUAL</span>
+              <span style={{ fontSize: pt(8) }}>ANTERIOR&nbsp;&nbsp;&nbsp;&nbsp;ACTUAL</span>
             </Td>
-            <Td al="center" style={{ lineHeight: 1.1 }}>
+            <Td negrita style={{ lineHeight: 1.05 }}>
               Kms
               <br />
               Recorridos
             </Td>
-            <Td al="center">Km X Gl</Td>
+            <Td negrita>Km X Gl</Td>
           </>
         ) : (
           <>
-            <Td al="center">Vehículo</Td>
-            <Td al="center">Propietario</Td>
-            <Td al="center">Observaciones</Td>
-            <Td al="center">Placa</Td>
+            <Td negrita>Vehiculo</Td>
+            <Td negrita>Propietario</Td>
+            <Td negrita>Observaciones</Td>
+            <Td negrita>Placa</Td>
           </>
         )}
+        <Margen />
       </tr>
 
       {/* ── Los renglones ─────────────────────────────────────────── */}
       {filas.map((f) => (
         <tr key={f.id}>
-          <Td alto={16.15} al="center">{f.fecha ? formatDateShort(f.fecha) : ''}</Td>
-          <Td al="center">{f.vale_num ?? ''}</Td>
+          <Margen />
+          <Td alto={16.15}>{f.fecha ? formatDateShort(f.fecha) : ''}</Td>
+          <Td>{f.vale_num ?? ''}</Td>
           <Td>{f.vale_a ?? ''}</Td>
-          <Td al="right">{num(f.galones, 3)}</Td>
-          <Td al="right">{num(f.monto)}</Td>
+          <Td>{num(f.galones, 3)}</Td>
+          <Td>{num(f.monto)}</Td>
           {asignado ? (
             <>
-              <Td al="right">{num(f.km_ultima_llenada, 0)}</Td>
-              <Td al="right">{num(f.kilometraje_actual, 0)}</Td>
-              <Td al="right">
-                {recorridos(f) ? num(recorridos(f), 0) : ''}
-              </Td>
-              <Td al="right">
-                {recorridos(f) && f.galones ? num(recorridos(f) / f.galones, 2) : ''}
-              </Td>
+              <Td>{num(f.km_ultima_llenada, 0)}</Td>
+              <Td>{num(f.kilometraje_actual, 0)}</Td>
+              <Td>{recorridos(f) ? num(recorridos(f), 0) : ''}</Td>
+              <Td>{recorridos(f) && f.galones ? num(recorridos(f) / f.galones, 2) : ''}</Td>
             </>
           ) : (
             <>
               <Td>{f.vehiculo_desc ?? ''}</Td>
               <Td>{f.propietario ?? ''}</Td>
               <Td>{f.observaciones ?? ''}</Td>
-              <Td al="center">{f.placa_libre ?? ''}</Td>
+              <Td>{f.placa_libre ?? ''}</Td>
             </>
           )}
+          <Margen />
         </tr>
       ))}
 
-      {/* Renglones en blanco: la hoja se usa tambien a mano. */}
+      {/* Renglones en blanco: la hoja tambien se llena a mano. */}
       {Array.from({ length: vacias }, (_, i) => (
         <tr key={`vacia-${i}`}>
-          {Array.from({ length: NCOL }, (__, j) => (
+          <Margen />
+          {Array.from({ length: 9 }, (__, j) => (
             <Td key={j} alto={16.15} />
           ))}
+          <Margen />
         </tr>
       ))}
 
-      {/* ── Totalizado ────────────────────────────────────────────── */}
-      <tr style={{ fontWeight: 700 }}>
-        <Td colSpan={2} alto={18} sinBorde />
-        <Td al="right" style={{ borderTop: GRUESA }}>
+      {/* ── Totalizado · banda cerrada de lado a lado (fila 16) ───── */}
+      <tr>
+        <Margen />
+        <Td colSpan={2} alto={18} lados={{ r: false }} negrita />
+        <Td lados={{ l: false }} al="right" negrita>
           Totalizado:
         </Td>
-        <Td al="right">{num(totalGalones, 3)}</Td>
-        <Td al="right">{num(totalMonto)}</Td>
+        <Td negrita>{num(totalGalones, 3)}</Td>
+        <Td negrita>{num(totalMonto)}</Td>
         {asignado ? (
           <>
-            <Td colSpan={2} sinBorde />
-            <Td al="right">{num(totalKms, 0)}</Td>
-            <Td sinBorde />
+            <Td colSpan={2} lados={{ r: false }} negrita />
+            <Td lados={{ l: false }} negrita>
+              {num(totalKms, 0)}
+            </Td>
+            <Td negrita />
           </>
         ) : (
-          <>
-            <Td colSpan={4} sinBorde />
-          </>
+          <Td colSpan={4} negrita />
         )}
+        <Margen />
       </tr>
 
+      {/* ── Kilometros por galon (fila 17) ────────────────────────── */}
       {asignado && (
         <tr>
-          <Td colSpan={5} alto={18} sinBorde />
-          <Td colSpan={3} al="right" style={{ fontWeight: 600 }}>
+          <Margen />
+          <Td colSpan={5} alto={18} lados={{ l: false, t: false, r: false }} />
+          <Td colSpan={3} negrita>
             Kilometros Recorridos por Galon
           </Td>
-          <Td al="right" style={{ fontWeight: 700 }}>
-            {totalGalones > 0 ? num(totalKms / totalGalones, 2) : num(0, 2)}
-          </Td>
+          <Td negrita>{totalGalones > 0 ? num(totalKms / totalGalones, 2) : num(0, 2)}</Td>
+          <Margen />
         </tr>
       )}
     </>
@@ -267,22 +339,51 @@ function Cuadro({ bloque }: { bloque: Bloque }) {
 }
 
 export function ControlValesPrintable({ reporte, bloques, realizadoPor }: Props) {
+  /**
+   * La hoja es horizontal. El `@page` de index.css es vertical porque lo son
+   * casi todos los documentos del sistema; este se trae el suyo mientras esta
+   * en pantalla y lo retira al cerrarse. Solo hay un imprimible abierto a la
+   * vez, asi que no se pisan.
+   */
+  useEffect(() => {
+    const el = document.createElement('style');
+    el.textContent = '@media print { @page { size: letter landscape; margin: 10mm; } }';
+    document.head.appendChild(el);
+    return () => {
+      el.remove();
+    };
+  }, []);
+
   const ini = reporte.periodo_ini ? new Date(`${reporte.periodo_ini}T12:00:00`) : null;
   const fin = reporte.periodo_fin ? new Date(`${reporte.periodo_fin}T12:00:00`) : null;
 
-  const totalGeneral = bloques.reduce(
-    (a, b) => a + b.filas.reduce((x, f) => x + (f.monto ?? 0), 0),
-    0,
-  );
+  const subtotal = (b: Bloque) => b.filas.reduce((x, f) => x + (f.monto ?? 0), 0);
+  const totalGeneral = bloques.reduce((a, b) => a + subtotal(b), 0);
+
+  /**
+   * En el «Total por vehiculo» del pie, la fila se llama por el CARGO o el
+   * departamento --«Gerente Administrativo», «Departamento de Compras»--,
+   * nunca por el nombre de la persona. Asi esta en la hoja original, y tiene
+   * sentido: lo que se reparte es el gasto de un puesto, no el de alguien.
+   */
+  const etiquetaDe = (b: Bloque) => b.responsable.etiqueta ?? b.puesto;
+
+  // El pie lleva dos columnas a la vez: la firma a la izquierda --cuatro
+  // renglones-- y la lista de totales a la derecha, que es tan larga como
+  // cuadros haya. Se recorren juntas.
+  const firma = ['', 'Realizado Por', realizadoPor?.nombre ?? '', realizadoPor?.puesto ?? ''];
+  // +2: la cabecera «Total por vehiculo» arriba y el TOTAL al final.
+  const filasPie = Math.max(firma.length, bloques.length + 2);
 
   return (
     <div
       className="printable"
       style={{
-        width: SHEET_W,
+        width: '100%',
         margin: '0 auto',
-        fontFamily: '"Segoe UI", Calibri, Arial, sans-serif',
+        fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif',
         fontSize: pt(9),
+        lineHeight: 1.15,
         color: '#000000',
         background: '#ffffff',
       }}
@@ -294,43 +395,53 @@ export function ControlValesPrintable({ reporte, bloques, realizadoPor }: Props)
           ))}
         </colgroup>
         <tbody>
-          {/* ── Encabezado de registro ─────────────────────────────── */}
+          {/* ── Encabezado de registro (filas 1-4) ─────────────────── */}
           <tr>
-            <Td colSpan={2} rowSpan={4} al="center" alto={18} style={{ padding: '2pt' }}>
-              <img src={logoOl} alt="" style={{ height: pt(46), display: 'inline-block' }} />
+            <Margen />
+            <Td colSpan={2} rowSpan={4} alto={18} style={{ padding: '2pt' }}>
+              <img src={logoOl} alt="" style={{ height: pt(48), display: 'inline-block' }} />
             </Td>
-            <Td colSpan={3} rowSpan={4} al="center" style={{ fontSize: pt(14), lineHeight: 1.15 }}>
+            <Td colSpan={3} rowSpan={4} tam={14} negrita style={{ lineHeight: 1.2 }}>
               Registro
               <br />
               Control de Vales de Combustible
             </Td>
-            <Td colSpan={2} style={{ fontWeight: 600 }}>Código:</Td>
-            <Td colSpan={2} al="center">OL-RG-0270</Td>
+            <Td colSpan={2} negrita>Código:</Td>
+            <Td colSpan={2} negrita>OL-RG-0270</Td>
+            <Margen />
           </tr>
           <tr>
-            <Td colSpan={2} alto={18} style={{ fontWeight: 600 }}>Fecha:</Td>
-            <Td colSpan={2} al="center">Septiembre 2024</Td>
+            <Margen />
+            <Td colSpan={2} alto={18} negrita>Fecha:</Td>
+            <Td colSpan={2} negrita>Septiembre 2024</Td>
+            <Margen />
           </tr>
           <tr>
-            <Td colSpan={2} alto={18} style={{ fontWeight: 600 }}>Sub-Proceso:</Td>
-            <Td colSpan={2} al="center">Operaciones</Td>
+            <Margen />
+            <Td colSpan={2} alto={18} negrita>Sub-Proceso:</Td>
+            <Td colSpan={2} negrita>Operaciones</Td>
+            <Margen />
           </tr>
           <tr>
-            <Td colSpan={2} alto={18} style={{ fontWeight: 600 }}>Versión:</Td>
-            <Td colSpan={2} al="center">02</Td>
+            <Margen />
+            <Td colSpan={2} alto={18} negrita>Versión:</Td>
+            <Td colSpan={2} negrita>02</Td>
+            <Margen />
           </tr>
 
           <tr>
-            <Td colSpan={NCOL} alto={10} sinBorde />
+            <Td colSpan={NCOL} alto={14} sinBorde />
           </tr>
 
-          {/* ── El periodo ─────────────────────────────────────────── */}
+          {/* ── El periodo (fila 7): banda sin lineas interiores ───── */}
           <tr>
-            <Td colSpan={NCOL} alto={18.75} sinBorde style={{ fontWeight: 700, fontSize: pt(11) }}>
+            <Margen />
+            <Td colSpan={9} alto={18.75} tam={13} negrita>
               Vales de combustible del {ini ? ini.getDate() : '___'} al{' '}
               {fin ? fin.getDate() : '___'} de {fin ? MESES[fin.getMonth()] : '________'}{' '}
               {fin ? fin.getFullYear() : '____'}
             </Td>
+            <Margen />
           </tr>
 
           {bloques.map((b) => (
@@ -339,39 +450,59 @@ export function ControlValesPrintable({ reporte, bloques, realizadoPor }: Props)
             </Fragment>
           ))}
 
-          {/* ── Pie: quien lo hizo y el total por vehiculo ─────────── */}
+          {/* ── Pie: la firma y el total por vehiculo (filas 87-96) ── */}
           <tr>
-            <Td colSpan={NCOL} alto={24} sinBorde />
+            <Td colSpan={NCOL} alto={26} sinBorde />
           </tr>
-          <tr>
-            <Td colSpan={3} alto={15} style={{ fontWeight: 600 }}>
-              Realizado Por
-            </Td>
-            <Td colSpan={2} sinBorde />
-            <Td colSpan={4} al="center" style={{ fontWeight: 700 }}>
-              Total por vehículo
-            </Td>
-          </tr>
-          {bloques.map((b, i) => {
-            const subtotal = b.filas.reduce((x, f) => x + (f.monto ?? 0), 0);
+          {Array.from({ length: filasPie }, (_, i) => {
+            const b = bloques[i - 1];
+            const esTotal = i === bloques.length + 1;
             return (
-              <tr key={`tot-${b.responsable.id}`}>
-                <Td colSpan={3} alto={15} sinBorde style={{ fontWeight: i === 0 ? 700 : 400 }}>
-                  {i === 0 ? (realizadoPor?.nombre ?? '') : i === 1 ? (realizadoPor?.puesto ?? '') : ''}
-                </Td>
+              <tr key={`pie-${i}`}>
+                <Margen />
+                {i < firma.length ? (
+                  <Td
+                    colSpan={3}
+                    alto={15.75}
+                    lados={{ t: i === 0, b: i === firma.length - 1 }}
+                    negrita={i !== 1}
+                  >
+                    {firma[i]}
+                  </Td>
+                ) : (
+                  <Td colSpan={3} alto={15.75} sinBorde />
+                )}
                 <Td colSpan={2} sinBorde />
-                <Td colSpan={3}>
-                  {b.responsable.tipo_bloque === 'vehiculo_asignado' ? b.puesto : b.nombre}
-                </Td>
-                <Td al="right">{num(subtotal)}</Td>
+                {i === 0 ? (
+                  <Td colSpan={2} negrita>
+                    Total por vehículo
+                  </Td>
+                ) : b ? (
+                  <>
+                    <Td al="left" negrita>
+                      {etiquetaDe(b)}
+                    </Td>
+                    <Td al="right" negrita>
+                      {num(subtotal(b))}
+                    </Td>
+                  </>
+                ) : esTotal ? (
+                  <>
+                    <Td al="left" sinBorde negrita>
+                      TOTAL
+                    </Td>
+                    <Td al="right" sinBorde negrita>
+                      {num(totalGeneral)}
+                    </Td>
+                  </>
+                ) : (
+                  <Td colSpan={2} sinBorde />
+                )}
+                <Td colSpan={2} sinBorde />
+                <Margen />
               </tr>
             );
           })}
-          <tr style={{ fontWeight: 700 }}>
-            <Td colSpan={5} alto={15} sinBorde />
-            <Td colSpan={3} al="right">TOTAL</Td>
-            <Td al="right">{num(totalGeneral)}</Td>
-          </tr>
         </tbody>
       </table>
     </div>

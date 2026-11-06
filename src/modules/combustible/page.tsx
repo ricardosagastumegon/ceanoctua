@@ -12,6 +12,9 @@ import { ReportesSection } from './ReportesSection';
 export default function CombustiblePage() {
   const { profile } = useAuth();
   const canEdit = profile?.rol === 'admin' || profile?.rol === 'asistente';
+  // Borrar una solicitud de vale es del administrador. La base lo vuelve a
+  // comprobar en `comb_borrar_solicitud`: esto solo esconde el boton.
+  const canDelete = profile?.rol === 'admin';
   const [tab, setTab] = useState<'solicitudes' | 'control'>('solicitudes');
 
   const btn = (activo: boolean) =>
@@ -38,9 +41,9 @@ export default function CombustiblePage() {
       </nav>
 
       {tab === 'solicitudes' ? (
-        <SolicitudesSection canEdit={canEdit} />
+        <SolicitudesSection canEdit={canEdit} canDelete={canDelete} />
       ) : (
-        <ReportesSection canEdit={canEdit} />
+        <ReportesSection canEdit={canEdit} canDelete={canDelete} />
       )}
     </div>
   );

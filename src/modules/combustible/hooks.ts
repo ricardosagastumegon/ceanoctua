@@ -42,11 +42,20 @@ export function useActualizarSolicitud() {
   });
 }
 
+/**
+ * Borrar toca tres sitios: la lista, el total del control del que sale y la
+ * bandeja del Tesorero, de donde se retira el envio. Invalidar solo la lista
+ * deja la pantalla diciendo que el control tiene un vale que ya no existe.
+ */
 export function useBorrarSolicitud() {
   const qc = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: (id) => solicitudesApi.remove(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+      void qc.invalidateQueries({ queryKey: REPORTES_KEY });
+      void qc.invalidateQueries({ queryKey: ENVIOS_KEY });
+    },
   });
 }
 
@@ -80,6 +89,18 @@ export function useCerrarReporte() {
   const qc = useQueryClient();
   return useMutation<Reporte, Error, string>({
     mutationFn: (id) => reportesApi.cerrar(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: REPORTES_KEY });
+      void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+    },
+  });
+}
+
+/** Borrar el control suelta sus vales, asi que las dos listas cambian. */
+export function useBorrarReporte() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => reportesApi.remove(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: REPORTES_KEY });
       void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });

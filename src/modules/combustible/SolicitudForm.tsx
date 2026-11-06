@@ -3,6 +3,7 @@ import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useResponsables } from './hooks';
+import { SelectorPersona, aClave, deClave, nombreDeClave, type Gente } from './SelectorPersona';
 import type { Solicitud, SolicitudInsert } from './api';
 
 /**
@@ -13,8 +14,8 @@ import type { Solicitud, SolicitudInsert } from './api';
 type Props = {
   inicial?: Solicitud | null;
   vehiculos: { id: string; marca: string; placa: string; tipo: string | null }[];
-  empleados: { id: string; nombre: string; puesto: string | null }[];
-  personas: { id: string; nombre: string }[];
+  empleados: Gente[];
+  personas: Gente[];
   onSubmit: (valores: SolicitudInsert) => void;
   onCancel: () => void;
   guardando?: boolean;
@@ -24,8 +25,9 @@ type Estado = {
   fecha: string;
   responsable_id: string;
   vehiculo_id: string;
+  /** `jd:<uuid>` o `emp:<uuid>`. Ver SelectorPersona. */
   vale_a: string;
-  solicitado_por_id: string;
+  solicitado_por: string;
   departamento: string;
   justificacion: string;
   autorizado_por_id: string;
@@ -43,7 +45,7 @@ const vacio: Estado = {
   responsable_id: '',
   vehiculo_id: '',
   vale_a: '',
-  solicitado_por_id: '',
+  solicitado_por: '',
   departamento: '',
   justificacion: '',
   autorizado_por_id: '',
@@ -61,8 +63,11 @@ function desdeFila(s: Solicitud): Estado {
     fecha: s.fecha ?? vacio.fecha,
     responsable_id: s.responsable_id ?? '',
     vehiculo_id: s.vehiculo_id ?? '',
-    vale_a: s.vale_a ?? '',
-    solicitado_por_id: s.solicitado_por_id ?? '',
+    vale_a: aClave({ personaId: s.vale_a_persona_id, empleadoId: s.vale_a_empleado_id }),
+    solicitado_por: aClave({
+      personaId: s.solicitado_por_persona_id,
+      empleadoId: s.solicitado_por_id,
+    }),
     departamento: s.departamento ?? '',
     justificacion: s.justificacion ?? '',
     autorizado_por_id: s.autorizado_por_id ?? '',
@@ -113,12 +118,20 @@ export function SolicitudForm({
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
+    const valeA = deClave(v.vale_a);
+    const pide = deClave(v.solicitado_por);
     onSubmit({
       fecha: v.fecha,
       responsable_id: v.responsable_id || null,
       vehiculo_id: v.vehiculo_id || null,
-      vale_a: v.vale_a.trim() || null,
-      solicitado_por_id: v.solicitado_por_id || null,
+      vale_a_persona_id: valeA.personaId,
+      vale_a_empleado_id: valeA.empleadoId,
+      // Ademas del vinculo se guarda el NOMBRE con el que se imprime. Si
+      // dentro de dos anios alguien corrige el catalogo, el papel emitido
+      // ese dia no cambia. Mismo criterio que el `snapshot` de un envio.
+      vale_a: nombreDeClave(v.vale_a, personas, empleados),
+      solicitado_por_id: pide.empleadoId,
+      solicitado_por_persona_id: pide.personaId,
       departamento: v.departamento.trim() || null,
       justificacion: v.justificacion.trim() || null,
       autorizado_por_id: v.autorizado_por_id || null,
@@ -171,25 +184,29 @@ export function SolicitudForm({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextInput
+        {/*
+          Obligatorio: es el nombre que lleva el papel. Ademas obliga a
+          escogerlo de la lista en las solicitudes viejas que traian el
+          nombre escrito a mano, que es justo lo que habia que quitar.
+        */}
+        <SelectorPersona
           label="Vale a"
-          placeholder="Quién viene a pedirlo"
+          hint="A nombre de quién se emite."
           value={v.vale_a}
-          onChange={(e) => set('vale_a', e.target.value)}
+          onChange={(x) => set('vale_a', x)}
+          personas={personas}
+          empleados={empleados}
+          vacio="Escoge…"
+          required
         />
-        <Select
+        <SelectorPersona
           label="Solicitado por"
-          value={v.solicitado_por_id}
-          onChange={(e) => set('solicitado_por_id', e.target.value)}
-        >
-          <option value="">—</option>
-          {empleados.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.nombre}
-              {x.puesto ? ` · ${x.puesto}` : ''}
-            </option>
-          ))}
-        </Select>
+          hint="Quien lo pide. Suele ser un gerente, y están en Personal JD."
+          value={v.solicitado_por}
+          onChange={(x) => set('solicitado_por', x)}
+          personas={personas}
+          empleados={empleados}
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

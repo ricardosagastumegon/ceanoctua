@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
+import { parseNumero } from '@/lib/money';
 import { useResponsables } from './hooks';
 import { SelectorPersona, aClave, deClave, nombreDeClave, type Gente } from './SelectorPersona';
 import type { Solicitud, SolicitudInsert } from './api';
@@ -81,11 +82,6 @@ function desdeFila(s: Solicitud): Estado {
   };
 }
 
-const numero = (v: string): number | null => {
-  const n = Number(v.replace(/,/g, ''));
-  return v.trim() === '' || Number.isNaN(n) ? null : n;
-};
-
 export function SolicitudForm({
   inicial,
   vehiculos,
@@ -135,9 +131,9 @@ export function SolicitudForm({
       departamento: v.departamento.trim() || null,
       justificacion: v.justificacion.trim() || null,
       autorizado_por_id: v.autorizado_por_id || null,
-      monto_autorizado: numero(v.monto_autorizado),
-      kilometraje_actual: numero(v.kilometraje_actual),
-      km_ultima_llenada: numero(v.km_ultima_llenada),
+      monto_autorizado: parseNumero(v.monto_autorizado),
+      kilometraje_actual: parseNumero(v.kilometraje_actual),
+      km_ultima_llenada: parseNumero(v.km_ultima_llenada),
       vehiculo_desc: esVarios ? v.vehiculo_desc.trim() || null : null,
       propietario: esVarios ? v.propietario.trim() || null : null,
       placa_libre: esVarios ? v.placa_libre.trim() || null : null,

@@ -8,7 +8,7 @@ import { TextInput } from '@/components/ui/TextInput';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/dates';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, parseNumero } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 import { useEmpleados, usePersonas, useProveedores } from '@/modules/admin/hooks';
 import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
@@ -544,14 +544,26 @@ function FormDespacho({
     manguera: s.manguera ?? '',
   });
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
-  const n = (v: string) => (v.trim() === '' ? null : Number(v));
 
-  // El total lo da la gasolinera; si no viene, se calcula para no dejarlo en
-  // blanco --el control de vales no cierra si falta un monto.
-  const montoCalculado =
-    f.monto.trim() !== ''
-      ? Number(f.monto)
-      : Number(f.galones || 0) * Number(f.precio_galon || 0);
+  const galones = parseNumero(f.galones);
+  const precio = parseNumero(f.precio_galon);
+  const calculado =
+    galones != null && precio != null ? Number((galones * precio).toFixed(2)) : null;
+
+  /**
+   * EL TOTAL SE ESCRIBE SOLO: galones por precio, en la casilla, no insinuado
+   * en una ayuda debajo. Antes se calculaba igual pero la casilla se quedaba
+   * vacia y habia que fiarse de un texto gris.
+   *
+   * Se puede escribir encima, porque la gasolinera a veces redondea y el
+   * comprobante es el que vale. Y si se vacia, vuelve al automatico: borrar
+   * es la forma natural de decir «calculalo tu otra vez».
+   */
+  const [totalManual, setTotalManual] = useState(s.monto != null);
+  const totalEnPantalla = totalManual ? f.monto : (calculado?.toFixed(2) ?? '');
+  const total = totalManual ? parseNumero(f.monto) : calculado;
+  const difiere =
+    totalManual && calculado != null && total != null && Math.abs(total - calculado) >= 0.01;
 
   return (
     <form
@@ -562,9 +574,9 @@ function FormDespacho({
           recibo_num: f.recibo_num.trim() || null,
           recibo_fecha: f.recibo_fecha || null,
           producto: f.producto.trim() || null,
-          galones: n(f.galones),
-          precio_galon: n(f.precio_galon),
-          monto: montoCalculado > 0 ? Number(montoCalculado.toFixed(2)) : null,
+          galones,
+          precio_galon: precio,
+          monto: total != null && total > 0 ? Number(total.toFixed(2)) : null,
           bomba: f.bomba.trim() || null,
           manguera: f.manguera.trim() || null,
         });
@@ -604,12 +616,18 @@ function FormDespacho({
           label="Total"
           inputMode="decimal"
           hint={
-            f.monto.trim() === '' && montoCalculado > 0
-              ? `Se guardará ${formatMoney(montoCalculado)}`
-              : 'Lo que dice el comprobante'
+            difiere && calculado != null
+              ? `Ojo: galones × precio da ${formatMoney(calculado)}`
+              : totalManual
+                ? 'Lo que dice el comprobante. Vacíalo para recalcularlo.'
+                : 'Galones × precio. Puedes escribir encima.'
           }
-          value={f.monto}
-          onChange={(e) => set('monto', e.target.value)}
+          value={totalEnPantalla}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTotalManual(v.trim() !== '');
+            set('monto', v);
+          }}
         />
         <TextInput label="Bomba" value={f.bomba} onChange={(e) => set('bomba', e.target.value)} />
         <TextInput

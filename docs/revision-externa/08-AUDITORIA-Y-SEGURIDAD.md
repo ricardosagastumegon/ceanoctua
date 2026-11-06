@@ -189,6 +189,17 @@ Se consultaron **las 104 tablas** con la sesión del usuario más restringido de
 | `firma_miembros` | 5 | A quién iba dirigido cada documento de firma |
 | `cea_notas_entrega` | 2 | Entregas físicas |
 
+> **Cerrado el 5 nov 2026.** Las seis quedaron acotadas al módulo desde el que se leen, más `miel_constancias`, y los catálogos de personas (`personas`, `empleados`, `invitados`, `directorio`) a los módulos operativos. El barrido de las 104 tablas repetido después:
+>
+> | | Antes | Después |
+> |---|---|---|
+> | Tablas que ve el usuario más restringido | 19 | **10** |
+> | Filas | 249 | **69** |
+>
+> Lo que queda son listas de valores —tipos de pago, entidades, proveedores, vehículos, miembros de junta— y su propia fila de `usuarios`. **Ningún contenido operativo ajeno.**
+>
+> Se comprobó también lo contrario, que es lo que de verdad podía romperse: el usuario de sólo lectura con módulos (CEA, Finanzas, T&T) sigue viendo 55 tablas y 717 filas, incluidas las seis cerradas. Acotar de más no se nota hasta que alguien abre la aplicación.
+
 **La asimetría es el patrón, y es el mismo que el de la auditoría:** *la cabecera está protegida y el detalle no*. `caja_chica_liquidaciones` quedó acotada y sus 53 renglones no. `firmas` quedó acotada y `firma_miembros` no. `tc_consumos` está acotada y `consumo_renglones` sólo está vacía — el día que tenga datos, serán visibles.
 
 No parece una decisión de diseño. Parece que las políticas se escribieron tabla por tabla y las de detalle heredaron la regla permisiva por omisión.

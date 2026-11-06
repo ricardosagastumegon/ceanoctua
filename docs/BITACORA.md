@@ -6,6 +6,104 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 46 · 2026-11-06 · Combustible, como lo usa de verdad
+
+**Objetivo:** cinco cosas que la usuaria encontró al usar el módulo recién
+entregado. Ninguna es de diseño: son de uso. Vale la pena anotarlas porque las
+tres de fondo tienen la misma forma —algo que el sistema sabía y aun así le
+pedía a ella.
+
+**El control de vales salía en blanco.** Creó CV-2026-0001 del 1 al 15 de
+noviembre, creó SV-2026-0002 con fecha 6, y el cuadro seguía diciendo cero.
+Entrar en el control era un paso manual escondido tras un botón («Renglones»),
+y encima el filtro solo aceptaba solicitudes ya despachadas. Tenía razón: si el
+vale cae en la quincena, el cuadro de esa quincena es su sitio y no hay nada
+que decidir. Ahora manda la fecha, por trigger
+(`comb_solicitudes_al_control`), y en los dos sentidos —el control que se abre
+recoge los vales que ya existían (`comb_reporte_recoge`), porque unos días crea
+primero el control y otros los vales. Con un solo sentido, la mitad de los días
+el cuadro sale vacío.
+
+Lo que el automatismo **no** hace: tocar un control cerrado, cuyo total está
+congelado y respalda un papel; ni devolver lo que se sacó a mano. Para eso está
+`excluir_del_control`, que distingue «todavía no le toca» de «la saqué yo».
+Sin esa marca, «Quitar» y el automatismo se pelean y gana siempre el
+automatismo.
+
+**El formulario pedía el nombre a mano.** «Vale a» era texto libre —el sitio
+exacto donde se pierde la trazabilidad: «Jose Rufino» y «Jose Rufino Ruiz» son
+dos personas para la base y una sola en la vida real. Y «Solicitado por» solo
+ofrecía la planilla, cuando quien pide el vale suele ser un gerente, y seis de
+las diez personas de Personal JD no están en `empleados`. Los dos pasan a una
+lista con las dos fuentes (`SelectorPersona`, valor `jd:<uuid>` / `emp:<uuid>`
+en una sola casilla: dos selectores dejarían elegir a los dos a la vez, que el
+CHECK rechaza, y descubrirlo al guardar es peor que no poder hacerlo).
+
+Se guarda el vínculo **y** el nombre impreso. Corregir el catálogo dentro de
+dos años no debe reescribir un papel ya emitido — mismo criterio que el
+`snapshot` de `envios`.
+
+**El documento OL-RG-0270 no cuadraba.** Se reconstruyó desde el .xlsx celda
+por celda. Tres cosas estaban mal y las tres se veían al imprimir:
+
+- Salía **en vertical**. La hoja es horizontal; nueve columnas no caben en una
+  letter vertical, y de ahí venía el descuadre entero. El `@page` global del
+  proyecto es vertical porque lo son casi todos los documentos, así que este se
+  trae el suyo mientras está en pantalla.
+- **No empieza en la columna B.** El área de impresión es A1:K107, y A (2.1 de
+  ancho) y K (3.3) son márgenes interiores, no columnas con datos.
+- El **«Totalizado» es una banda cerrada** de lado a lado, no tres celdas
+  sueltas con una raya encima.
+
+Y la etiqueta del «Total por vehículo» no depende del tipo de cuadro sino de si
+tiene título propio: `etiqueta ?? puesto`. Es la única regla que cuadra con los
+cuatro casos de su hoja (Lissa→Gerente Administrativo, Mensajero→Mensajero,
+Verónica→Departamento de Compras, Asistente→OTROS).
+
+**Borrar, solo el administrador.** Lo pidió para su usuario, y en cualquier
+estado: hacía falta para limpiar las pruebas. Va por RPC
+(`comb_borrar_solicitud`) y no por un update suelto, porque hay dos cosas que
+el cliente no garantiza: retirar el envío que esté en la bandeja del Tesorero
+—un envío sin documento detrás es una bandeja que él no puede resolver ni
+quitarse de encima— y negarse si el vale entró en un control cerrado, cuyo
+total ya viajó a Pagos.
+
+**Cambios de schema:**
+- `comb_solicitudes`: `vale_a_empleado_id`, `vale_a_persona_id`,
+  `solicitado_por_persona_id`, `excluir_del_control`; dos CHECK de fuente única.
+- Triggers `comb_solicitudes_al_control` y `comb_reportes_recoge`.
+- `comb_cerrar_reporte` ahora nombra los correlativos a los que les falta
+  despacho, en vez de decir «hay solicitudes sin monto» y ya.
+- `comb_borrar_solicitud`, solo admin.
+- Las siete funciones `comb_*` dejan de ser ejecutables por `anon`. Las de
+  trigger no eran explotables —PostgREST no expone una función que devuelve
+  `trigger`— pero la regla de la fase 45 es que ninguna `security definer` le
+  queda abierta, y una regla con excepciones que hay que recordar no sirve para
+  revisar.
+
+**Cambios de UI:**
+- Botones al molde de los catálogos (`rounded-md`, `px-3`, `font-semibold`,
+  `gap-2`). Tener un botón con otra forma en una sola pantalla se nota, y lo
+  único que dice es que esa pantalla se escribió aparte.
+- «Renglones» → «Vales», con una línea que explica para qué es ahora que no
+  hace falta en el uso normal. El control muestra cuántos vales trae, cuántos
+  van sin despacho y el total al vuelo.
+- Los tres pasos del flujo —abrir, cerrar, enviar a Pagos— escritos arriba. Que
+  ella preguntara «¿qué hace Cerrar?» es la respuesta a si hacían falta.
+- Un cuadro de «varios» ya puede llevar vehículo en la cabecera: en la hoja
+  original, el del mensajero lleva columnas de varios **y** su moto arriba. Son
+  cosas independientes y el formulario las trataba como una.
+
+**Comentarios:** la migración se probó en seco con nueve casos antes de
+aplicarse —incluidos los dos que importan de verdad: que un control cerrado no
+se deje tocar, y que el trigger siga disparando para un usuario sin EXECUTE
+sobre él. El documento se verificó renderizándolo contra los seis cuadros de la
+hoja original, no leyendo el código.
+
+**Commits clave:** `78e278f`.
+
+---
+
 ## Fase 45 · 2026-11-05 · Combustible de vehículos, y la frontera entre usuarios
 
 **Objetivo:** llevar en CEA la cadena del combustible, que vivía en papel y en un

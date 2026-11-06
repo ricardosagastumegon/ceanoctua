@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import type { Solicitud } from './api';
+import type { DatosVale } from './documento';
 import logoOl from './logo-ol.png';
 
 /**
@@ -38,13 +38,13 @@ const LINEA = '1px solid #000000';
 // es donde la parte el formato original.
 const COL_W = ['18.32%', '46.45%', '17.90%', '17.33%'];
 
+/**
+ * Recibe el documento ya aplanado (`DatosVale`) y no la fila de la base, para
+ * que el Tesorero pueda abrir el MISMO papel desde su bandeja: el no lee
+ * `comb_solicitudes`, le llega una copia dentro del envio. Ver `documento.ts`.
+ */
 type Props = {
-  solicitud: Solicitud;
-  /** Del catalogo de vehiculos: lo que va en Marca, No. Placa y Tipo. */
-  vehiculo?: { marca: string; placa: string; tipo: string | null } | null;
-  /** Personal JD. Por omision el que trae impreso el formato. */
-  autorizador?: string | null;
-  solicitante?: string | null;
+  datos: DatosVale;
 };
 
 function Celda({
@@ -106,15 +106,10 @@ function FilaDoble({
   );
 }
 
-export function SolicitudValePrintable({
-  solicitud: s,
-  vehiculo,
-  autorizador,
-  solicitante,
-}: Props) {
-  const marca = vehiculo?.marca ?? '';
-  const placa = vehiculo?.placa ?? s.placa_libre ?? '';
-  const tipo = vehiculo?.tipo ?? '';
+export function SolicitudValePrintable({ datos: s }: Props) {
+  const marca = s.marca ?? '';
+  const placa = s.placa ?? '';
+  const tipo = s.tipo ?? '';
 
   return (
     <div
@@ -260,10 +255,10 @@ export function SolicitudValePrintable({
           </tr>
           <tr>
             <Celda colSpan={2} alto={15} centrado>
-              {autorizador ?? 'Lissa Arriaza'}
+              {s.autorizado_por ?? 'Lissa Arriaza'}
             </Celda>
             <Celda colSpan={2} centrado>
-              {solicitante ?? ''}
+              {s.solicitado_por ?? ''}
             </Celda>
           </tr>
 

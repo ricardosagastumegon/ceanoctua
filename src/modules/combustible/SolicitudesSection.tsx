@@ -31,6 +31,7 @@ import {
   useResponsables,
   useSolicitudes,
 } from './hooks';
+import { datosDeSolicitud } from './documento';
 import { FacturaForm } from './FacturaForm';
 import { SolicitudForm } from './SolicitudForm';
 import { SolicitudValePrintable } from './SolicitudValePrintable';
@@ -121,6 +122,23 @@ export function SolicitudesSection({
     });
   }, [solicitudesQ.data, filtroEstado, busca, facturaPorId]);
 
+  /**
+   * El documento de un vale, armado en un solo sitio. Lo usan la impresion y
+   * el envio al Tesorero --que no puede leer esta tabla y recibe una copia.
+   * Si cada uno lo armara por su cuenta, el papel que ella imprime y el que
+   * el abre podrian acabar diciendo cosas distintas.
+   */
+  const documentoDe = (s: Solicitud) =>
+    datosDeSolicitud(s, {
+      vehiculo: s.vehiculo_id ? (vehiculoPorId.get(s.vehiculo_id) ?? null) : null,
+      autorizador: s.autorizado_por_id ? (personaPorId.get(s.autorizado_por_id) ?? null) : null,
+      solicitante: s.solicitado_por_persona_id
+        ? (personaPorId.get(s.solicitado_por_persona_id) ?? null)
+        : s.solicitado_por_id
+          ? (empleadoPorId.get(s.solicitado_por_id) ?? null)
+          : null,
+    });
+
   async function enviarAlTesorero(s: Solicitud, destinatarioId: string) {
     const veh = s.vehiculo_id ? vehiculoPorId.get(s.vehiculo_id) : null;
     try {
@@ -137,6 +155,9 @@ export function SolicitudesSection({
           monto: s.monto_autorizado ?? undefined,
           moneda: 'GTQ',
           detalle: s.justificacion ?? '',
+          // El documento completo, para que el pueda abrir el formato
+          // oficial y no solo esta ficha de cinco campos.
+          documento: documentoDe(s),
           campos: [
             { etiqueta: 'Vale a', valor: s.vale_a ?? '—' },
             { etiqueta: 'Vehículo', valor: veh ? `${veh.marca} · ${veh.placa}` : '—' },
@@ -472,24 +493,7 @@ export function SolicitudesSection({
         onClose={() => setDlg({ tipo: 'cerrado' })}
         title={dlg.tipo === 'imprimir' ? (dlg.s.serial ?? 'Solicitud de vale') : ''}
       >
-        {dlg.tipo === 'imprimir' && (
-          <SolicitudValePrintable
-            solicitud={dlg.s}
-            vehiculo={dlg.s.vehiculo_id ? (vehiculoPorId.get(dlg.s.vehiculo_id) ?? null) : null}
-            autorizador={
-              dlg.s.autorizado_por_id ? (personaPorId.get(dlg.s.autorizado_por_id) ?? null) : null
-            }
-            solicitante={
-              // Puede venir de cualquiera de las dos listas: los gerentes que
-              // piden vales estan en Personal JD, no en la planilla.
-              dlg.s.solicitado_por_persona_id
-                ? (personaPorId.get(dlg.s.solicitado_por_persona_id) ?? null)
-                : dlg.s.solicitado_por_id
-                  ? (empleadoPorId.get(dlg.s.solicitado_por_id) ?? null)
-                  : null
-            }
-          />
-        )}
+        {dlg.tipo === 'imprimir' && <SolicitudValePrintable datos={documentoDe(dlg.s)} />}
       </PrintableModal>
 
       {responsablesQ.data?.length === 0 && (

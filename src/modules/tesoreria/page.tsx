@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
+import { PrintableModal } from '@/components/ui/PrintableModal';
 import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { useToast } from '@/components/ui/Toast';
@@ -16,6 +17,8 @@ import {
   enDias,
   money,
 } from '@/modules/dashboard/tablero';
+import { leerDatosVale } from '@/modules/combustible/documento';
+import { SolicitudValePrintable } from '@/modules/combustible/SolicitudValePrintable';
 import {
   DOC_TIPO_LABEL,
   ENVIOS_KEY,
@@ -75,6 +78,9 @@ export default function TesoreriaPage() {
   const pendientesQ = usePendientes();
   const resueltosQ = useResueltos();
   const [abierto, setAbierto] = useState<Envio | null>(null);
+  /** El formato oficial, y la ficha de algo ya resuelto (sin botones). */
+  const [papel, setPapel] = useState<Envio | null>(null);
+  const [resumen, setResumen] = useState<Envio | null>(null);
 
   const resolver = useMutation({
     mutationFn: async (v: {
@@ -127,6 +133,28 @@ export default function TesoreriaPage() {
 
   const totalPendiente = pendientes.length;
   const montoPorPagar = porPagar.reduce((a, e) => a + (leerSnapshot(e).monto ?? 0), 0);
+
+  /**
+   * El documento que viaja dentro del envío, ya con el número de vale que él
+   * registró al aceptarlo. En el snapshot va vacío --cuando ella lo manda,
+   * todavía no existe-- y es justamente el dato que él quiere volver a ver.
+   */
+  function documentoDe(e: Envio) {
+    const d = leerDatosVale(leerSnapshot(e).documento);
+    if (!d) return null;
+    const dat = (e.datos ?? {}) as Record<string, unknown>;
+    return {
+      ...d,
+      vale_num: (dat.vale_num as string | undefined) ?? d.vale_num ?? null,
+    };
+  }
+
+  /** Lo que lleva papel: hoy, las solicitudes de vale. */
+  const tienePapel = (e: Envio) =>
+    e.doc_tipo === 'comb_solicitud' && documentoDe(e) != null;
+
+  const botonVer =
+    'rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l';
 
   /** Un renglón a partir de un envío, igual en todos los bloques. */
   const renglon = (e: Envio, accion?: React.ReactNode) => {
@@ -181,10 +209,22 @@ export default function TesoreriaPage() {
           cargando={pendientesQ.isLoading}
           vacio="Nadie te ha pedido un vale."
         >
+          {/*
+            «Ver» antes que «Emitir vale», en ese orden: primero se mira el
+            papel y despues se actua. Antes solo llegaba la ficha de cinco
+            campos, asi que el emitia un vale sin haber visto la solicitud.
+          */}
           {vales.map((e) =>
             renglon(
               e,
-              <BotonPrincipal onClick={() => setAbierto(e)}>Emitir vale</BotonPrincipal>,
+              <span className="flex gap-2">
+                {tienePapel(e) && (
+                  <button type="button" className={botonVer} onClick={() => setPapel(e)}>
+                    Ver
+                  </button>
+                )}
+                <BotonPrincipal onClick={() => setAbierto(e)}>Emitir vale</BotonPrincipal>
+              </span>,
             ),
           )}
         </Bloque>
@@ -275,10 +315,18 @@ export default function TesoreriaPage() {
               const s = leerSnapshot(e);
               const pagado =
                 e.datos && typeof e.datos === 'object' && 'pagado_at' in e.datos;
+              const valeNum = (e.datos as Record<string, unknown> | null)?.vale_num as
+                | string
+                | undefined;
               return (
-                <li key={e.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                  <span className="min-w-0 truncate text-dark-2">
+                <li key={e.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+                  <span className="min-w-0 flex-1 truncate text-dark-2">
                     {s.serial ?? s.titulo ?? DOC_TIPO_LABEL[e.doc_tipo as DocTipo]}
+                    {valeNum && (
+                      <span className="ml-2 rounded bg-teal/15 px-1.5 py-0.5 text-[11px] font-semibold text-teal-d">
+                        vale {valeNum}
+                      </span>
+                    )}
                   </span>
                   <span
                     className={`shrink-0 text-[11px] font-semibold ${
@@ -288,12 +336,41 @@ export default function TesoreriaPage() {
                     {e.estado === 'rechazado' ? 'Devuelto' : pagado ? 'Pagado' : 'Recibido'}
                     {e.resuelto_at ? ` · ${formatDate(e.resuelto_at)}` : ''}
                   </span>
+                  <span className="flex shrink-0 gap-2">
+                    {tienePapel(e) && (
+                      <button type="button" className={botonVer} onClick={() => setPapel(e)}>
+                        Ver
+                      </button>
+                    )}
+                    <button type="button" className={botonVer} onClick={() => setResumen(e)}>
+                      Ver resumen
+                    </button>
+                  </span>
                 </li>
               );
             })}
           </ul>
         </section>
       )}
+
+      {/* El formato oficial, el mismo que ella imprime. */}
+      <PrintableModal
+        open={papel != null}
+        onClose={() => setPapel(null)}
+        title={papel ? (leerSnapshot(papel).serial ?? 'Solicitud de vale') : ''}
+      >
+        {papel && <SolicitudValePrintable datos={documentoDe(papel) ?? {}} />}
+      </PrintableModal>
+
+      {/* La ficha de algo ya resuelto: se mira, no se decide. */}
+      <Modal
+        open={resumen != null}
+        onClose={() => setResumen(null)}
+        title={resumen ? DOC_TIPO_LABEL[resumen.doc_tipo as DocTipo] : ''}
+        size="md"
+      >
+        {resumen && <Ficha envio={resumen} trabajando={false} onCancelar={() => setResumen(null)} />}
+      </Modal>
 
       <Modal
         open={abierto != null}
@@ -316,6 +393,13 @@ export default function TesoreriaPage() {
   );
 }
 
+/**
+ * La ficha de un envio.
+ *
+ * Sin `onResolver` es de solo lectura: lo ya resuelto se mira, no se decide
+ * otra vez. Es el mismo componente a proposito --que la ficha de consulta
+ * ensene lo mismo que la de decidir es justo lo que hay que poder confiar.
+ */
 function Ficha({
   envio,
   trabajando,
@@ -324,11 +408,13 @@ function Ficha({
 }: {
   envio: Envio;
   trabajando: boolean;
-  onResolver: (datos: Record<string, unknown>, nota: string, aceptar: boolean) => void;
+  onResolver?: (datos: Record<string, unknown>, nota: string, aceptar: boolean) => void;
   onCancelar: () => void;
 }) {
   const s = leerSnapshot(envio);
   const esVale = envio.doc_tipo === 'comb_solicitud';
+  const soloLectura = onResolver == null;
+  const datos = (envio.datos ?? {}) as Record<string, unknown>;
   const [valeNum, setValeNum] = useState('');
   const [valeFecha, setValeFecha] = useState(new Date().toISOString().slice(0, 10));
   const [nota, setNota] = useState('');
@@ -361,7 +447,41 @@ function Ficha({
         </dl>
       </div>
 
-      {esVale && (
+      {soloLectura && (
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border border-sand px-3 py-2 text-sm">
+          <dt className="text-dark-3">Lo que registraste</dt>
+          <dd className="text-dark">
+            {envio.estado === 'rechazado' ? 'Devuelto' : 'Recibido'}
+            {envio.resuelto_at ? ` · ${formatDate(envio.resuelto_at)}` : ''}
+          </dd>
+          {typeof datos.vale_num === 'string' && (
+            <>
+              <dt className="text-dark-3">No. del vale</dt>
+              <dd className="font-mono font-semibold text-dark">{datos.vale_num}</dd>
+            </>
+          )}
+          {typeof datos.vale_fecha === 'string' && (
+            <>
+              <dt className="text-dark-3">Fecha del vale</dt>
+              <dd className="text-dark">{formatDate(datos.vale_fecha)}</dd>
+            </>
+          )}
+          {typeof datos.pagado_at === 'string' && (
+            <>
+              <dt className="text-dark-3">Pagada</dt>
+              <dd className="text-dark">{formatDate(datos.pagado_at)}</dd>
+            </>
+          )}
+          {envio.nota && (
+            <>
+              <dt className="text-dark-3">Nota</dt>
+              <dd className="text-dark">{envio.nota}</dd>
+            </>
+          )}
+        </dl>
+      )}
+
+      {!soloLectura && esVale && (
         <div className="grid gap-3 sm:grid-cols-2">
           <TextInput
             label="No. del vale que entregaste"
@@ -379,20 +499,33 @@ function Ficha({
         </div>
       )}
 
-      <TextArea
-        label="Nota"
-        rows={2}
-        placeholder="Opcional. Obligatoria si lo devuelves."
-        value={nota}
-        onChange={(e) => setNota(e.target.value)}
-      />
+      {!soloLectura && (
+        <TextArea
+          label="Nota"
+          rows={2}
+          placeholder="Opcional. Obligatoria si lo devuelves."
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+        />
+      )}
 
+      {soloLectura ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onCancelar}
+            className="rounded-md border border-sand px-4 py-2 text-sm text-dark-2 hover:bg-sand-l"
+          >
+            Cerrar
+          </button>
+        </div>
+      ) : (
       <div className="flex justify-between gap-2">
         <button
           type="button"
           disabled={trabajando || nota.trim() === ''}
           title={nota.trim() === '' ? 'Escribe por qué lo devuelves' : undefined}
-          onClick={() => onResolver({}, nota, false)}
+          onClick={() => onResolver?.({}, nota, false)}
           className="rounded-md border border-rust/50 px-4 py-2 text-sm text-rust hover:bg-rust/10 disabled:opacity-40"
         >
           Devolver
@@ -409,7 +542,7 @@ function Ficha({
             type="button"
             disabled={trabajando || (esVale && valeNum.trim() === '')}
             onClick={() =>
-              onResolver(
+              onResolver?.(
                 esVale ? { vale_num: valeNum.trim(), vale_fecha: valeFecha } : {},
                 nota,
                 true,
@@ -421,6 +554,7 @@ function Ficha({
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

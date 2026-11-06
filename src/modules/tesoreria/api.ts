@@ -14,6 +14,7 @@
 // unico que cruza es lo que alguien manda a proposito.
 
 import { supabase } from '@/lib/supabase';
+import type { DatosVale } from '@/modules/combustible/documento';
 import type { Database, Json } from '@/types/database';
 
 export type Envio = Database['public']['Tables']['envios']['Row'];
@@ -49,6 +50,15 @@ export type Snapshot = {
   detalle?: string;
   /** Pares etiqueta/valor que la ficha muestra tal cual. */
   campos?: { etiqueta: string; valor: string }[];
+  /**
+   * El documento entero, para poder abrir el formato oficial y no solo la
+   * ficha. Viaja aqui porque el destinatario no lee la tabla de origen: el
+   * envio es lo unico que cruza entre dos usuarios.
+   *
+   * Los envios hechos antes de la fase 47 no lo traen; la pantalla lo
+   * comprueba antes de ofrecer el boton.
+   */
+  documento?: DatosVale;
 };
 
 export function leerSnapshot(e: Envio): Snapshot {

@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
 import { PrintableModal } from '@/components/ui/PrintableModal';
+import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError } from '@/modules/admin/hooks';
@@ -67,6 +69,16 @@ export function CombustibleSection({
   const [abierto, setAbierto] = useState(false);
   const [editando, setEditando] = useState<RegistroCompleto | null>(null);
   const [visor, setVisor] = useState<Visor | null>(null);
+  /**
+   * El vale en foto y la factura en PDF. Son dos documentos y hasta ahora
+   * solo cabia uno (`archivo_path`), que ademas vivia en el bucket de
+   * aeronaves --donde ni quien firma ni el tesorero pueden entrar.
+   *
+   * Van al bucket comun, con `entidad_tipo = 'avn_combustible'`, porque desde
+   * ahi la politica de `documentos` los sigue hasta la solicitud de pago que
+   * nazca de este registro. No hay que copiarlos ni volver a subirlos.
+   */
+  const [expediente, setExpediente] = useState<RegistroCompleto | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
   const [cargandoPago, setCargandoPago] = useState<string | null>(null);
   const [viendo, setViendo] = useState<RegistroCompleto | null>(null);
@@ -307,6 +319,21 @@ export function CombustibleSection({
                     </td>
 
                     <td className="whitespace-nowrap px-2 py-2 text-right">
+                      {/*
+                        El expediente: el vale en foto y la factura en PDF.
+                        Van al bucket comun y no al de aeronaves porque tienen
+                        que VIAJAR hasta la solicitud de pago --quien la firma
+                        y quien la recibe no leen este modulo, y lo que
+                        atraviesa esa frontera es la cadena de `documentos`.
+                      */}
+                      <button
+                        type="button"
+                        onClick={() => setExpediente(r)}
+                        title="Vale y factura. Viajan con la solicitud de pago."
+                        className="px-1 text-[12px] opacity-50 hover:opacity-100"
+                      >
+                        🗂
+                      </button>
                       {r.archivo_path && (
                         <button
                           type="button"
@@ -416,6 +443,36 @@ export function CombustibleSection({
         editando={editando}
         onClose={() => setAbierto(false)}
       />
+
+      <Modal
+        open={expediente != null}
+        onClose={() => setExpediente(null)}
+        title={`Expediente · ${expediente?.serial ?? ''}`}
+        size="md"
+      >
+        {expediente && (
+          <div className="space-y-3">
+            <p className="rounded-md border border-sand bg-sand-l/40 px-3 py-2 text-xs text-dark-2">
+              El vale en foto y la factura en PDF. Cuando este registro se mande a Pagos,{' '}
+              <strong>quien firme la solicitud y quien la reciba verán esto mismo</strong> sin
+              que tengas que volver a subirlo.
+            </p>
+            <DocumentAttachment
+              entidadTipo="avn_combustible"
+              entidadId={expediente.id}
+              canEdit={canEdit}
+              label="Vale y factura"
+              accept="application/pdf,image/*"
+            />
+            {expediente.archivo_path && (
+              <p className="text-xs text-dark-3">
+                Este registro trae además «{expediente.archivo_nombre}», de antes de que
+                hubiera expediente. Se sigue viendo con el 📎 de la fila.
+              </p>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <VisorDocumento visor={visor} onClose={() => setVisor(null)} />
 

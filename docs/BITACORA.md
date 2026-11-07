@@ -66,6 +66,23 @@ anotado en `PENDIENTES.md` como DT-24, con su nota de que el tablero debe
 seguir mostrando todos los próximos —nombre, fechas, destino y participantes—
 «solo para estar enterada».
 
+**Y el catálogo de tarjetas.** Quedó suelto al cerrar los consumos:
+`tc_consumos` pasó a pedir `finanzas:editor` pero `tarjetas_credito` se quedó
+en `observador`, así que quien firma seguía viendo las doce con su titular, su
+banco y su límite. Al cerrarlo apareció lo de siempre: **lo abrían dos
+políticas, no una** —`tarjetas_credito_read_tt` lo concedía con
+`tt:observador`, que es justo el permiso de Lissa. Dos políticas permisivas se
+suman, así que apretar una sola no cierra nada y en una revisión rápida parece
+hecho. Se fundieron en una, y la comprobación ahora exige que quede **una
+sola** política de lectura sobre esa tabla.
+
+Antes de cerrarlo se miró que no rompiera arriba, porque el catálogo lo consume
+Arriaza T&T y Lissa tiene ese módulo: `att_cargos` guarda `pagado_con` como
+texto al lado del id, así que las vistas de solo lectura pintan ese texto sin
+tocar el catálogo, y los únicos que lo leen son formularios de edición —donde
+ella no puede guardar de todos modos. Comprobado: pierde el catálogo, conserva
+sus 14 cargos y sus 10 viajes.
+
 **Commits clave:** `782c601`, y el de esta fase.
 
 ---

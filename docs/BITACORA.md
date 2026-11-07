@@ -6,6 +6,70 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 51 · 2026-11-07 · Aeronaves, Javier, y quién firma no opera
+
+**Objetivo:** el combustible de aeronaves de punta a punta, y el usuario de
+Javier Arriaza, que firma sus solicitudes de pago.
+
+**Casi todo estaba.** Del proceso que describió —despacho, vale del proveedor,
+factura uno o dos días después, reflejo en el estado de cuenta, envío a Pagos,
+firma, tesorero— ya existían el registro con `vale`/`factura`/`fer_ap`, el
+estado de cuenta que los refleja con su saldo corriendo, y el puente a Pagos.
+Faltaban dos cosas.
+
+**Solo cabía un archivo.** `archivo_path`, uno. Y el proceso real son dos
+documentos que llegan en momentos distintos: el vale en foto el mismo día, la
+factura en PDF uno o dos días después. Peor: el único que hay vive en el bucket
+de Aeronaves, donde ni quien firma ni el tesorero entran, así que **nunca
+habría llegado a la solicitud de pago**. Ahora el registro tiene expediente con
+`entidad_tipo = 'avn_combustible'` en el bucket común, y no hizo falta nada
+más: la cadena de la fase 50 ya contemplaba este origen.
+
+**`aeronaves` no era un módulo que se pudiera conceder.** Estaba fuera del
+CHECK de `usuario_modulos`. El efecto era silencioso: el módulo existe con sus
+pantallas y sus políticas, pero el `insert` rechazaba la fila, así que en la
+práctica era solo de admin —`puede()` deja pasar al admin sin mirar la tabla.
+Era deuda anotada desde la fase 45; dejó de serlo al bloquear a Javier.
+
+**Lo que salió de medir en vez de suponer.** Creado el usuario con lo pedido
+—su tablero, Finanzas para las firmas, Aeronaves completo— se barrieron las
+104 tablas con su sesión, y aparecieron las 22 liquidaciones de caja chica, los
+25 vales, los reintegros y los consumos de tarjeta.
+
+No venía del módulo de Finanzas: venía del **rol `solo_lectura`**, que abre
+seis tablas de golpe sin mirar módulos. Se escribió cuando la única persona de
+solo lectura era Lissa, que sí necesita ver lo que firma; Javier lo heredó
+entero por necesitar `pagos` para firmar.
+
+La decisión la tomó ella sabiendo que alcanzaba a Lissa: **«ni Javier ni Lissa
+verían caja chica, reintegros ni consumos de tarjeta. Seguirían viendo las
+solicitudes de pago que firman, con su expediente adjunto»**. Así que la línea
+quedó: `solo_lectura` sirve para **firmar**, no para mirar la operación.
+
+Lo que **no** se tocó, y es donde estaría el fallo silencioso: `pagos`,
+`firmas` y `pagos_notificaciones`. Los avisos son la tripa de la solicitud —el
+imprimible oficial lista con ellos las liquidaciones que cubre—, así que
+cerrarlos habría dejado la hoja firmada con un bloque en blanco. Y el detalle
+de caja chica (`liq_rows`, `liquidacion_vales`) se cerró junto con la cabecera:
+de poco sirve cerrar una y dejar la otra, que es el mismo descuido que la fase
+45 vino a arreglar, repetido por el otro lado.
+
+**Resultado, medido con las tres sesiones:** Angeles conserva las 7 tablas de
+operación; Lissa y Javier las pierden las 7 y conservan `pagos`, `firmas` y
+`pagos_notificaciones`.
+
+**Travel & Tours quedó fuera a propósito.** La usuaria preguntó cómo se había
+resuelto para Lissa y la respuesta honesta era que no se había resuelto: le
+aparece el viaje en el que participa **porque le aparecen los siete**, en las
+42 tablas del módulo. Darle `tt` a Javier hoy sería darle los siete. Queda
+anotado en `PENDIENTES.md` como DT-24, con su nota de que el tablero debe
+seguir mostrando todos los próximos —nombre, fechas, destino y participantes—
+«solo para estar enterada».
+
+**Commits clave:** `782c601`, y el de esta fase.
+
+---
+
 ## Fase 50 · 2026-11-07 · El expediente viaja la cadena, y Victor ve el papel
 
 **Objetivo:** «Victor DEBE DE VER TODO, por favor, todo lo que se cargue, la SP

@@ -16,6 +16,35 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 
 > **Nota de numeración:** la sección «Deferred a polish futuro» del final usa su propia serie DT-5 a DT-8, de la Fase 19 y ya cerrada. Los items vivos de aquí siguen desde DT-10 para no chocar con ella.
 
+### DT-24 · Travel & Tours se ve entero, o no se ve
+
+**Origen:** fase 51, al crear el usuario de Javier. La usuaria preguntó cómo se
+había resuelto para Lissa, y la respuesta era que no se había resuelto: a Lissa
+le aparece el viaje en el que participa **porque le aparecen los siete**.
+
+**Dónde:** las **42 tablas** `att_*` tienen la misma regla de lectura —
+`puede('tt','observador')`. No hay nada por fila. El tablero filtra los
+próximos viajes **por fecha**, no por participación; coincide que el que sale
+arriba es el suyo.
+
+**Lo que ella quiere:** «solo poder ver completo un viaje con todos sus
+servicios cuando él participe de estos viajes». Y para el tablero, a
+propósito, lo contrario: que vea **todos** los próximos con nombre, fechas,
+destino y participantes, «solo para estar enterada».
+
+**Las piezas ya existen:** `att_viaje_participantes` (27 filas, 7 viajes) con
+`persona_id`, y `usuarios.persona_id` ya enlaza —Javier y Lissa están ligados.
+El patrón por persona ya se usa en los pendientes del tablero.
+
+**Por qué no se hizo ya:** son 42 políticas, y antes hay que terminar «los
+participantes de viaje seleccionando del catálogo con su información de viaje
+agregada». Ella lo dijo explícito: **no urge**.
+
+**Mientras tanto:** Javier NO tiene el módulo `tt`. Dárselo hoy sería darle los
+siete viajes.
+
+---
+
 ### DT-1 · Setup de vitest + primeros tests unitarios
 
 - **Origen:** [`docs/AUDIT-2026-07-12.md`](AUDIT-2026-07-12.md) finding M-2

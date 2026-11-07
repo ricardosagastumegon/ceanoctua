@@ -35,17 +35,22 @@ function diasEsperando(recepcion: string | null): number | null {
  * esto no es un indicador, es su trabajo. Antes había que saber que vivía en
  * CEA → Firmas y entrar a buscarlo.
  *
- * Solo aparece si esa persona puede firmar de verdad --`puede('cea','editor')`
- * del lado de la base-- y si hay algo esperando. A quien no firma no le
- * estorba.
+ * Solo aparece si esa persona firma de verdad --marcada en Personal JD-- y
+ * si hay algo esperando. A quien no firma no le estorba.
  */
 export function FirmasPendientes() {
   const { profile } = useAuth();
   const firmasQ = useFirmas();
   const pagosQ = usePagos();
 
+  /**
+   * Firma quien ESTA MARCADO como firmante en Personal JD, no quien tiene el
+   * modulo CEA. Eran lo mismo mientras la unica que firmaba era quien ademas
+   * lo operaba; con Javier dejaron de serlo.
+   */
   const puedeFirmar =
     profile?.rol === 'admin' ||
+    profile?.es_firmante === true ||
     RANGO_PERMISO[profile?.modulos?.cea ?? 'observador'] >= RANGO_PERMISO.editor;
 
   const pendientes = (firmasQ.data ?? [])

@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { PrintableModal } from '@/components/ui/PrintableModal';
+import { abrirAdjunto } from '@/lib/adjuntos';
 import { fmtDate } from '@/modules/arriaza/utils';
 import { acento } from '../constants';
 import type { Aeronave } from '../api';
-import type { RegistroCompleto } from './api';
+import { expedienteDe, type RegistroCompleto } from './api';
 
 const money = (n: number) =>
   n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -56,6 +58,22 @@ export function RegistroPrintable({
 }: Props) {
   const col = acento(aeronave.acento);
   const anulado = !!r.cancelado_en;
+
+  // Los del expediente. Se consultan aqui y no se reciben por props porque
+  // esta hoja se abre sola desde dos sitios y cargarlos fuera obligaria a
+  // acordarse en los dos.
+  const [adjuntos, setAdjuntos] = useState<
+    { id: string; nombre: string; storage_path: string }[]
+  >([]);
+  useEffect(() => {
+    let vivo = true;
+    void expedienteDe(r.id).then((d) => {
+      if (vivo) setAdjuntos(d);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [r.id]);
   const pendiente = !!r.notificacion_id && !r.notificacion_procesada && !r.pago_id;
 
   return (
@@ -163,24 +181,46 @@ export function RegistroPrintable({
           {/* Lo que se escaneó del vale o de la factura. */}
           <div className="rounded-lg border px-4 py-3" style={{ borderColor: `${col.solid}55` }}>
             <div className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: col.dark }}>
-              Documento cargado
+              Documentos
             </div>
-            {r.archivo_path ? (
-              <div className="mt-1.5 flex items-center justify-between gap-3">
-                <span className="truncate text-[12px] text-dark">
-                  📎 {r.archivo_nombre ?? 'Archivo adjunto'}
-                </span>
-                <button
-                  type="button"
-                  onClick={onVerArchivo}
-                  className="no-print shrink-0 rounded-md border px-2 py-1 text-[11px] font-extrabold hover:opacity-80"
-                  style={{ borderColor: `${col.solid}66`, color: col.dark }}
-                >
-                  👁 Ver
-                </button>
-              </div>
+            {/*
+              TODOS los del expediente, no solo el primero. Antes solo salia
+              `archivo_path` --un unico archivo-- asi que el vale se veia y la
+              factura no, aunque estuviera adjunta.
+            */}
+            {adjuntos.length === 0 && !r.archivo_path ? (
+              <p className="mt-1.5 text-[12px] italic text-dark-3">Sin documentos adjuntos.</p>
             ) : (
-              <p className="mt-1.5 text-[12px] italic text-dark-3">Sin documento adjunto.</p>
+              <ul className="mt-1.5 space-y-1">
+                {adjuntos.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-3">
+                    <span className="truncate text-[12px] text-dark">📎 {d.nombre}</span>
+                    <button
+                      type="button"
+                      onClick={() => void abrirAdjunto('documentos', d.storage_path)}
+                      className="no-print shrink-0 rounded-md border px-2 py-1 text-[11px] font-extrabold hover:opacity-80"
+                      style={{ borderColor: `${col.solid}66`, color: col.dark }}
+                    >
+                      👁 Ver
+                    </button>
+                  </li>
+                ))}
+                {r.archivo_path && (
+                  <li className="flex items-center justify-between gap-3">
+                    <span className="truncate text-[12px] text-dark">
+                      📎 {r.archivo_nombre ?? 'Archivo adjunto'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onVerArchivo}
+                      className="no-print shrink-0 rounded-md border px-2 py-1 text-[11px] font-extrabold hover:opacity-80"
+                      style={{ borderColor: `${col.solid}66`, color: col.dark }}
+                    >
+                      👁 Ver
+                    </button>
+                  </li>
+                )}
+              </ul>
             )}
           </div>
 

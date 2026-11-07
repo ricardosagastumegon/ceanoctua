@@ -100,6 +100,12 @@ export function CombustibleSection({
    * nazca de este registro. No hay que copiarlos ni volver a subirlos.
    */
   const [expediente, setExpediente] = useState<RegistroCompleto | null>(null);
+  /**
+   * Sube uno cada vez que cambian los adjuntos. El lector de facturas vive al
+   * lado y consulta la lista al montarse: sin este aviso, adjuntar un PDF no
+   * le llegaba y habia que cerrar el cuadro y volver a abrirlo --le paso.
+   */
+  const [adjuntosV, setAdjuntosV] = useState(0);
   const [pago, setPago] = useState<Pago | null>(null);
   const [cargandoPago, setCargandoPago] = useState<string | null>(null);
   const [viendo, setViendo] = useState<RegistroCompleto | null>(null);
@@ -498,6 +504,7 @@ export function CombustibleSection({
               canEdit={canEdit}
               label="Vale y factura"
               accept="application/pdf,image/*"
+              onCambio={() => setAdjuntosV((v) => v + 1)}
             />
 
             {/*
@@ -511,6 +518,7 @@ export function CombustibleSection({
                 Completar desde la factura
               </p>
               <LectorDeFactura
+                key={adjuntosV}
                 registro={expediente}
                 aeronaveId={aeronave.id}
                 canEdit={canEdit}

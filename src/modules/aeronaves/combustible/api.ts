@@ -237,3 +237,51 @@ async function reemplazarLineas(registroId: string, lineas: LineaInput[]): Promi
   );
   if (error) throw error;
 }
+
+/**
+ * Sube un archivo AL EXPEDIENTE del registro.
+ *
+ * Antes el formulario lo mandaba al bucket de aeronaves, en `archivo_path`, y
+ * el expediente a otro sitio: el mismo vale acababa subido dos veces --la
+ * usuaria lo noto-- y el que iba por el formulario nunca llegaba a la
+ * solicitud de pago, porque ni quien firma ni el tesorero leen el bucket de
+ * aeronaves. Ahora hay un solo sitio, y es el que viaja.
+ */
+export async function subirAlExpediente(registroId: string, file: File): Promise<void> {
+  const limpio = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `avn_combustible/${registroId}/${Date.now()}_${limpio}`;
+
+  const up = await supabase.storage.from('documentos').upload(path, file, {
+    contentType: file.type || undefined,
+    upsert: false,
+  });
+  if (up.error) throw up.error;
+
+  const { error } = await supabase.from('documentos').insert({
+    nombre: file.name,
+    tipo_mime: file.type || null,
+    tamano_bytes: file.size,
+    storage_path: path,
+    entidad_tipo: 'avn_combustible',
+    entidad_id: registroId,
+  });
+  // Sin su fila en `documentos` el archivo no lo puede leer nadie --la
+  // politica del bucket pregunta por ella-- asi que se retira en vez de
+  // dejarlo ahi ocupando sitio e invisible.
+  if (error) {
+    await supabase.storage.from('documentos').remove([path]);
+    throw error;
+  }
+}
+
+/** Los adjuntos del expediente de un registro. */
+export async function expedienteDe(registroId: string) {
+  const { data, error } = await supabase
+    .from('documentos')
+    .select('id, nombre, storage_path, tipo_mime')
+    .eq('entidad_tipo', 'avn_combustible')
+    .eq('entidad_id', registroId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}

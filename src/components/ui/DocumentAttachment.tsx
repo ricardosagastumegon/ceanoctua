@@ -19,6 +19,8 @@ type DocumentAttachmentProps = {
   label?: string;
   accept?: string;
   bucket?: string;
+  /** Avisa cuando la lista cambia, para quien dependa de ella. */
+  onCambio?: () => void;
 };
 
 const DEFAULT_BUCKET = 'documentos';
@@ -30,6 +32,7 @@ export function DocumentAttachment({
   label = 'Documentos adjuntos',
   accept,
   bucket = DEFAULT_BUCKET,
+  onCambio,
 }: DocumentAttachmentProps) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -96,6 +99,7 @@ export function DocumentAttachment({
         throw insErr;
       }
       setDocs((prev) => [row as DocRow, ...prev]);
+      onCambio?.();
       toast.success(`"${file.name}" adjuntado.`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo subir el archivo.');
@@ -139,6 +143,7 @@ export function DocumentAttachment({
       return;
     }
     setDocs((prev) => prev.filter((d) => d.id !== doc.id));
+    onCambio?.();
     toast.success('Adjunto borrado.');
   }
 

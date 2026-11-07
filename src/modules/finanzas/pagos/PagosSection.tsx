@@ -994,6 +994,11 @@ async function prellenarDesdeNotificacion(
         nit: data.proveedor_nit,
         entidad_id: data.entidad_id,
         entidad: data.entidad,
+        // El combustible de aeronaves se paga contra el deposito que ya
+        // esta hecho con el Aeroclub: siempre es un anticipo con factura.
+        // Es una regla del negocio, no una preferencia, asi que viene
+        // puesta en vez de esperar a que alguien se acuerde.
+        tipo_label: 'Anticipo Con Factura',
       };
     }
 

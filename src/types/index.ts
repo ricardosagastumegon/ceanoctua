@@ -36,6 +36,8 @@ export type UserProfile = {
    * son dos cosas distintas.
    */
   persona_id: string | null;
+  /** Marcado como firmante en Personal JD. Es lo que habilita firmar. */
+  es_firmante: boolean;
   activo: boolean;
   /**
    * Nivel por módulo. Espejo de `usuario_modulos`, que es lo que de verdad

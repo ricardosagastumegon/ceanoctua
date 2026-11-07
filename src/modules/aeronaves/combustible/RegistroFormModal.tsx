@@ -4,8 +4,8 @@ import { TextInput } from '@/components/ui/TextInput';
 import { useToast } from '@/components/ui/Toast';
 import { describeError, useEntidades, useProveedores } from '@/modules/admin/hooks';
 import { supabase } from '@/lib/supabase';
-import { subirArchivo, type Aeronave } from '../api';
-import { unidadDe } from './api';
+import { type Aeronave } from '../api';
+import { subirAlExpediente, unidadDe } from './api';
 import { useActualizarRegistro, useCrearRegistro } from './hooks';
 import type { LineaInput, RegistroCompleto } from './api';
 
@@ -166,18 +166,6 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
       const ent = (entidades.data ?? []).find((x) => x.id === entidadId);
       const prov = (proveedores.data ?? []).find((x) => x.id === proveedorId);
 
-      let archivo_path = editando?.archivo_path ?? null;
-      let archivo_nombre = editando?.archivo_nombre ?? null;
-      if (archivo) {
-        const subido = await subirArchivo(
-          `${aeronave.matricula}/combustible`,
-          Number(fecha.slice(0, 4)),
-          archivo,
-        );
-        archivo_path = subido.path;
-        archivo_nombre = subido.nombre;
-      }
-
       // Se guarda el nombre y el NIT además del id: si mañana cambian en el
       // catálogo, este registro tiene que seguir diciendo lo que decía.
       const campos = {
@@ -198,17 +186,22 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
         proveedor_nit: prov?.nit ?? null,
         moneda,
         notas: notas.trim() || null,
-        archivo_path,
-        archivo_nombre,
       };
 
+      // El archivo se sube DESPUES de guardar porque cuelga del registro, y
+      // un registro nuevo no tiene id hasta que la base se lo da.
+      let id = editando?.id ?? null;
       if (editando) {
         await actualizar.mutateAsync({ id: editando.id, patch: campos, lineas: conValor });
-        toast.success('Registro actualizado.');
       } else {
-        await crear.mutateAsync({ input: { aeronave_id: aeronave.id, ...campos }, lineas: conValor });
-        toast.success('Registro creado.');
+        const creado = await crear.mutateAsync({
+          input: { aeronave_id: aeronave.id, ...campos },
+          lineas: conValor,
+        });
+        id = creado.id;
       }
+      if (archivo && id) await subirAlExpediente(id, archivo);
+      toast.success(editando ? 'Registro actualizado.' : 'Registro creado.');
       onClose();
     } catch (err) {
       setError(describeError(err));
@@ -422,6 +415,9 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-dark-2">
               Vale o factura escaneada
+            </span>
+            <span className="mb-1 block text-[10px] text-dark-3">
+              Va al expediente, y de ahí viaja con la solicitud de pago.
             </span>
             <input
               type="file"

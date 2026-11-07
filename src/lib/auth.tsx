@@ -48,6 +48,22 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
     .from('usuario_modulos')
     .select('modulo, permiso')
     .eq('usuario_id', userId);
+  /**
+   * Si esta persona firma. Sale de `personas.es_firmante` --la unica fuente,
+   * invariante 4-- y no de tener el modulo CEA, que es lo que se miraba
+   * antes: daba la casualidad de que la unica que firmaba tambien lo operaba.
+   */
+  let esFirmante = false;
+  const personaId = (data as { persona_id?: string | null }).persona_id ?? null;
+  if (personaId) {
+    const { data: per } = await supabase
+      .from('personas')
+      .select('es_firmante')
+      .eq('id', personaId)
+      .maybeSingle();
+    esFirmante = !!per?.es_firmante;
+  }
+
   const modulos: Partial<Record<Modulo, Permiso>> = {};
   for (const m of mods ?? []) {
     modulos[m.modulo as Modulo] = m.permiso as Permiso;
@@ -59,6 +75,7 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
     rol: data.rol as AppRol,
     miembro_id: data.miembro_id as string | null,
     persona_id: (data as { persona_id?: string | null }).persona_id ?? null,
+    es_firmante: esFirmante,
     activo: data.activo as boolean,
     miembro_codigo: miembroCodigo,
     modulos,

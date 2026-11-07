@@ -91,15 +91,12 @@ export const firmasApi = {
    * formulario de edicion, que era la unica forma y nadie adivinaba.
    */
   async firmar(id: string): Promise<void> {
-    const { data: sesion } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from('firmas')
-      .update({
-        status_firma: 'firmado',
-        fecha_firma: new Date().toISOString().slice(0, 10),
-        firmada_por: sesion.user?.id ?? null,
-      })
-      .eq('id', id);
+    // Va por funcion y no por un update directo: escribir en `firmas` pide
+    // operar CEA, y quien firma no tiene por que operarlo --Javier firma las
+    // solicitudes de aeronaves y no toca la agenda de Lissa. Ademas el
+    // «quien» lo pone la base con la sesion, asi que no se puede firmar en
+    // nombre de otro ni por descuido.
+    const { error } = await supabase.rpc('firma_firmar', { p_firma: id });
     if (error) throw error;
   },
 

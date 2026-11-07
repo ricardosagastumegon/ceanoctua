@@ -4336,6 +4336,19 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      /**
+       * Firmar una solicitud. Solo pone estado, fecha y quien --y el quien
+       * sale de la sesion, no del cliente.
+       */
+      firma_firmar: {
+        Args: { p_firma: string };
+        Returns: Database['public']['Tables']['firmas']['Row'];
+      };
+      /** Si el usuario esta marcado como firmante en Personal JD. */
+      es_firmante: {
+        Args: { p_usuario?: string | null };
+        Returns: boolean;
+      };
       /** Personal JD marcado como firmante. La usa el modal de pedir firma. */
       firmantes: {
         Args: Record<string, never>;

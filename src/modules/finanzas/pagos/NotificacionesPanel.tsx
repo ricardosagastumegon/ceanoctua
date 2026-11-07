@@ -13,6 +13,29 @@ type Notif = Database['public']['Tables']['pagos_notificaciones']['Row'];
 /** Key única del panel — que todos invaliden la misma y no se desincronicen. */
 export const PAGOS_NOTIF_KEY = ['pagos_notificaciones'] as const;
 
+/**
+ * De donde viene cada aviso.
+ *
+ * Estaba escrito como «liquidacion, y si no, Consumo TC». Con dos origenes
+ * colaba; ahora hay cuatro, y una quincena de combustible de vehiculos
+ * llegaba etiquetada como consumo de tarjeta. Un mapa no se queda atras al
+ * añadir el quinto: lo que falte sale con su propio nombre, no con el del
+ * vecino.
+ */
+const ORIGEN_LABEL: Record<string, string> = {
+  liquidacion: 'Liquidación',
+  consumo_tc: 'Consumo TC',
+  combustible: 'Combustible aeronaves',
+  combustible_vehiculos: 'Combustible vehículos',
+};
+
+const ORIGEN_TONO: Record<string, string> = {
+  liquidacion: 'bg-teal-l text-teal-d',
+  consumo_tc: 'bg-blue-light text-blue',
+  combustible: 'bg-gold/25 text-dark',
+  combustible_vehiculos: 'bg-gold/25 text-dark',
+};
+
 function fmt(n: number, currency: string | null): string {
   if (currency === 'GTQ' || !currency) return formatMoney(n);
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n);
@@ -165,12 +188,10 @@ export function NotificacionesPanel({ onCreateFromNotifs }: Props) {
                 <div className="flex-1">
                   <span
                     className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
-                      n.origen_tipo === 'liquidacion'
-                        ? 'bg-teal-l text-teal-d'
-                        : 'bg-blue-light text-blue'
+                      ORIGEN_TONO[n.origen_tipo] ?? 'bg-blue-light text-blue'
                     }`}
                   >
-                    {n.origen_tipo === 'liquidacion' ? 'Liquidación' : 'Consumo TC'}
+                    {ORIGEN_LABEL[n.origen_tipo] ?? n.origen_tipo}
                   </span>
                   <p className="mt-1 line-clamp-2 font-medium text-dark">
                     {n.resumen ?? '(sin resumen)'}

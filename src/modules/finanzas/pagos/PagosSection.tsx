@@ -841,21 +841,64 @@ function conceptoDeNotificaciones(notifs: { resumen: string | null }[]): string 
 async function prellenarDesdeNotificacion(
   notif: { origen_tipo: string; origen_id: string },
 ): Promise<Record<string, unknown>> {
-  if (notif.origen_tipo !== 'combustible') return {};
   try {
-    const { data, error } = await supabase
-      .from('avn_combustible_registros')
-      .select('proveedor_id, proveedor, proveedor_nit, entidad_id, entidad')
-      .eq('id', notif.origen_id)
-      .maybeSingle();
-    if (error || !data) return {};
-    return {
-      proveedor_id: data.proveedor_id,
-      proveedor: data.proveedor,
-      nit: data.proveedor_nit,
-      entidad_id: data.entidad_id,
-      entidad: data.entidad,
-    };
+    // Combustible de AERONAVES: el registro ya trae el proveedor encima.
+    if (notif.origen_tipo === 'combustible') {
+      const { data, error } = await supabase
+        .from('avn_combustible_registros')
+        .select('proveedor_id, proveedor, proveedor_nit, entidad_id, entidad')
+        .eq('id', notif.origen_id)
+        .maybeSingle();
+      if (error || !data) return {};
+      return {
+        proveedor_id: data.proveedor_id,
+        proveedor: data.proveedor,
+        nit: data.proveedor_nit,
+        entidad_id: data.entidad_id,
+        entidad: data.entidad,
+      };
+    }
+
+    // Combustible de VEHICULOS: el control de vales no tiene proveedor
+    // propio. Lo tienen sus facturas, asi que hay que bajar dos escalones:
+    // control -> vales -> facturas. Es el precio de que la factura sea un
+    // documento aparte, y vale la pena: es lo que permite que una cubra dos
+    // despachos sin teclearla dos veces.
+    if (notif.origen_tipo === 'combustible_vehiculos') {
+      const { data: vales } = await supabase
+        .from('comb_solicitudes')
+        .select('factura_id')
+        .eq('reporte_id', notif.origen_id)
+        .is('deleted_at', null)
+        .not('factura_id', 'is', null);
+
+      const facturaIds = [...new Set((vales ?? []).map((v) => v.factura_id).filter(Boolean))];
+      if (facturaIds.length === 0) return {};
+
+      const { data: facturas } = await supabase
+        .from('comb_facturas')
+        .select('proveedor_id')
+        .in('id', facturaIds as string[])
+        .not('proveedor_id', 'is', null);
+
+      const proveedores = [...new Set((facturas ?? []).map((f) => f.proveedor_id))];
+      // Con dos proveedores distintos no hay uno que prellenar, y escoger
+      // el primero seria peor que dejarlo en blanco: se firmaria un pago a
+      // nombre de quien no toca. La quincena de la gasolinera siempre es de
+      // uno, pero el dia que no lo sea, mejor que se note.
+      if (proveedores.length !== 1) return {};
+
+      const { data: prov } = await supabase
+        .from('proveedores')
+        .select('nombre, nit')
+        .eq('id', proveedores[0] as string)
+        .maybeSingle();
+      if (!prov) return {};
+
+      return { proveedor_id: proveedores[0], proveedor: prov.nombre, nit: prov.nit };
+    }
+
+    return {};
   } catch {
     return {};
   }

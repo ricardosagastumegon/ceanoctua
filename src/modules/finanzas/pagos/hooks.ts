@@ -34,6 +34,14 @@ export function useAdvancePago() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
   });
 }
+/** Un paso atras. Solo lo ve el admin, y la funcion lo vuelve a comprobar. */
+export function useStepBackPago() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pagosApi.stepBack(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.all }),
+  });
+}
 export function useUploadPagoComprobante() {
   const qc = useQueryClient();
   return useMutation({

@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import {
   useAdvancePago,
+  useStepBackPago,
   useCreatePago,
   useDeletePago,
   usePagos,
@@ -45,9 +46,12 @@ const estadoBg: Record<Pago['status'], string> = {
 
 export function PagosSection({
   canEdit,
+  puedeDeshacer,
   resaltar,
 }: {
   canEdit: boolean;
+  /** Devolver una solicitud un paso atras. Solo el administrador. */
+  puedeDeshacer?: boolean;
   /** Serial de la solicitud a la que se vino, si se llegó desde el tablero. */
   resaltar?: string | null;
 }) {
@@ -66,6 +70,7 @@ export function PagosSection({
   const create = useCreatePago();
   const update = useUpdatePago();
   const advance = useAdvancePago();
+  const stepBack = useStepBackPago();
   const upload = useUploadPagoComprobante();
   const remove = useDeletePago();
   const toast = useToast();
@@ -308,6 +313,26 @@ export function PagosSection({
     try { await advance.mutateAsync({ id: pago.id, current: pago }); }
     catch (e) { toast.error(describeError(e)); }
   }
+  /**
+   * Un paso atras. Se pregunta siempre: es corregir un documento financiero
+   * que ya habia avanzado, y la pregunta es lo que separa «me equivoque» de
+   * «le di sin querer otra vez».
+   */
+  async function handleStepBack(pago: Pago) {
+    const desde = PAGO_STEPS[pago.step_idx] ?? 'el paso actual';
+    const hacia = PAGO_STEPS[pago.step_idx - 1] ?? 'el anterior';
+    const ok = await confirm({
+      title: `Devolver ${pago.serial ?? 'la solicitud'} un paso`,
+      message: `Vuelve de «${desde}» a «${hacia}», y se borra la fecha de «${desde}». Queda registrado en auditoría.`,
+    });
+    if (!ok) return;
+    try {
+      await stepBack.mutateAsync(pago.id);
+      toast.success(`Devuelta a «${hacia}».`);
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
   async function handleUpload(pago: Pago, file: File | null) {
     if (!file) return;
     try { await upload.mutateAsync({ id: pago.id, file }); toast.success('Comprobante cargado.'); }
@@ -491,13 +516,30 @@ export function PagosSection({
                     </button>
                     {canEdit && (
                       <>
+                      {/*
+                        Deshabilitado mientras va: el servidor ya ignora el
+                        segundo clic, pero que el boton no se deje pulsar es
+                        lo que hace que no haya que confiar en eso.
+                      */}
                       {!isLast && (
                         <button
                           type="button"
+                          disabled={advance.isPending}
                           onClick={() => void handleAdvance(p)}
-                          className="rounded-md bg-teal px-3 py-1 text-xs font-semibold text-white hover:bg-teal-d"
+                          className="rounded-md bg-teal px-3 py-1 text-xs font-semibold text-white hover:bg-teal-d disabled:opacity-50"
                         >
                           → Siguiente
+                        </button>
+                      )}
+                      {puedeDeshacer && p.step_idx > 0 && (
+                        <button
+                          type="button"
+                          disabled={stepBack.isPending}
+                          onClick={() => void handleStepBack(p)}
+                          className="rounded-md border border-sand px-2 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l disabled:opacity-50"
+                          title={`Devolver a «${PAGO_STEPS[p.step_idx - 1]}»`}
+                        >
+                          ← Atrás
                         </button>
                       )}
                       {(() => {
@@ -673,6 +715,24 @@ export function PagosSection({
                             {/* La solicitud pagada es la que se consulta despues:
                                 ahi esta el formato que se firmo y, cuando se
                                 habilite la carga, tambien ira la factura. */}
+                            {/*
+                              La unica salida de esta lista. Una solicitud que
+                              llego al ultimo paso sale del flujo de trabajo, y
+                              hasta ahora eso era definitivo: un paso dado de
+                              mas se quedaba dado. Reabrir la devuelve a la
+                              lista de arriba, donde se puede corregir.
+                            */}
+                            {puedeDeshacer && (
+                              <button
+                                type="button"
+                                disabled={stepBack.isPending}
+                                onClick={() => void handleStepBack(p)}
+                                className="rounded-md border border-gold/50 bg-gold/15 px-2 py-0.5 text-xs font-semibold text-dark hover:bg-gold/25 disabled:opacity-50"
+                                title={`Devolver a «${PAGO_STEPS[p.step_idx - 1] ?? ''}» y volver a la lista de arriba`}
+                              >
+                                ↩ Reabrir
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => setFormato(p)}

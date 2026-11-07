@@ -6,6 +6,92 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 48 · 2026-11-07 · Un paso atrás, y el clic de más que no cuenta
+
+**Objetivo:** «se trabó la compu y di dos clic intentando avanzarlo, cuando se
+destrabó se fue a pagado de una vez, entonces estos errores pueden ocurrir y
+luego no hay vuelta atrás».
+
+Son dos problemas y arreglar uno solo deja el otro suelto.
+
+**No había vuelta atrás.** Al llegar al último paso la solicitud sale de la
+lista de trabajo y cae en «Solicitudes pagadas», que es de consulta. En un
+flujo de seis pasos que una persona avanza a mano, eso no es una salvaguarda:
+es que el error se queda. `pago_retroceder_paso` la devuelve un paso, solo para
+el administrador —lo pidió para su usuario— y borra la fecha del paso que
+abandona, porque dejarla diría que ese paso se cumplió tal día, que es justo lo
+que se está deshaciendo. Queda en `audit_log` por el trigger de la tabla, y eso
+es lo que hace aceptable poder deshacer: se puede, y se ve quién lo hizo.
+
+**El clic de más contaba.** El botón calculaba el paso siguiente sobre la copia
+que tenía en pantalla y escribía el resultado. Con la pantalla trabada, dos
+clics salen con la misma copia y, según cuándo llegue cada respuesta, el pago
+avanza dos veces. `pago_avanzar_paso` recibe **de qué paso cree venir** el
+botón y no hace nada si la fila ya se movió. El segundo clic deja de contar sin
+que nadie tenga que acordarse de deshabilitar nada —y aun así el botón se
+deshabilita mientras va, porque no conviene que haga falta confiar en una cosa
+sola.
+
+Las etiquetas de los pasos viven en el cliente (`PAGO_STEPS`), así que el total
+viaja como parámetro: dos listas de pasos que se pueden desincronizar es peor
+que un argumento de más.
+
+**Comentarios:** probado en seco con seis casos, incluido el del doble clic y
+el de que un usuario que no es admin no puede retroceder.
+
+---
+
+## Fase 47 · 2026-11-06 · La factura es un documento, y el Tesorero ve el papel
+
+**Objetivo:** tres cosas que salieron de usarlo, no de diseñarlo.
+
+**«Una factura puede llevar más de un vale [...] el ingreso del monto es manual
+y eso es causante de doble error, porque en el despacho también fue manual».**
+Tenía razón dos veces. La factura vivía dentro del vale: ocho columnas
+repetidas en cada `comb_solicitudes`, y cuando una cubría dos despachos del
+mismo día había que teclearla dos veces sin nada que impidiera que las copias
+se contradijeran. El propio modelo lo admitía en un comentario —`factura_monto`
+estaba marcado como «referencia, NO sumando: puede repetirse en dos
+solicitudes». Eso describe un modelo mal puesto, no una regla.
+
+`comb_facturas` es ahora su propia tabla con la forma de
+`caja_chica_liquidaciones` ← `liquidacion_vales`, que es lo que ella pidió. Y
+el monto sale de sumar los despachos de los vales escogidos, que a su vez salen
+de galones × precio: lo único que se teclea de verdad son galones y precio. Se
+puede escribir encima —la gasolinera redondea— pero entonces la pantalla avisa
+en cuanto las dos cifras se separan. **Dos números que se pueden desmentir
+valen más que uno en el que hay que confiar.**
+
+Un índice único por (proveedor, serie, número) impide meter la misma factura
+dos veces, que es el error que acaba en dos contraseñas para un mismo pago.
+
+**«Victor NO tiene ningún botón donde pueda ver la solicitud con el formato
+OFICIAL que yo sí veo».** La causa no era que faltara un botón: el documento no
+le llegaba. El `snapshot` del envío cargaba cinco campos y el formato necesita
+trece. Él no lee `comb_solicitudes` y no debe —RLS concede por tabla, así que
+esa lectura sería darle todos los vales de la casa. Lo único que cruza entre
+dos usuarios es el envío, así que ahora viaja el documento entero.
+
+`documento.ts` tiene el tipo y la función que lo arma, y la usan los dos lados:
+lo que ella imprime y lo que él abre salen de la misma llamada. En su tablero,
+«Ver» va **antes** que «Emitir vale» —primero se mira el papel y después se
+actúa; antes emitía un vale sin haber visto la solicitud.
+
+**El proveedor en la solicitud de pago.** El control de vales no tiene
+proveedor propio: lo tienen sus facturas. El prellenado baja dos escalones
+—control → vales → facturas → proveedor— y con dos proveedores distintos no
+prellena nada, porque escoger el primero sería firmar un pago a nombre de quien
+no toca y ese error no se ve.
+
+**Comentarios:** las tres migraciones se probaron en seco antes de aplicarse.
+De paso: la etiqueta de los avisos de pago estaba escrita como «liquidación, y
+si no, Consumo TC», así que una quincena de combustible llegaba marcada como
+consumo de tarjeta. Con dos orígenes colaba; ya hay cuatro.
+
+**Commits clave:** `0648ca8`, `fc7822b`, `049ebeb`.
+
+---
+
 ## Fase 46 · 2026-11-06 · Combustible, como lo usa de verdad
 
 **Objetivo:** cinco cosas que la usuaria encontró al usar el módulo recién

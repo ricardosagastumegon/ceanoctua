@@ -66,14 +66,31 @@ export const pagosApi = {
     const { error } = await supabase.from('pagos').update({ deleted_at: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
   },
+  /**
+   * Avanzar es un acto del servidor, no un update calculado aqui.
+   *
+   * Antes el boton sacaba el paso siguiente de la copia que tenia en
+   * pantalla y escribia el resultado. Con la pantalla trabada --le paso-- dos
+   * clics salen con la misma copia, y segun cuando llegue cada respuesta el
+   * pago avanza dos veces. La funcion recibe DE QUE PASO cree venir el boton
+   * y no hace nada si la fila ya se movio.
+   */
   async advanceStep(id: string, current: Pago): Promise<Pago> {
     if (current.step_idx >= PAGO_STEPS.length - 1) return current;
-    const next = current.step_idx + 1;
-    const dates = [...(current.step_dates ?? [])];
-    dates[next] = new Date().toISOString().slice(0, 10);
-    const patch: PagoUpdate = { step_idx: next, step_dates: dates };
-    if (next === PAGO_STEPS.length - 1) patch.status = 'Pagado';
-    return this.update(id, patch);
+    const { data, error } = await supabase.rpc('pago_avanzar_paso', {
+      p_pago: id,
+      p_desde: current.step_idx,
+      p_total: PAGO_STEPS.length,
+    });
+    if (error) throw error;
+    return data as unknown as Pago;
+  },
+
+  /** Un paso atras. Solo admin; la funcion lo vuelve a comprobar. */
+  async stepBack(id: string): Promise<Pago> {
+    const { data, error } = await supabase.rpc('pago_retroceder_paso', { p_pago: id });
+    if (error) throw error;
+    return data as unknown as Pago;
   },
   async uploadComprobante(id: string, file: File): Promise<string> {
     const ext = file.name.split('.').pop() ?? 'bin';

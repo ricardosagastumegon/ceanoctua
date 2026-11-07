@@ -55,6 +55,10 @@ export function FinanzasPage() {
   // `finanzas:observador`-- veía la pestaña en la barra y al entrar se topaba
   // con «Sin acceso».
   const canEdit = puede(profile, 'finanzas', 'editor');
+  // Deshacer un paso de una solicitud de pago es del administrador. La
+  // funcion `pago_retroceder_paso` lo vuelve a comprobar; esto solo esconde
+  // el boton.
+  const esAdmin = profile?.rol === 'admin';
   const location = useLocation();
 
   const esAsistente = profile?.rol === 'admin' || profile?.rol === 'asistente';
@@ -135,7 +139,9 @@ export function FinanzasPage() {
       {esAsistente && tab === 'reintegros' && <ReintegrosSection canEdit={canEdit} />}
       {tab === 'consumos' && <ConsumosSection canEdit={canEdit} tipo="corporativa" />}
       {esAsistente && tab === 'consumos_pres' && <ConsumosSection canEdit={canEdit} tipo="presidencia" />}
-      {tab === 'pagos' && <PagosSection canEdit={canEdit} resaltar={resaltarPago} />}
+      {tab === 'pagos' && (
+        <PagosSection canEdit={canEdit} puedeDeshacer={esAdmin} resaltar={resaltarPago} />
+      )}
     </section>
   );
 }

@@ -4344,6 +4344,22 @@ export type Database = {
         Returns: Database['public']['Tables']['comb_reportes']['Row'];
       };
       /**
+       * Avanza una solicitud de pago un paso, SOLO si sigue en el paso del
+       * que salio el boton. Un segundo clic no cuenta.
+       */
+      pago_avanzar_paso: {
+        Args: { p_pago: string; p_desde: number; p_total: number };
+        Returns: Database['public']['Tables']['pagos']['Row'];
+      };
+      /**
+       * Devuelve una solicitud de pago un paso atras. Solo admin; queda en
+       * audit_log.
+       */
+      pago_retroceder_paso: {
+        Args: { p_pago: string };
+        Returns: Database['public']['Tables']['pagos']['Row'];
+      };
+      /**
        * Borrado suave de una solicitud de vale. Solo admin. Retira el envio
        * pendiente y se niega si ya entro en un control cerrado.
        */

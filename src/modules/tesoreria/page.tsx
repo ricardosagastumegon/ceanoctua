@@ -246,15 +246,29 @@ export default function TesoreriaPage() {
           cargando={pendientesQ.isLoading}
           vacio="No hay solicitudes de pago esperándote."
         >
+          {/*
+            «Expediente» junto a «Ver», y antes de «Recibir». Los documentos
+            estaban dentro de «Recibir», que se lee como una accion y no como
+            una consulta: para mirarlos habia que hacer como que se aceptaba.
+            Se consulta con los dos primeros y se decide con el tercero.
+          */}
           {pagos.map((e) =>
             renglon(
               e,
-              <span className="flex gap-2">
+              <span className="flex flex-wrap justify-end gap-2">
                 {tienePapel(e) && (
                   <button type="button" className={botonVer} onClick={() => setPapel(e)}>
                     Ver
                   </button>
                 )}
+                <button
+                  type="button"
+                  className={botonVer}
+                  onClick={() => setResumen(e)}
+                  title="El vale, la factura y todo lo que respalda la solicitud"
+                >
+                  Expediente
+                </button>
                 <BotonPrincipal onClick={() => setAbierto(e)}>Recibir</BotonPrincipal>
               </span>,
             ),

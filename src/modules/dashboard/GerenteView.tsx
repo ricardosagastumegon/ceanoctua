@@ -1,7 +1,8 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useFirmarDocumento, useFirmas } from '@/modules/cea/firmas/hooks';
+import type { Firma } from '@/modules/cea/firmas/api';
 import { MiFirma } from '@/modules/cea/firmas/MiFirma';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -11,6 +12,7 @@ import { useLiquidaciones } from '@/modules/cc-board/liquidaciones/hooks';
 import { useCeaTodos } from '@/modules/cea/todos/hooks';
 import { bloqueDe } from '@/modules/cea/todos/orden';
 import { useAttViajes } from '@/modules/arriaza/viajes/hooks';
+import { FirmarModal } from '@/modules/cea/firmas/FirmarModal';
 import {
   BotonPrincipal,
   Bloque,
@@ -86,6 +88,8 @@ export function GerenteView() {
   }
 
   const porPago = new Map((pagosQ.data ?? []).map((p) => [p.id, p]));
+  /** La firma que se esta revisando para firmar, con su documento delante. */
+  const [firmando, setFirmando] = useState<Firma | null>(null);
   // Una firma digital puede venir de una solicitud de pago o de una
   // liquidación. Las dos llevan a su documento; lo que cambia es la puerta.
   const porLiquidacion = new Map((liquidacionesQ.data ?? []).map((l) => [l.id, l]));
@@ -138,6 +142,14 @@ export function GerenteView() {
         }
       />
 
+      {firmando && (
+        <FirmarModal
+          firma={firmando}
+          pago={firmando.pago_id ? (porPago.get(firmando.pago_id) ?? null) : null}
+          onClose={() => setFirmando(null)}
+        />
+      )}
+
       <MiFirma />
 
       {/* ── Firmas ───────────────────────────────────────────────────── */}
@@ -155,11 +167,6 @@ export function GerenteView() {
           {digitales.map((f) => {
             const pago = f.pago_id ? porPago.get(f.pago_id) : undefined;
             const liq = f.liquidacion_id ? porLiquidacion.get(f.liquidacion_id) : undefined;
-            const aDonde = pago?.serial
-              ? `/finanzas?sp=${encodeURIComponent(pago.serial)}#pagos`
-              : liq?.serial
-                ? `/finanzas?liq=${encodeURIComponent(liq.serial)}#liquidaciones`
-                : null;
             const espera = enDias(f.recepcion);
             return (
               <Renglon
@@ -184,17 +191,16 @@ export function GerenteView() {
                 }
                 alerta={espera != null && espera <= -3}
                 accion={
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                    {aDonde && (
-                      <Link
-                        to={aDonde}
-                        className="rounded-md border border-teal/40 px-2.5 py-1.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
-                        title="Abrir la solicitud en Finanzas para revisarla antes de firmar"
-                      >
-                        Ver detalles
-                      </Link>
-                    )}
-                    <BotonPrincipal onClick={() => void firmarDocumento(f.id, f.tipo)}>✍️ Firmar</BotonPrincipal>
+                  /*
+                    Un solo boton, y que abra TODO: el papel, su respaldo y la
+                    firma. Antes habia un «Ver detalles» que mandaba a
+                    Finanzas --otro modulo, otra pantalla-- y un «Firmar» que
+                    firmaba a ciegas. Esto se usa desde el telefono: mandar a
+                    buscar el respaldo a otro sitio es, en la practica,
+                    firmar sin verlo.
+                  */
+                  <div className="flex shrink-0 items-center justify-end">
+                    <BotonPrincipal onClick={() => setFirmando(f)}>Revisar y firmar</BotonPrincipal>
                   </div>
                 }
               />

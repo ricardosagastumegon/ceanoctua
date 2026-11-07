@@ -44,6 +44,15 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
   const [vale, setVale] = useState('');
   const [factura, setFactura] = useState('');
   const [ferAp, setFerAp] = useState('');
+  /**
+   * La matricula que figura en el vale, cuando no es la de la cuenta.
+   *
+   * El registro cuelga de la cuenta --el deposito con el Aeroclub es de una
+   * aeronave y de ahi sale el combustible-- pero a veces vuela otra en su
+   * lugar y se abastece contra esa misma cuenta. El dato esta en el papel y
+   * hasta ahora no tenia donde guardarse.
+   */
+  const [matricula, setMatricula] = useState('');
   const [entidadId, setEntidadId] = useState('');
   const [proveedorId, setProveedorId] = useState('');
   const [moneda, setMoneda] = useState('GTQ');
@@ -57,6 +66,7 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
     if (!open) return;
     setFecha(editando?.fecha ?? new Date().toISOString().slice(0, 10));
     setVale(editando?.vale ?? '');
+    setMatricula(editando?.matricula_abastecida ?? '');
     setFactura(editando?.factura ?? '');
     setFerAp(editando?.fer_ap ?? '');
     setEntidadId(editando?.entidad_id ?? '');
@@ -141,6 +151,11 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
         vale: vale.trim() || null,
         factura: factura.trim() || null,
         fer_ap: ferAp.trim() || null,
+        // Vacia = se abastecio la aeronave de la cuenta, que es lo normal.
+        matricula_abastecida:
+          matricula.trim().toUpperCase() === aeronave.matricula.toUpperCase()
+            ? null
+            : matricula.trim().toUpperCase() || null,
         entidad_id: entidadId || null,
         entidad: ent?.nombre ?? null,
         entidad_nit: ent?.nit ?? null,
@@ -222,6 +237,20 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
           <TextInput name="fer_ap" label="FER/AP" value={ferAp}
             onChange={(e) => setFerAp(e.target.value)} />
         </div>
+
+        {/*
+          Se deja vacia en el caso normal. Escribirla solo cuando voló otra:
+          asi la casilla en blanco significa «la de siempre» y no «se me
+          olvido», que es la diferencia entre un dato y un hueco.
+        */}
+        <TextInput
+          name="matricula_abastecida"
+          label="Matrícula abastecida"
+          placeholder={aeronave.matricula}
+          hint={`Solo si no fue la ${aeronave.matricula}. El combustible sale igual de su cuenta.`}
+          value={matricula}
+          onChange={(e) => setMatricula(e.target.value)}
+        />
 
         {/* Los productos */}
         <div className="rounded-md border border-sand p-3">

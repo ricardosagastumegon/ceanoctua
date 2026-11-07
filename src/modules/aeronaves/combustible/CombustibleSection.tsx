@@ -12,6 +12,7 @@ import { fmtDate } from '@/modules/arriaza/utils';
 import { VisorDocumento, type Visor } from '../VisorDocumento';
 import { acento } from '../constants';
 import type { Aeronave } from '../api';
+import { LectorDeFactura } from './LectorDeFactura';
 import { RegistroFormModal } from './RegistroFormModal';
 import { RegistroPrintable } from './RegistroPrintable';
 import { AnularModal } from './AnularModal';
@@ -33,6 +34,26 @@ import type { RegistroCompleto } from './api';
 function estadoPago(r: RegistroCompleto) {
   const pendiente = !!r.notificacion_id && !r.notificacion_procesada && !r.pago_id;
   return { pendiente, conSolicitud: !!r.pago_id, libre: !r.pago_id && !pendiente };
+}
+
+/**
+ * Que le falta a un registro para poder mandarse a Pagos.
+ *
+ * El vale llega el mismo dia y la factura uno o dos despues, asi que entre
+ * medias el registro existe pero esta a medias: con el vale apuntado y el
+ * monto en cero. Hasta ahora el boton «Enviar a SP» salia desde el primer
+ * momento, y mandar eso a Pagos es pedir que se firme un pago de Q 0.00.
+ *
+ * Devuelve la lista de lo que falta --en plural y en palabras-- para poder
+ * decirlo en el `title` del boton: un boton apagado sin explicacion se lee
+ * como una averia.
+ */
+function loQueFalta(r: RegistroCompleto): string[] {
+  const falta: string[] = [];
+  if (!r.factura?.trim()) falta.push('el número de factura');
+  if (!r.fer_ap?.trim()) falta.push('el FER/AP');
+  if (Number(r.total) <= 0) falta.push('el monto');
+  return falta;
 }
 
 const money = (n: number) =>
@@ -305,14 +326,25 @@ export function CombustibleSection({
                           )}
                         </span>
                       ) : canEdit ? (
-                        <button
-                          type="button"
-                          onClick={() => void mandarAPagos(r)}
-                          className="rounded-md px-2 py-1 text-[11px] font-extrabold text-white"
-                          style={{ backgroundColor: col.solid }}
-                        >
-                          Enviar a SP
-                        </button>
+                        (() => {
+                          const falta = loQueFalta(r);
+                          return (
+                            <button
+                              type="button"
+                              disabled={falta.length > 0}
+                              onClick={() => void mandarAPagos(r)}
+                              title={
+                                falta.length > 0
+                                  ? `Falta ${falta.join(', ')}. Se llena al cargar la factura.`
+                                  : 'Avisar a Pagos para que generen la solicitud'
+                              }
+                              className="rounded-md px-2 py-1 text-[11px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                              style={{ backgroundColor: col.solid }}
+                            >
+                              Enviar a SP
+                            </button>
+                          );
+                        })()
                       ) : (
                         <span className="text-dark-3">—</span>
                       )}
@@ -464,12 +496,46 @@ export function CombustibleSection({
               label="Vale y factura"
               accept="application/pdf,image/*"
             />
+
+            {/*
+              Y leerla. El vale llega a mano el mismo dia; la factura llega en
+              PDF dos dias despues con todo dentro. En vez de volver a
+              teclearlo, se lee --y lo que no cuadre con lo ya escrito se
+              ensena antes de guardar, que es donde se caza un teclazo.
+            */}
+            <div className="border-t border-sand pt-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dark-2">
+                Completar desde la factura
+              </p>
+              <LectorDeFactura
+                registro={expediente}
+                aeronaveId={aeronave.id}
+                canEdit={canEdit}
+              />
+            </div>
             {expediente.archivo_path && (
               <p className="text-xs text-dark-3">
                 Este registro trae además «{expediente.archivo_nombre}», de antes de que
                 hubiera expediente. Se sigue viendo con el 📎 de la fila.
               </p>
             )}
+
+            {/*
+              Cada archivo queda guardado en cuanto se sube --no hay un paso
+              pendiente-- pero sin un boton de cierre uno se queda con la duda
+              de si quedo. Dice «Listo» y no «Guardar» porque guardar ya pasó:
+              un boton que no hace nada y se llama Guardar es peor que no
+              tenerlo.
+            */}
+            <div className="flex justify-end border-t border-sand pt-3">
+              <button
+                type="button"
+                onClick={() => setExpediente(null)}
+                className="rounded-md bg-teal px-4 py-2 text-sm font-extrabold text-white hover:bg-teal-d"
+              >
+                Listo
+              </button>
+            </div>
           </div>
         )}
       </Modal>

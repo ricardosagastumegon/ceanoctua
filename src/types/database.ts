@@ -899,6 +899,7 @@ export type Database = {
           vale: string | null;
           factura: string | null;
           fer_ap: string | null;
+          matricula_abastecida: string | null;
           entidad_id: string | null;
           entidad: string | null;
           entidad_nit: string | null;
@@ -923,6 +924,7 @@ export type Database = {
           vale?: string | null;
           factura?: string | null;
           fer_ap?: string | null;
+          matricula_abastecida?: string | null;
           entidad_id?: string | null;
           entidad?: string | null;
           entidad_nit?: string | null;
@@ -942,6 +944,7 @@ export type Database = {
           vale?: string | null;
           factura?: string | null;
           fer_ap?: string | null;
+          matricula_abastecida?: string | null;
           entidad_id?: string | null;
           entidad?: string | null;
           entidad_nit?: string | null;

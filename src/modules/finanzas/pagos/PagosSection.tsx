@@ -23,6 +23,7 @@ import {
   useFirmaDePago,
   useOrigenes,
 } from './ExpedienteDeLaSP';
+import { BotonSPConAdjuntos } from './SPConAdjuntos';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
 import { EnviarATesoreriaModal } from '@/modules/tesoreria/EnviarATesoreria';
@@ -144,6 +145,7 @@ export function PagosSection({
    * ejecutado, un solo archivo y al final.
    */
   const [adjuntos, setAdjuntos] = useState<Pago | null>(null);
+  const hojaFormato = useRef<HTMLDivElement | null>(null);
   const [formato, setFormato] = useState<Pago | null>(null);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStep, setFilterStep] = useState<string>('');
@@ -929,8 +931,11 @@ export function PagosSection({
         open={formato !== null}
         onClose={() => setFormato(null)}
         title={`Solicitud de trámite de pago · ${formato?.serial ?? ''}`}
+        acciones={
+          formato ? <BotonSPConAdjuntos pago={formato} hoja={hojaFormato} /> : undefined
+        }
       >
-        {formato && <SolicitudPagoPrintable pago={formato} />}
+        {formato && <SolicitudPagoPrintable pago={formato} hojaRef={hojaFormato} />}
       </PrintableModal>
       </div>
       </div>

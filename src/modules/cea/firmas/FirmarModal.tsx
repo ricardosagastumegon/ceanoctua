@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { useToast } from '@/components/ui/Toast';
@@ -6,6 +6,7 @@ import { formatDate } from '@/lib/dates';
 import { describeError } from '@/modules/admin/hooks';
 import { ExpedienteDeLaSP } from '@/modules/finanzas/pagos/ExpedienteDeLaSP';
 import { SolicitudPagoPrintable } from '@/modules/finanzas/pagos/SolicitudPagoPrintable';
+import { BotonSPConAdjuntos } from '@/modules/finanzas/pagos/SPConAdjuntos';
 import type { Pago } from '@/modules/finanzas/pagos/api';
 import { useFirmarDocumento } from './hooks';
 import type { Firma } from './api';
@@ -41,6 +42,7 @@ export function FirmarModal({
   const toast = useToast();
   const firmar = useFirmarDocumento();
   const [papel, setPapel] = useState(false);
+  const hoja = useRef<HTMLDivElement | null>(null);
   const [confirmando, setConfirmando] = useState(false);
 
   async function hacerlo() {
@@ -149,8 +151,13 @@ export function FirmarModal({
       </Modal>
 
       {pago && (
-        <PrintableModal open={papel} onClose={() => setPapel(false)} title={pago.serial ?? ''}>
-          <SolicitudPagoPrintable pago={pago} />
+        <PrintableModal
+          open={papel}
+          onClose={() => setPapel(false)}
+          title={pago.serial ?? ''}
+          acciones={<BotonSPConAdjuntos pago={pago} hoja={hoja} />}
+        >
+          <SolicitudPagoPrintable pago={pago} hojaRef={hoja} />
         </PrintableModal>
       )}
     </>

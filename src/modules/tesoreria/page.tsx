@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { PrintableModal } from '@/components/ui/PrintableModal';
@@ -21,6 +21,7 @@ import {
 import { leerDatosVale } from '@/modules/combustible/documento';
 import { SolicitudValePrintable } from '@/modules/combustible/SolicitudValePrintable';
 import { SolicitudPagoPrintable } from '@/modules/finanzas/pagos/SolicitudPagoPrintable';
+import { BotonSPConAdjuntos } from '@/modules/finanzas/pagos/SPConAdjuntos';
 import {
   DOC_TIPO_LABEL,
   leerDocumentoSP,
@@ -84,6 +85,7 @@ export default function TesoreriaPage() {
   /** El formato oficial, y la ficha de algo ya resuelto (sin botones). */
   const [papel, setPapel] = useState<Envio | null>(null);
   const [resumen, setResumen] = useState<Envio | null>(null);
+  const hojaSP = useRef<HTMLDivElement | null>(null);
 
   const resolver = useMutation({
     mutationFn: async (v: {
@@ -405,6 +407,21 @@ export default function TesoreriaPage() {
         open={papel != null}
         onClose={() => setPapel(null)}
         title={papel ? (leerSnapshot(papel).serial ?? 'Solicitud de vale') : ''}
+        acciones={
+          // El tesorero no puede averiguar de donde viene la solicitud --no
+          // lee los avisos-- asi que los origenes salen del envio, que ya se
+          // los trae congelados.
+          papel && papel.doc_tipo === 'pago' && leerDocumentoSP(papel) ? (
+            <BotonSPConAdjuntos
+              pago={leerDocumentoSP(papel)!.pago}
+              hoja={hojaSP}
+              origenes={(leerSnapshot(papel).origen ?? []).map((o) => ({
+                tipo: o.tipo,
+                id: o.id,
+              }))}
+            />
+          ) : undefined
+        }
       >
         {papel && papel.doc_tipo === 'comb_solicitud' && (
           <SolicitudValePrintable datos={documentoDe(papel) ?? {}} />
@@ -417,6 +434,7 @@ export default function TesoreriaPage() {
             return (
               <SolicitudPagoPrintable
                 pago={d.pago}
+                hojaRef={hojaSP}
                 congelada={{
                   origenes: d.origenes,
                   firmoPor: d.firmoPor,

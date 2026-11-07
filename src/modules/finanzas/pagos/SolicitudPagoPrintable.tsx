@@ -156,9 +156,12 @@ export type SPCongelada = {
 export function SolicitudPagoPrintable({
   pago,
   congelada,
+  hojaRef,
 }: {
   pago: Pago;
   congelada?: SPCongelada | null;
+  /** Para capturar la hoja al armar el PDF con sus adjuntos. */
+  hojaRef?: React.Ref<HTMLDivElement>;
 }) {
   // Los hooks se llaman siempre --no pueden ir dentro de un `if`-- pero
   // cuando viene congelada manda lo congelado. Para quien no lee esas tablas
@@ -230,7 +233,7 @@ export function SolicitudPagoPrintable({
   };
 
   return (
-    <div className="fz-sheet" style={base}>
+    <div ref={hojaRef} className="fz-sheet" style={base}>
       {/* Las celdas del Excel no tienen padding: sin esto cada fila crece ~2pt
           y las 43 filas ya no caben en una página. */}
       <style>{'.fz-sheet td { padding: 0; line-height: 1.05; }'}</style>

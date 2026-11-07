@@ -406,6 +406,12 @@ export function PagosSection({
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+        {/*
+          La bandeja de avisos es de quien ARMA las solicitudes. Quien solo
+          firma ve ahora unicamente las suyas, y un panel con un boton de
+          «Nueva solicitud» que no puede usar es ruido en su pantalla.
+        */}
+        {canEdit && (
         <NotificacionesPanel
           onCreateFromNotifs={(notifs) => {
             if (notifs.length === 0) return;
@@ -426,6 +432,7 @@ export function PagosSection({
             });
           }}
         />
+        )}
       <div className="space-y-3">
       {/* KPIs por paso */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">

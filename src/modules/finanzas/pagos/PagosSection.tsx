@@ -17,7 +17,12 @@ import {
   useUpdatePago,
   useUploadPagoComprobante,
 } from './hooks';
-import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
+import {
+  ENTIDAD_DEL_ORIGEN,
+  ExpedienteDeLaSP,
+  useFirmaDePago,
+  useOrigenes,
+} from './ExpedienteDeLaSP';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
 import { EnviarATesoreriaModal } from '@/modules/tesoreria/EnviarATesoreria';
@@ -86,6 +91,16 @@ export function PagosSection({
    * tambien cruza por `envios`, que es lo unico que pasa entre dos usuarios.
    */
   const [enviandoATesoreria, setEnviandoATesoreria] = useState<Pago | null>(null);
+  /**
+   * Lo que el Tesorero no puede consultar por su cuenta y sin embargo sale en
+   * el papel: los avisos que originaron la SP y quien la firmo. Se leen aqui
+   * --donde si hay permiso-- y viajan congelados dentro del envio, igual que
+   * el documento de una solicitud de vale.
+   */
+  const origenesDelEnvio = useOrigenes(
+    enviandoATesoreria ?? ({ id: '', origen_notificacion_id: null } as unknown as Pago),
+  );
+  const firmaDelEnvio = useFirmaDePago(enviandoATesoreria?.id ?? null);
   const pendientesQ = useFirmasPendientes();
   const cancelarFirma = useCancelarFirma();
 
@@ -804,6 +819,33 @@ export function PagosSection({
                 valor: enviandoATesoreria.step_dates?.[2] ?? 'si',
               },
             ],
+            // El papel entero, congelado: el Tesorero no lee `pagos` ni
+            // `firmas` ni los avisos, y tiene que poder abrir la MISMA hoja
+            // que se firmo. Lo unico que no viaja es la imagen de la firma,
+            // que es un enlace que caduca: viaja quien firmo y la estampa se
+            // pide en el momento.
+            documento: {
+              pago: enviandoATesoreria,
+              origenes: (origenesDelEnvio.data ?? []).map((o) => ({
+                id: o.id,
+                resumen: o.resumen,
+                monto: o.monto ?? null,
+                moneda: o.moneda ?? null,
+              })),
+              firmoPor: firmaDelEnvio.data?.por ?? null,
+              firmoFecha: firmaDelEnvio.data?.fecha ?? null,
+            },
+            // De donde nacio, para que su expediente tambien le llegue: el
+            // respaldo no esta en la SP, esta en el control de vales o en la
+            // liquidacion de la que salio.
+            origen: (origenesDelEnvio.data ?? [])
+              .filter((o) => o.origen_id && ENTIDAD_DEL_ORIGEN[o.origen_tipo])
+              .map((o) => ({
+                tipo: ENTIDAD_DEL_ORIGEN[o.origen_tipo].tipo,
+                id: o.origen_id as string,
+                que: ENTIDAD_DEL_ORIGEN[o.origen_tipo].que,
+                resumen: o.resumen,
+              })),
           }}
           onEnviado={async () => {
             // Mandarla ES el paso: la SP pasa a «Presentado». Dejarlo a mano
@@ -865,22 +907,7 @@ export function PagosSection({
         title={`Expediente · ${adjuntos?.serial ?? ''}`}
         size="md"
       >
-        {adjuntos && (
-          <div className="space-y-3">
-            <p className="rounded-md border border-sand bg-sand-l/40 px-3 py-2 text-xs text-dark-2">
-              Lo que respalda esta solicitud: facturas, vales, órdenes de despacho,
-              contraseñas y el control de vales. <strong>Lo ve quien ve la solicitud</strong>
-              {' '}— quien la firma y quien la recibe.
-            </p>
-            <DocumentAttachment
-              entidadTipo="pago"
-              entidadId={adjuntos.id}
-              canEdit={canEdit}
-              label="Documentos del expediente"
-              accept="application/pdf,image/*"
-            />
-          </div>
-        )}
+        {adjuntos && <ExpedienteDeLaSP pago={adjuntos} canEdit={canEdit} />}
       </Modal>
 
       <PrintableModal

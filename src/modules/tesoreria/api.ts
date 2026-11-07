@@ -55,11 +55,36 @@ export type Snapshot = {
    * ficha. Viaja aqui porque el destinatario no lee la tabla de origen: el
    * envio es lo unico que cruza entre dos usuarios.
    *
-   * Los envios hechos antes de la fase 47 no lo traen; la pantalla lo
-   * comprueba antes de ofrecer el boton.
+   * Que forma tiene depende del `doc_tipo` del envio, y quien lo lee lo sabe
+   * por eso. Los envios hechos antes de la fase 47 no lo traen; la pantalla
+   * lo comprueba antes de ofrecer el boton.
    */
-  documento?: DatosVale;
+  documento?: DatosVale | DocumentoSP;
+  /**
+   * De donde nacio el documento, para que su expediente tambien llegue.
+   *
+   * El respaldo de una solicitud de pago no esta en la solicitud: esta en el
+   * control de vales o en la liquidacion de la que salio. El destinatario no
+   * puede averiguar ese camino --no lee los avisos-- asi que se lo dice el
+   * envio, y la politica de `documentos` hace el resto.
+   */
+  origen?: { tipo: string; id: string; que: string; resumen: string | null }[];
 };
+
+/** La solicitud de pago congelada: la fila, mas lo que el papel necesita. */
+export type DocumentoSP = {
+  pago: Database['public']['Tables']['pagos']['Row'];
+  origenes?: { id: string; resumen: string | null; monto: number | null; moneda: string | null }[];
+  firmoPor?: string | null;
+  firmoFecha?: string | null;
+};
+
+/** El documento de un envio de solicitud de pago, si lo trae. */
+export function leerDocumentoSP(e: Envio): DocumentoSP | null {
+  if (e.doc_tipo !== 'pago') return null;
+  const d = leerSnapshot(e).documento as DocumentoSP | undefined;
+  return d && typeof d === 'object' && 'pago' in d ? d : null;
+}
 
 export function leerSnapshot(e: Envio): Snapshot {
   const s = e.snapshot;

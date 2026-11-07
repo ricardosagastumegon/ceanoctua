@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
+import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { TextInput } from '@/components/ui/TextInput';
 import { useToast } from '@/components/ui/Toast';
@@ -67,6 +68,17 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
   const [nuevo, setNuevo] = useState(false);
   const [imprimir, setImprimir] = useState<Reporte | null>(null);
   const [gestionar, setGestionar] = useState<Reporte | null>(null);
+  /**
+   * El PDF que respalda la quincena --vales, despachos, facturas y
+   * contrasenas en un solo archivo. Se carga AQUI y no en la solicitud de
+   * pago porque es aqui donde se arma; la SP es el final de cadenas
+   * distintas y cada una trae el suyo desde donde nacio.
+   *
+   * Desde la SP se ve sin tener que volver a subirlo: la politica de
+   * `documentos` sigue la cadena hasta ella, asi que lo ven tambien quien
+   * la firma y quien la recibe.
+   */
+  const [expediente, setExpediente] = useState<Reporte | null>(null);
 
   const vehiculoPorId = useMemo(
     () => new Map((vehiculosQ.data ?? []).map((v) => [v.id, v])),
@@ -247,6 +259,13 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
             <button className={boton} onClick={() => setImprimir(r)}>
               Imprimir
             </button>
+            <button
+              className={boton}
+              title="El PDF de respaldo de la quincena. Viaja con la solicitud de pago."
+              onClick={() => setExpediente(r)}
+            >
+              📎 Expediente
+            </button>
             {canEdit && r.estado === 'abierto' && (
               <button
                 className={boton}
@@ -358,6 +377,32 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
               }
             }}
           />
+        )}
+      </Modal>
+
+      {/* ── El PDF de respaldo de la quincena ─────────────────────── */}
+      <Modal
+        open={expediente != null}
+        onClose={() => setExpediente(null)}
+        title={`Expediente · ${expediente?.serial ?? ''}`}
+        size="md"
+      >
+        {expediente && (
+          <div className="space-y-3">
+            <p className="rounded-md border border-sand bg-sand-l/40 px-3 py-2 text-xs text-dark-2">
+              Un PDF con los vales, despachos, facturas y contraseñas de la quincena.
+              Cuando este control llegue a una solicitud de pago,{' '}
+              <strong>quien la firme y quien la reciba verán esto mismo</strong> sin que
+              tengas que volver a subirlo.
+            </p>
+            <DocumentAttachment
+              entidadTipo="comb_reporte"
+              entidadId={expediente.id}
+              canEdit={canEdit}
+              label="Respaldo de la quincena"
+              accept="application/pdf,image/*"
+            />
+          </div>
         )}
       </Modal>
 

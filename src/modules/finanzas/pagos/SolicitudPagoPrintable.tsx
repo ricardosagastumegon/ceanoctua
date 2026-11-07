@@ -137,9 +137,40 @@ function useQuienFirmo(pagoId: string) {
   });
 }
 
-export function SolicitudPagoPrintable({ pago }: { pago: Pago }) {
-  const origenes = useOrigenes(pago).data ?? [];
-  const firmo = useQuienFirmo(pago.id).data ?? null;
+/**
+ * Lo que la hoja necesita y NO esta en la fila del pago: los avisos que la
+ * originaron y quien la firmo. Normalmente se consultan aqui mismo; cuando la
+ * hoja la abre alguien que no lee esas tablas --el Tesorero-- llegan
+ * congeladas dentro del envio.
+ *
+ * La estampa no viaja: es un enlace firmado que caduca. Viaja QUIEN firmo, y
+ * la imagen se pide en el momento. La politica del bucket deja leer la
+ * estampa de otro justamente para esto.
+ */
+export type SPCongelada = {
+  origenes?: { id: string; resumen: string | null; monto: number | null; moneda: string | null }[];
+  firmoPor?: string | null;
+  firmoFecha?: string | null;
+};
+
+export function SolicitudPagoPrintable({
+  pago,
+  congelada,
+}: {
+  pago: Pago;
+  congelada?: SPCongelada | null;
+}) {
+  // Los hooks se llaman siempre --no pueden ir dentro de un `if`-- pero
+  // cuando viene congelada manda lo congelado. Para quien no lee esas tablas
+  // las consultas devuelven vacio, no error, asi que no estorban.
+  const origenesVivos = useOrigenes(pago).data ?? [];
+  const firmoVivo = useQuienFirmo(pago.id).data ?? null;
+  const origenes = congelada?.origenes ?? origenesVivos;
+  const firmo = congelada
+    ? congelada.firmoPor
+      ? { por: congelada.firmoPor, fecha: congelada.firmoFecha ?? null }
+      : null
+    : firmoVivo;
   const estampa = useEstampaDe(firmo?.por).data ?? null;
 
   // ── Que la hoja no pase de una pagina ────────────────────────────────

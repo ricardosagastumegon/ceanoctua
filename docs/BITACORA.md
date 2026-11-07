@@ -6,6 +6,74 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 50 · 2026-11-07 · El expediente viaja la cadena, y Victor ve el papel
+
+**Objetivo:** «Victor DEBE DE VER TODO, por favor, todo lo que se cargue, la SP
+con el formato oficial, lo que se cargue adjunto en las SP. Al igual que
+Lissa».
+
+Y la pieza que faltaba del modelo: «si hablamos de COMBUSTIBLES es en ese paso
+de la cadena [el control de vales] que se debe de cargar 1 PDF con todos los
+vales, despachos, facturas y contraseñas para que soporte al llegar a la SP
+final». Más: «cuando hablamos de SP es la parte final que puede tener orígenes
+diferentes; las SP pueden nacer desde un vale, pasar por una liquidación, o
+pueden nacer desde un vale de combustible, pasar por toda la cadena y llegar a
+la SP».
+
+**Lo que eso cambió.** La fase 49 colgó el adjunto de la SP. Correcto, pero
+incompleto: **el respaldo no se sube en la SP, se sube donde se arma.** La SP
+es el final de cadenas distintas y el expediente tiene que llegar hasta ella
+desde donde nació. Así que la regla se extendió sin cambiar de forma —un
+documento colgado de un ORIGEN lo ve quien puede ver la SP a la que ese origen
+llega— y por eso bastó una función más, `pago_del_documento`, que resuelve el
+camino. `security definer` porque atraviesa `pagos_notificaciones`, que ni
+Victor ni Lissa leen; pero no devuelve datos, devuelve un identificador, y
+quien concede sigue siendo `puede_ver_pago`. **Resolver el camino y conceder el
+permiso son dos actos distintos y conviene que lo sigan siendo.**
+
+El mapa lleva las cuatro cadenas —combustible vehículos, liquidación, consumo
+TC, combustible aeronaves— aunque hoy solo se use la primera. Escribir las
+cuatro costó cuatro líneas; volver a tocar una política de seguridad dentro de
+tres meses cuesta acordarse de que había que tocarla.
+
+**Una mina que había puesto la fase anterior.** El bucket `documentos` no solo
+guarda adjuntos: también las **estampas de firma** (`usuarios.firma_path`), que
+no tienen fila en `documentos` porque no son adjuntos de nada. Al acotar el
+bucket quedaron fuera. No se notaba porque el bucket estaba vacío, pero el día
+que se subiera una firma la hoja habría salido en blanco justo en el renglón de
+la firma —**y sin decir nada**, porque el código que la busca se traga el error
+a propósito para no romper el documento entero. Un fallo silencioso en un papel
+que se firma es de los peores que se pueden dejar puestos. Se restituyó lo
+anterior y solo eso, acotado a los archivos de firma: `es_estampa_de_firma`.
+Comprobado que Victor ve la estampa de Lissa (o su copia saldría sin firma) y
+que un archivo cualquiera sigue denegado.
+
+**Victor ve el papel de la SP.** El mismo problema que con el vale y la misma
+solución: el formato oficial FZ-RG-0185 consulta `pagos_notificaciones` y
+`firmas`, que él no lee. Así que el documento viaja congelado dentro del envío
+—la fila del pago, los avisos que la originaron y quién la firmó— y el
+imprimible acepta ese paquete además de consultarlo por su cuenta. Lo único que
+no viaja es la imagen de la firma, que es un enlace que caduca: viaja **quién**
+firmó y la estampa se pide en el momento, que es justo para lo que se arregló
+la política.
+
+**Cambios de UI:**
+- **📎 Expediente** en cada control de vales: ahí se sube el PDF de la quincena.
+- En la SP, dos paneles y no uno: lo adjuntado a la solicitud (editable) y lo
+  que trae el origen (solo lectura, con su nombre). Mezclarlos haría creer que
+  borrar desde la SP quita el respaldo de la quincena, y no es así.
+- En la bandeja de Victor: **Ver** junto a Recibir, y en «Pendientes de pagar»
+  también **Expediente**.
+
+**Comentarios:** comprobado en seco con las tres sesiones reales. Victor ve el
+PDF del control de vales que llega a SU solicitud y no el de uno que todavía
+está abierto; Lissa igual; Angeles ve los dos, incluido el del control sin
+cerrar. Al retirarle el envío a Victor, deja de verlo.
+
+**Lo que sigue fuera:** separar las SP de Zonia de las de Angeles.
+
+---
+
 ## Fase 49 · 2026-11-07 · El expediente de la Solicitud de Pago
 
 **Objetivo:** «cuando esté la SP deberá de tener también opción de cargar un PDF

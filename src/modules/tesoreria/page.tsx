@@ -20,8 +20,10 @@ import {
 } from '@/modules/dashboard/tablero';
 import { leerDatosVale } from '@/modules/combustible/documento';
 import { SolicitudValePrintable } from '@/modules/combustible/SolicitudValePrintable';
+import { SolicitudPagoPrintable } from '@/modules/finanzas/pagos/SolicitudPagoPrintable';
 import {
   DOC_TIPO_LABEL,
+  leerDocumentoSP,
   ENVIOS_KEY,
   enviosApi,
   leerSnapshot,
@@ -150,9 +152,14 @@ export default function TesoreriaPage() {
     };
   }
 
-  /** Lo que lleva papel: hoy, las solicitudes de vale. */
+  /**
+   * Lo que lleva papel. El envio trae el documento congelado dentro; sin el
+   * --los que se mandaron antes de que viajara-- solo queda la ficha, y el
+   * boton no se ofrece en vez de abrir una hoja en blanco.
+   */
   const tienePapel = (e: Envio) =>
-    e.doc_tipo === 'comb_solicitud' && documentoDe(e) != null;
+    (e.doc_tipo === 'comb_solicitud' && documentoDe(e) != null) ||
+    (e.doc_tipo === 'pago' && leerDocumentoSP(e) != null);
 
   const botonVer =
     'rounded-md border border-sand px-3 py-1 text-xs font-semibold text-dark-2 hover:bg-sand-l';
@@ -240,7 +247,17 @@ export default function TesoreriaPage() {
           vacio="No hay solicitudes de pago esperándote."
         >
           {pagos.map((e) =>
-            renglon(e, <BotonPrincipal onClick={() => setAbierto(e)}>Recibir</BotonPrincipal>),
+            renglon(
+              e,
+              <span className="flex gap-2">
+                {tienePapel(e) && (
+                  <button type="button" className={botonVer} onClick={() => setPapel(e)}>
+                    Ver
+                  </button>
+                )}
+                <BotonPrincipal onClick={() => setAbierto(e)}>Recibir</BotonPrincipal>
+              </span>,
+            ),
           )}
         </Bloque>
       </div>
@@ -262,12 +279,27 @@ export default function TesoreriaPage() {
         {porPagar.map((e) =>
           renglon(
             e,
-            <BotonPrincipal
-              disabled={marcarPagado.isPending}
-              onClick={() => marcarPagado.mutate(e.doc_id)}
-            >
-              Marcar pagada
-            </BotonPrincipal>,
+            <span className="flex gap-2">
+              {tienePapel(e) && (
+                <button type="button" className={botonVer} onClick={() => setPapel(e)}>
+                  Ver
+                </button>
+              )}
+              <button
+                type="button"
+                className={botonVer}
+                onClick={() => setResumen(e)}
+                title="El respaldo y lo que registraste"
+              >
+                Expediente
+              </button>
+              <BotonPrincipal
+                disabled={marcarPagado.isPending}
+                onClick={() => marcarPagado.mutate(e.doc_id)}
+              >
+                Marcar pagada
+              </BotonPrincipal>
+            </span>,
           ),
         )}
       </Bloque>
@@ -360,7 +392,25 @@ export default function TesoreriaPage() {
         onClose={() => setPapel(null)}
         title={papel ? (leerSnapshot(papel).serial ?? 'Solicitud de vale') : ''}
       >
-        {papel && <SolicitudValePrintable datos={documentoDe(papel) ?? {}} />}
+        {papel && papel.doc_tipo === 'comb_solicitud' && (
+          <SolicitudValePrintable datos={documentoDe(papel) ?? {}} />
+        )}
+        {papel &&
+          papel.doc_tipo === 'pago' &&
+          (() => {
+            const d = leerDocumentoSP(papel);
+            if (!d) return null;
+            return (
+              <SolicitudPagoPrintable
+                pago={d.pago}
+                congelada={{
+                  origenes: d.origenes,
+                  firmoPor: d.firmoPor,
+                  firmoFecha: d.firmoFecha,
+                }}
+              />
+            );
+          })()}
       </PrintableModal>
 
       {/* La ficha de algo ya resuelto: se mira, no se decide. */}
@@ -455,12 +505,29 @@ function Ficha({
         ver esa SP; aqui no se decide nada.
       */}
       {envio.doc_tipo === 'pago' && (
-        <DocumentAttachment
-          entidadTipo="pago"
-          entidadId={envio.doc_id}
-          canEdit={false}
-          label="Respaldo de la solicitud"
-        />
+        <>
+          <DocumentAttachment
+            entidadTipo="pago"
+            entidadId={envio.doc_id}
+            canEdit={false}
+            label="Respaldo de la solicitud"
+          />
+          {/*
+            Y lo que trae de donde nacio. El respaldo de una SP de combustible
+            no esta en la SP: esta en el control de vales de la quincena. El
+            camino se lo dice el envio --el no lee los avisos-- y el permiso
+            lo da la politica de `documentos`, que sigue la cadena hasta aqui.
+          */}
+          {(s.origen ?? []).map((o) => (
+            <DocumentAttachment
+              key={`${o.tipo}-${o.id}`}
+              entidadTipo={o.tipo}
+              entidadId={o.id}
+              canEdit={false}
+              label={`Respaldo que trae ${o.que}`}
+            />
+          ))}
+        </>
       )}
 
       {soloLectura && (

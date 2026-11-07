@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { PrintableModal } from '@/components/ui/PrintableModal';
+import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
 import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { useToast } from '@/components/ui/Toast';
@@ -446,6 +447,21 @@ function Ficha({
           ))}
         </dl>
       </div>
+
+      {/*
+        El expediente que respalda la solicitud de pago. El lo VE y no lo
+        toca: lo arma quien hace la SP. Y ve solo el de las que le mandaron
+        --la regla vive en la politica de `documentos`, que pregunta si puede
+        ver esa SP; aqui no se decide nada.
+      */}
+      {envio.doc_tipo === 'pago' && (
+        <DocumentAttachment
+          entidadTipo="pago"
+          entidadId={envio.doc_id}
+          canEdit={false}
+          label="Respaldo de la solicitud"
+        />
+      )}
 
       {soloLectura && (
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border border-sand px-3 py-2 text-sm">

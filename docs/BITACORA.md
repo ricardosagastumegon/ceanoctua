@@ -6,6 +6,75 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 49 · 2026-11-07 · El expediente de la Solicitud de Pago
+
+**Objetivo:** «cuando esté la SP deberá de tener también opción de cargar un PDF
+con todo esto [...] facturas, vales, órdenes de despacho, contraseñas y control
+de vales». El papel oficial no los lista uno a uno —dice «se adjuntan»— así que
+el respaldo tiene que estar en alguna parte.
+
+**La decisión que importa.** Lo pidió junto con la regla de quién lo ve: «quien
+tenga acceso a las SP tanto al momento de hacerlas, procesarlas como yo,
+autorizarlas y firmarlas como Lissa, recibirlas y confirmarlas como Victor
+deberán poder ver ese documento adjunto, porque eso es el respaldo de la SP».
+Y a la vez, hablando del futuro perfil de Zonia: «yo no puedo ver nada de ella
+a menos que me lo comparta».
+
+Las dos frases juntas dicen una sola cosa, y no es la que parece: **el adjunto
+no cuelga de un rol, cuelga de la solicitud.** «Lo ve quien ve la SP» es lo
+único que sigue siendo cierto cuando haya dos espacios. Escrito como «lo ven
+admin, asistente, solo_lectura y tesorería» habría que reescribirlo el día de
+Zonia —y lo normal es que se reescriba uno de los dos sitios y no el otro.
+
+Por eso hay **una** función, `puede_ver_pago`, y tanto `documentos` como el
+bucket la obedecen. Es `security invoker` a propósito: por dentro consulta
+`pagos` y `envios` con las políticas del que pregunta, así que no repite quién
+puede ver una SP —lo averigua preguntándolo. El día que `pagos_select` lleve el
+dueño, los adjuntos lo siguen sin tocarlos.
+
+En el bucket la misma regla se enforca otra vez, apoyándose en la tabla: el
+`exists` sobre `documentos` vuelve a pasar por su política, así que no hay una
+segunda copia del criterio sino una sola consultada dos veces. Efecto
+secundario sano: un archivo sin fila en `documentos` no lo lee nadie —un
+huérfano deja de ser una fuga y pasa a ser basura.
+
+**Se cerró un agujero de paso.** El bucket `documentos` tenía lectura
+`auth.uid() IS NOT NULL`: cualquier sesión leía cualquier archivo. Cuando se
+escribió esa política el único usuario era la dueña; ahora están Lissa y
+Victor, y lo que se va a subir ahí son facturas y contraseñas. El bucket estaba
+vacío, así que no había nada expuesto —pero acotarlo tenía que ir en **la misma
+migración** que habilita la subida, no en la siguiente.
+
+Los otros dos puntos de adjunto que ya existían en el código (`firmas` y
+`vouchers`, los dos sin una sola fila) siguen el mismo criterio: se ve el
+adjunto si se ve aquello de lo que cuelga. Dejarlos en «admin y asistente» le
+habría quitado a Lissa los documentos de sus propias firmas sin que nadie lo
+notara, porque hoy no hay ninguno que echar en falta.
+
+**Y auditoría.** Borrar un adjunto es físico —la tabla no tiene `deleted_at`—
+y hasta ahora no quedaba ni rastro. En lo que va a respaldar solicitudes
+firmadas eso no se sostiene: el trigger guarda el `before` completo.
+
+**Cambios de UI:**
+- Botón **📎 Expediente** en cada solicitud, en curso y pagada. No va dentro de
+  la vista imprimible: ahí acabaría en el papel.
+- En la bandeja de Victor, el respaldo aparece en la ficha de la SP, en solo
+  lectura: él la recibe, no la arma.
+- No confundir con **📎 Comprobante**, que es otra cosa: el del pago ya
+  ejecutado, un solo archivo y al final.
+
+**Comentarios:** la parte que importa de la migración no se puede comprobar sin
+datos, así que la comprobación que viaja en el archivo es estructural y la de
+verdad va en la prueba en seco: Victor ve 1 de 2 adjuntos —solo el de la SP que
+le mandaron—, Lissa y Angeles ven los dos, Victor no puede subir, y al
+retirarle el envío deja de ver el suyo.
+
+**Lo que NO es esta fase:** separar las SP de Zonia de las de Angeles. Eso es
+un cambio de modelo en `pagos` y va aparte; lo único que esta fase garantiza es
+que los adjuntos no habrá que volver a tocarlos cuando llegue.
+
+---
+
 ## Fase 48 · 2026-11-07 · Un paso atrás, y el clic de más que no cuenta
 
 **Objetivo:** «se trabó la compu y di dos clic intentando avanzarlo, cuando se

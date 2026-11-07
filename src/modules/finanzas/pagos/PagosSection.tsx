@@ -17,6 +17,7 @@ import {
   useUpdatePago,
   useUploadPagoComprobante,
 } from './hooks';
+import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
 import { PAGO_STEPS, PAGO_TIPO_COLORS, type Pago, type PagoInsert } from './api';
 import { PedirFirmaModal } from '@/modules/cea/firmas/PedirFirmaModal';
 import { EnviarATesoreriaModal } from '@/modules/tesoreria/EnviarATesoreria';
@@ -118,6 +119,16 @@ export function PagosSection({
   const [verPagadas, setVerPagadas] = useState(false);
   const [buscaPagada, setBuscaPagada] = useState('');
   const [viewing, setViewing] = useState<Pago | null>(null);
+  /**
+   * El expediente que respalda la solicitud: facturas, vales, ordenes de
+   * despacho, contrasenas y el control de vales. El papel oficial no los
+   * lista --dice «se adjuntan»-- asi que tienen que estar en algun sitio.
+   *
+   * No va dentro de la vista imprimible: ahi acabaria en el papel. Y no se
+   * confunde con el «Comprobante», que es otra cosa --el del pago ya
+   * ejecutado, un solo archivo y al final.
+   */
+  const [adjuntos, setAdjuntos] = useState<Pago | null>(null);
   const [formato, setFormato] = useState<Pago | null>(null);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStep, setFilterStep] = useState<string>('');
@@ -514,6 +525,14 @@ export function PagosSection({
                     >
                       📄
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdjuntos(p)}
+                      className="rounded-md border border-teal/40 px-2 py-1 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                      title="Expediente: facturas, vales, órdenes de despacho, contraseñas y control de vales"
+                    >
+                      📎 Expediente
+                    </button>
                     {canEdit && (
                       <>
                       {/*
@@ -735,6 +754,14 @@ export function PagosSection({
                             )}
                             <button
                               type="button"
+                              onClick={() => setAdjuntos(p)}
+                              className="rounded-md border border-teal/40 px-2 py-0.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
+                              title="Expediente de esta solicitud"
+                            >
+                              📎
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setFormato(p)}
                               className="rounded-md border border-teal/40 px-2 py-0.5 text-xs font-semibold text-teal-d hover:bg-teal-l"
                               title="Formato oficial FZ-RG-0185 de esta solicitud"
@@ -830,6 +857,30 @@ export function PagosSection({
           onSubmit={handleSave}
           onCancel={closeForm}
         />
+      </Modal>
+
+      <Modal
+        open={adjuntos !== null}
+        onClose={() => setAdjuntos(null)}
+        title={`Expediente · ${adjuntos?.serial ?? ''}`}
+        size="md"
+      >
+        {adjuntos && (
+          <div className="space-y-3">
+            <p className="rounded-md border border-sand bg-sand-l/40 px-3 py-2 text-xs text-dark-2">
+              Lo que respalda esta solicitud: facturas, vales, órdenes de despacho,
+              contraseñas y el control de vales. <strong>Lo ve quien ve la solicitud</strong>
+              {' '}— quien la firma y quien la recibe.
+            </p>
+            <DocumentAttachment
+              entidadTipo="pago"
+              entidadId={adjuntos.id}
+              canEdit={canEdit}
+              label="Documentos del expediente"
+              accept="application/pdf,image/*"
+            />
+          </div>
+        )}
       </Modal>
 
       <PrintableModal

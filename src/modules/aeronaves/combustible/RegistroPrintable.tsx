@@ -122,7 +122,8 @@ export function RegistroPrintable({
               <thead>
                 <tr style={{ backgroundColor: col.light, color: col.dark }} className="text-left">
                   <th className="px-4 py-1.5 font-extrabold">Producto</th>
-                  <th className="px-2 py-1.5 text-right font-extrabold">Galones</th>
+                  {/* «Galones» a secas mentia en el renglon del aceite. */}
+                  <th className="px-2 py-1.5 text-right font-extrabold">Cantidad</th>
                   <th className="px-2 py-1.5 text-right font-extrabold">Precio unitario</th>
                   <th className="px-4 py-1.5 text-right font-extrabold">Total</th>
                 </tr>
@@ -131,7 +132,10 @@ export function RegistroPrintable({
                 {r.lineas.map((l, i) => (
                   <tr key={l.id} style={{ backgroundColor: i % 2 ? '#ffffff' : 'rgba(0,0,0,.02)' }}>
                     <td className="px-4 py-1.5 font-semibold text-dark">{l.producto}</td>
-                    <td className="px-2 py-1.5 text-right text-dark-2">{money(Number(l.galones))}</td>
+                    <td className="px-2 py-1.5 text-right text-dark-2">
+                      {money(Number(l.galones))}{' '}
+                      <span className="text-[10px] uppercase text-dark-3">{l.unidad ?? 'gal'}</span>
+                    </td>
                     <td className="px-2 py-1.5 text-right text-dark-2">
                       {money(Number(l.precio_unitario))}
                     </td>

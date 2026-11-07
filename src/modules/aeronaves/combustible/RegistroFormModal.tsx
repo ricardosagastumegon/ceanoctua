@@ -3,7 +3,9 @@ import { Modal } from '@/components/ui/Modal';
 import { TextInput } from '@/components/ui/TextInput';
 import { useToast } from '@/components/ui/Toast';
 import { describeError, useEntidades, useProveedores } from '@/modules/admin/hooks';
+import { supabase } from '@/lib/supabase';
 import { subirArchivo, type Aeronave } from '../api';
+import { unidadDe } from './api';
 import { useActualizarRegistro, useCrearRegistro } from './hooks';
 import type { LineaInput, RegistroCompleto } from './api';
 
@@ -53,6 +55,23 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
    * hasta ahora no tenia donde guardarse.
    */
   const [matricula, setMatricula] = useState('');
+
+  /**
+   * Los registros que YA traen este numero de vale.
+   *
+   * Avisa, no impide. El numero sale de un talonario del proveedor y los
+   * talonarios se reinician por serie, asi que dos vales distintos pueden
+   * compartir numero --impedirlo dejaria el dia que pase sin forma de
+   * trabajar. Lo que no puede pasar es teclearlo dos veces sin enterarse.
+   *
+   * La pregunta va a la base y no se resuelve aqui porque es «existe en
+   * alguna parte», y esta pantalla solo tiene cargada la aeronave que se
+   * esta mirando: el mismo vale pegado a otra aeronave es justo el caso que
+   * hay que cazar.
+   */
+  const [repetidos, setRepetidos] = useState<
+    { serial: string | null; fecha: string | null; total: number | null; matricula: string | null }[]
+  >([]);
   const [entidadId, setEntidadId] = useState('');
   const [proveedorId, setProveedorId] = useState('');
   const [moneda, setMoneda] = useState('GTQ');
@@ -85,6 +104,20 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
         : [{ producto: PRODUCTOS[0], galones: '', precio: '' }],
     );
   }, [open, editando]);
+
+  useEffect(() => {
+    const v = vale.trim();
+    if (!open || v === '') {
+      setRepetidos([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      void supabase
+        .rpc('avn_vale_repetido', { p_vale: v, p_excluir: editando?.id ?? null })
+        .then(({ data }) => setRepetidos(data ?? []));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [vale, open, editando?.id]);
 
   const total = useMemo(
     () => lineas.reduce((s, l) => s + num(l.galones) * num(l.precio), 0),
@@ -120,6 +153,7 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
         producto: l.producto,
         galones: num(l.galones),
         precio_unitario: num(l.precio),
+        unidad: unidadDe(l.producto),
       }));
     if (conValor.length === 0) {
       setError('Agrega al menos un producto con galones y precio.');
@@ -239,6 +273,34 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
         </div>
 
         {/*
+          El aviso del vale repetido. Va debajo de la fila donde se escribe,
+          pegado al dato que lo provoca, y dice CUAL es el otro: «ya existe»
+          a secas obliga a ir a buscarlo, y el que lo lee con prisa lo
+          ignora.
+        */}
+        {repetidos.length > 0 && (
+          <div className="rounded-md border border-gold bg-gold-light/60 px-3 py-2 text-sm">
+            <p className="font-extrabold text-dark">
+              Ojo: el vale {vale.trim()} ya está registrado
+            </p>
+            <ul className="mt-1 space-y-0.5 text-dark-2">
+              {repetidos.map((r) => (
+                <li key={r.serial ?? r.fecha}>
+                  {r.serial ?? 'registro'}
+                  {r.matricula ? ` · ${r.matricula}` : ''}
+                  {r.fecha ? ` · ${r.fecha}` : ''}
+                  {r.total != null ? ` · Q ${Number(r.total).toFixed(2)}` : ''}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-[11px] text-dark-3">
+              Si de verdad son dos vales distintos —los talonarios se reinician por
+              serie— puedes guardar igual.
+            </p>
+          </div>
+        )}
+
+        {/*
           Se deja vacia en el caso normal. Escribirla solo cuando voló otra:
           asi la casilla en blanco significa «la de siempre» y no «se me
           olvido», que es la diferencia entre un dato y un hueco.
@@ -286,13 +348,27 @@ export function RegistroFormModal({ open, aeronave, editando, onClose }: Props) 
                 </label>
                 <label className="block">
                   {i === 0 && (
-                    <span className="mb-1 block text-[10px] font-semibold text-dark-3">Galones</span>
+                    <span className="mb-1 block text-[10px] font-semibold text-dark-3">
+                      Cantidad
+                    </span>
                   )}
-                  <input
-                    type="number" step="0.001" min="0" value={l.galones}
-                    onChange={(e) => cambiar(i, 'galones', e.target.value)}
-                    className="block w-full rounded-md border border-sand px-2 py-1.5 text-sm focus:border-teal focus:outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number" step="0.001" min="0" value={l.galones}
+                      onChange={(e) => cambiar(i, 'galones', e.target.value)}
+                      className="block w-full rounded-md border border-sand py-1.5 pl-2 pr-8 text-sm focus:border-teal focus:outline-none"
+                    />
+                    {/*
+                      La unidad se deduce del producto --el aceite va en
+                      litros-- y se ensena dentro de la casilla. Que no sea
+                      editable es a proposito: no hay gasolina en litros ni
+                      aceite en galones, y una casilla mas seria una casilla
+                      mas que se puede dejar mal.
+                    */}
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-extrabold uppercase text-dark-3">
+                      {unidadDe(l.producto)}
+                    </span>
+                  </div>
                 </label>
                 <label className="block">
                   {i === 0 && (

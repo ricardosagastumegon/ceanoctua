@@ -968,6 +968,7 @@ export type Database = {
           registro_id: string;
           producto: string;
           galones: number;
+          unidad: string;
           precio_unitario: number;
           total: number;
           orden: number;
@@ -979,12 +980,14 @@ export type Database = {
           registro_id: string;
           producto: string;
           galones?: number;
+          unidad?: string;
           precio_unitario?: number;
           orden?: number;
         };
         Update: {
           producto?: string;
           galones?: number;
+          unidad?: string;
           precio_unitario?: number;
           orden?: number;
         };
@@ -4345,6 +4348,20 @@ export type Database = {
       comb_cerrar_reporte: {
         Args: { p_reporte: string };
         Returns: Database['public']['Tables']['comb_reportes']['Row'];
+      };
+      /**
+       * Los registros vivos que ya traen ese numero de vale. Avisa, no
+       * impide: los talonarios del proveedor se reinician por serie.
+       */
+      avn_vale_repetido: {
+        Args: { p_vale: string; p_excluir?: string | null };
+        Returns: {
+          id: string;
+          serial: string | null;
+          fecha: string | null;
+          total: number | null;
+          matricula: string | null;
+        }[];
       };
       /**
        * Avanza una solicitud de pago un paso, SOLO si sigue en el paso del

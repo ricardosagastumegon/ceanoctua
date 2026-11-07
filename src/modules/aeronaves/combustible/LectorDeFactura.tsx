@@ -95,20 +95,27 @@ export function LectorDeFactura({
       // Las lineas se reemplazan enteras --asi funciona la API-- con lo que
       // dice la factura. Si no trajera galones o precio se deja lo que habia:
       // es preferible un registro con lo tecleado que uno con ceros.
-      const lineaVieja = registro.lineas[0];
+      const utiles = leida.lineas.filter((l) => l.cantidad != null && l.precioUnitario != null);
       const lineas =
-        leida.galones != null && leida.precioUnitario != null
-          ? [
-              {
-                producto: leida.producto ?? lineaVieja?.producto ?? 'Gasolina',
-                galones: leida.galones,
-                precio_unitario: leida.precioUnitario,
-              },
-            ]
+        utiles.length > 0
+          ? utiles.map((l) => ({
+              // El nombre de la factura es el del proveedor («GASOLINA
+              // AV-GAS»); el registro usa el suyo, corto, que es con el que
+              // se lee el estado de cuenta.
+              producto: /aceite|oil/i.test(l.producto)
+                ? 'Aceite'
+                : /diesel/i.test(l.producto)
+                  ? 'Diesel'
+                  : 'Gasolina',
+              galones: l.cantidad as number,
+              precio_unitario: l.precioUnitario as number,
+              unidad: l.unidad,
+            }))
           : registro.lineas.map((l) => ({
               producto: l.producto,
               galones: Number(l.galones),
               precio_unitario: Number(l.precio_unitario),
+              unidad: l.unidad ?? 'gal',
             }));
 
       await actualizar.mutateAsync({
@@ -175,12 +182,30 @@ export function LectorDeFactura({
               {fila('Número', leida.numero)}
               {fila('FER/AP', leida.fer)}
               {fila('Fecha', leida.fecha)}
-              {fila('Producto', leida.producto)}
-              {fila('Galones', leida.galones)}
-              {fila('Precio por galón', leida.precioUnitario)}
               {fila('Total', leida.total != null ? `Q ${leida.total.toFixed(2)}` : null)}
               {fila('Vale que cita', leida.vale)}
             </dl>
+
+            {/* Los renglones, uno por uno: una factura puede traer gasolina
+                y aceite, y el aceite va en litros. */}
+            <ul className="mt-2 space-y-1 border-t border-sand pt-2 text-sm">
+              {leida.lineas.length === 0 && (
+                <li className="text-rust">No se reconoció ningún producto.</li>
+              )}
+              {leida.lineas.map((l) => (
+                <li key={l.producto} className="flex justify-between gap-3">
+                  <span className="text-dark">
+                    {l.producto}{' '}
+                    <span className="text-dark-3">
+                      {l.cantidad ?? '—'} {l.unidad} × {l.precioUnitario ?? '—'}
+                    </span>
+                  </span>
+                  <span className="font-medium">
+                    {l.total != null ? `Q ${l.total.toFixed(2)}` : '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {choques.length > 0 && (

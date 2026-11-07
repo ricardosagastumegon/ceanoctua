@@ -17,7 +17,18 @@ export type LineaInput = {
   producto: string;
   galones: number;
   precio_unitario: number;
+  /**
+   * `gal` o `lt`. El aceite del vale va en litros, lo demas en galones. La
+   * columna de cantidad se llama `galones` por historia; lo que la mide es
+   * esto. Ver la migracion 20261107000008.
+   */
+  unidad?: string;
 };
+
+/** Lo normal de cada producto. El aceite es el unico que no va en galones. */
+export function unidadDe(producto: string): 'gal' | 'lt' {
+  return /aceite/i.test(producto) ? 'lt' : 'gal';
+}
 
 /** Un registro con sus líneas y el estado de su solicitud de pago. */
 export type RegistroCompleto = Registro & {
@@ -216,6 +227,7 @@ async function reemplazarLineas(registroId: string, lineas: LineaInput[]): Promi
   if (lineas.length === 0) return;
   const { error } = await supabase.from('avn_combustible_lineas').insert(
     lineas.map((l, i) => ({
+      unidad: l.unidad ?? unidadDe(l.producto),
       registro_id: registroId,
       producto: l.producto,
       galones: l.galones,

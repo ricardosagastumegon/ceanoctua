@@ -290,7 +290,10 @@ export function CombustibleSection({
                     <td className="px-2 py-2 text-dark-2">{r.factura ?? '—'}</td>
                     <td className="px-2 py-2 text-dark-2">{r.fer_ap ?? '—'}</td>
                     <td className="px-2 py-2 text-dark-3">
-                      {r.lineas.map((l) => `${l.producto} ${l.galones}g`).join(' · ') || '—'}
+                      {/* «Aceite 2g» era mentira: dos litros no son dos galones. */}
+                      {r.lineas
+                        .map((l) => `${l.producto} ${l.galones} ${l.unidad ?? 'gal'}`)
+                        .join(' · ') || '—'}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-right font-extrabold text-dark">
                       {r.moneda} {money(Number(r.total))}

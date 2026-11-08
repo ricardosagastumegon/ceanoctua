@@ -407,7 +407,18 @@ export function PagosSection({
         )}
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+      {/*
+        Dos columnas solo cuando HAY bandeja de avisos.
+        Al esconderla para quien solo firma, la rejilla seguia declarando
+        `280px 1fr` y el contenido --que pasaba a ser el primer hijo-- caia
+        en la columna estrecha: la pantalla entera de Pagos quedaba metida en
+        280 px. Se vio en el usuario de Lissa y no en el de Javier solo
+        porque el no tiene ninguna solicitud todavia y el hueco vacio no
+        delata el ancho.
+      */}
+      <div
+        className={`grid grid-cols-1 gap-4 ${canEdit ? 'lg:grid-cols-[280px_1fr]' : ''}`}
+      >
         {/*
           La bandeja de avisos es de quien ARMA las solicitudes. Quien solo
           firma ve ahora unicamente las suyas, y un panel con un boton de

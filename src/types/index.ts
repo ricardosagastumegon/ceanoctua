@@ -13,7 +13,10 @@ export type AppRol = Database['public']['Enums']['app_rol'];
 /** Los módulos a los que se le puede dar acceso a alguien. */
 export type Modulo =
   | 'dashboard' | 'tt' | 'aeronaves' | 'cea' | 'finanzas' | 'caja_chica'
-  | 'miel_sj' | 'admin' | 'combustible' | 'tesoreria';
+  | 'miel_sj' | 'admin' | 'combustible' | 'tesoreria'
+  // La llave del piloto: entra SOLO a su liquidación de viaje, no al resto
+  // de Aeronaves (flota, certificados, estado de cuenta, combustible).
+  | 'avn_liquidacion';
 
 /** Observador ve; editor además crea y edita; super además borra. */
 export type Permiso = 'observador' | 'editor' | 'super';

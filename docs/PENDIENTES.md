@@ -16,6 +16,29 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 
 > **Nota de numeración:** la sección «Deferred a polish futuro» del final usa su propia serie DT-5 a DT-8, de la Fase 19 y ya cerrada. Los items vivos de aquí siguen desde DT-10 para no chocar con ella.
 
+### DT-26 · La liquidación del piloto no sale hacia Pagos
+
+**Origen:** fase 56. La sección captura el viaje, calcula el reembolso al
+piloto y cierra con sus documentos, pero ahí se detiene.
+
+**Lo que falta:** el **«Enviar a SP»** desde una liquidación cerrada, para que
+el reembolso al piloto se convierta en una solicitud de pago con su expediente
+—las fotos de las facturas ya viven en `documentos` con
+`entidad_tipo = 'avn_liq_gasto'`, que es el sitio que viaja—. Con él vienen los
+dos estados que ya están en el CHECK esperando: `Enviada a SP` y `Reembolsada`.
+
+**Lo que hay que tocar cuando se haga:** `pagos_notificaciones_origen_tipo_check`
+tiene que admitir un origen más, y `pago_del_documento` necesita la entrada
+`'avn_liq_gasto'` en su mapa de la cadena para que quien firma y el tesorero
+alcancen las facturas del viaje. Hoy el `else` de `documentos_read` ya lo
+intentaría; sin la entrada en el mapa devuelve null y solo lo ven admin,
+asistente y el propio piloto.
+
+**Impacto:** medio. Sin esto el reembolso se tramita a mano fuera del sistema,
+como hasta ahora, pero el papel ya sale bien y auditable.
+
+---
+
 ### DT-25 · El vale de caja chica no llega a «Solicitado» ni «Acreditado»
 
 **Origen:** fase 55, al montar el ciclo del vale. La usuaria lo describió

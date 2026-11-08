@@ -13,6 +13,13 @@ type Tab = {
    * usuario; `roles` se queda para los casos que aún no migran a módulos.
    */
   modulo?: Modulo;
+  /**
+   * No dibujar esta pestaña si el usuario ya tiene ese otro módulo, porque
+   * entonces llega por dentro y la pestaña sería un duplicado. Es el caso del
+   * piloto: él entra directo a su liquidación; quien tiene Aeronaves entero
+   * la alcanza desde la flota.
+   */
+  salvoSi?: Modulo;
 };
 
 const tabs: Tab[] = [
@@ -20,6 +27,11 @@ const tabs: Tab[] = [
   // CC Board pestaña eliminada en Fase 16 · F-0. Vales y Liquidaciones viven ahora dentro de Finanzas.
   { to: '/arriaza',  label: 'Arriaza T&T', roles: ['admin', 'asistente'], modulo: 'tt' },
   { to: '/aeronaves', label: '✈ Aeronaves', roles: ['admin', 'asistente'], modulo: 'aeronaves' },
+  // La puerta del piloto. Solo aparece para quien NO tiene Aeronaves entero.
+  {
+    to: '/aeronaves/liquidaciones', label: '✈ Mis liquidaciones', roles: [],
+    modulo: 'avn_liquidacion', salvoSi: 'aeronaves',
+  },
   { to: '/cea',      label: 'CEA',         roles: ['admin', 'asistente'], modulo: 'cea' },
   { to: '/finanzas', label: '💰 Finanzas', roles: ['admin', 'asistente'], modulo: 'finanzas' },
   { to: '/caja-chica', label: '💵 Caja Chica', roles: ['admin', 'asistente'], modulo: 'caja_chica' },
@@ -32,6 +44,8 @@ const tabs: Tab[] = [
 
 function canSeeTab(tab: Tab, profile: UserProfile | null): boolean {
   if (!profile) return false;
+
+  if (tab.salvoSi && puede(profile, tab.salvoSi)) return false;
 
   // Un permiso de módulo asignado a mano abre la pestaña aunque el rol no la
   // contemple: así se le puede dar T&T a un miembro del board sin volverlo

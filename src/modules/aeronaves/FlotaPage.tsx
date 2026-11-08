@@ -30,6 +30,15 @@ export function FlotaPage() {
             Escoge una aeronave para ver su ficha, sus certificados y su operación.
           </p>
         </div>
+        {/* La liquidación del piloto no cuelga de una aeronave: un piloto la
+            llena por viaje y el viaje puede tocar más de una. Va aquí arriba,
+            al lado de la flota, y no dentro de una matrícula. */}
+        <Link
+          to="/aeronaves/liquidaciones"
+          className="rounded-md border border-teal bg-teal-l px-4 py-2.5 text-sm font-extrabold text-teal-d hover:bg-teal hover:text-white"
+        >
+          🧾 Liquidación del piloto
+        </Link>
       </header>
 
       {q.isLoading && <p className="text-sm text-dark-3">Cargando la flota…</p>}

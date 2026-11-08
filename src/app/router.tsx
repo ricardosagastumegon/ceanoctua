@@ -16,6 +16,7 @@ const ArriazaPage = lazy(() => cargar(() => import('@/modules/arriaza/page')));
 const ArriazaTripPage = lazy(() => cargar(() => import('@/modules/arriaza/detail-page')));
 const AeronavesPage = lazy(() => cargar(() => import('@/modules/aeronaves/page')));
 const AeronaveDetailPage = lazy(() => cargar(() => import('@/modules/aeronaves/detail-page')));
+const LiquidacionesPage = lazy(() => cargar(() => import('@/modules/aeronaves/liquidaciones/LiquidacionesPage')));
 const CeaPage = lazy(() => cargar(() => import('@/modules/cea/page')));
 const AdminPage = lazy(() => cargar(() => import('@/modules/admin/page')));
 const MielSjPage = lazy(() => cargar(() => import('@/modules/miel-sj/page')));
@@ -64,6 +65,8 @@ export const router = createBrowserRouter([
       // El modulo de aeronaves entra por la flota; la matricula va en la
       // direccion porque es unica, no cambia y se lee.
       { path: 'aeronaves', element: withSuspense(<AeronavesPage />) },
+      // Antes que `:matricula`, que si no se la come como si fuera una.
+      { path: 'aeronaves/liquidaciones', element: withSuspense(<LiquidacionesPage />) },
       { path: 'aeronaves/:matricula', element: withSuspense(<AeronaveDetailPage />) },
       { path: 'cea', element: withSuspense(<CeaPage />) },
       { path: 'admin', element: withSuspense(<AdminPage />) },

@@ -994,6 +994,126 @@ export type Database = {
         Relationships: [];
       };
 
+      avn_liquidaciones: {
+        Row: {
+          id: string;
+          serial: string | null;
+          aeronave_id: string;
+          piloto_id: string;
+          ruta: string | null;
+          fecha_inicio: string;
+          fecha_fin: string;
+          motivo: string | null;
+          pasajeros: string | null;
+          tc_gtq_usd: number | null;
+          tc_usd_gtq: number | null;
+          estado: string;
+          total_gtq: number;
+          total_usd: number;
+          empresa_gtq: number;
+          piloto_gtq: number;
+          piloto_usd: number;
+          notas: string | null;
+          cerrada_en: string | null;
+          cerrada_por: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          serial?: string | null;
+          aeronave_id: string;
+          piloto_id: string;
+          ruta?: string | null;
+          fecha_inicio: string;
+          fecha_fin: string;
+          motivo?: string | null;
+          pasajeros?: string | null;
+          tc_gtq_usd?: number | null;
+          tc_usd_gtq?: number | null;
+          estado?: string;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: {
+          aeronave_id?: string;
+          piloto_id?: string;
+          ruta?: string | null;
+          fecha_inicio?: string;
+          fecha_fin?: string;
+          motivo?: string | null;
+          pasajeros?: string | null;
+          tc_gtq_usd?: number | null;
+          tc_usd_gtq?: number | null;
+          estado?: string;
+          notas?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      avn_liquidacion_gastos: {
+        Row: {
+          id: string;
+          liquidacion_id: string;
+          orden: number;
+          fecha: string;
+          categoria: string;
+          proveedor: string;
+          detalle: string | null;
+          documento: string | null;
+          sin_documento: boolean;
+          pagado_por: string;
+          medio: string;
+          moneda: string;
+          monto: number;
+          tipo_cambio: number;
+          monto_gtq: number;
+          monto_usd: number;
+          registro_combustible_id: string | null;
+          galones: number | null;
+          precio_unitario: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          liquidacion_id: string;
+          orden?: number;
+          fecha: string;
+          categoria: string;
+          proveedor: string;
+          detalle?: string | null;
+          documento?: string | null;
+          sin_documento?: boolean;
+          pagado_por: string;
+          medio: string;
+          moneda?: string;
+          monto: number;
+          tipo_cambio: number;
+          registro_combustible_id?: string | null;
+          galones?: number | null;
+          precio_unitario?: number | null;
+        };
+        Update: {
+          orden?: number;
+          fecha?: string;
+          categoria?: string;
+          proveedor?: string;
+          detalle?: string | null;
+          documento?: string | null;
+          sin_documento?: boolean;
+          pagado_por?: string;
+          medio?: string;
+          moneda?: string;
+          monto?: number;
+          tipo_cambio?: number;
+          registro_combustible_id?: string | null;
+          galones?: number | null;
+          precio_unitario?: number | null;
+        };
+        Relationships: [];
+      };
       avn_pilotos: {
         Row: {
           id: string;
@@ -1004,6 +1124,7 @@ export type Database = {
           telefono: string | null;
           activo: boolean;
           notas: string | null;
+          usuario_id: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -1017,6 +1138,7 @@ export type Database = {
           telefono?: string | null;
           activo?: boolean;
           notas?: string | null;
+          usuario_id?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -1027,6 +1149,7 @@ export type Database = {
           telefono?: string | null;
           activo?: boolean;
           notas?: string | null;
+          usuario_id?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -4361,6 +4484,19 @@ export type Database = {
       comb_cerrar_reporte: {
         Args: { p_reporte: string };
         Returns: Database['public']['Tables']['comb_reportes']['Row'];
+      };
+      /**
+       * Cierra la liquidacion del piloto. Exige al menos un gasto y, de cada
+       * uno, su documento o la marca de que no lo hay.
+       */
+      avn_liquidacion_cerrar: {
+        Args: { p_liq: string };
+        Returns: undefined;
+      };
+      /** Devuelve la liquidacion a borrador. Solo admin. */
+      avn_liquidacion_reabrir: {
+        Args: { p_liq: string };
+        Returns: undefined;
       };
       /**
        * Los registros vivos que ya traen ese numero de vale. Avisa, no

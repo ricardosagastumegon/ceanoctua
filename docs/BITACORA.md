@@ -6,6 +6,121 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 56 · 2026-11-08 · Aeronaves · La liquidación del piloto
+
+**Objetivo:** sustituir el PDF de liquidación de viaje que ella describió como
+«HORRIBLE, poco legible, NADA entendible», y montar la sección que lo produce.
+
+**Primero el formato, el sistema después.** Fue instrucción explícita: «ANTES
+DE QUE CREES ALGO EN EL SISTEMA necesito que encontremos la forma de crear un
+formato lo bastante bueno como para sustituir este». Se analizó el PDF de
+LIQUIDACION MIAMI (GUA-FRS-EYW-MIA, TG-OBI, 01/10/2026), se propuso un formato
+y solo tras su visto bueno se tocó la base.
+
+**Las cuentas del papel viejo estaban BIEN** —los Q16,487.83, el reparto
+Q10,207.77 de la empresa y Q6,280.06 del piloto cuadran al centavo—. Lo que
+fallaba era el formato, en cuatro sitios, y cada uno se corrigió en el modelo:
+
+1. **Las descripciones no correspondían a sus filas.** Iban en un bloque suelto
+   al final, en otro orden. Emparejarlas exigió multiplicar galones por precio
+   y buscar el que cuadrara: los Q3,631.20 son 53.4 × Q68 —el Aeroclub— pero
+   caían en la fila cuya factura decía «PEND», mientras la primera descripción
+   era FBO TAS. Ahora el concepto es una columna de la fila.
+2. **Una columna hacía dos trabajos.** `TARJETA/EFECTIVO/CREDITO` llevaba una X
+   que además decía «(EMPRESA)» o «(FM)», y los subtotales sumaban por quién
+   pagaba, no por el medio. Ahora son `pagado_por` y `medio`.
+3. **Dos tipos de cambio en el mismo papel, sin decirlo** —7.53 para lo nacido
+   en quetzales, 7.91 para lo nacido en dólares—. Ahora cada gasto guarda su
+   moneda y su tipo de cambio, y los equivalentes son columnas calculadas.
+4. **El reembolso al piloto era una nota en prosa al pie.** Ahora es la suma de
+   las líneas que pagó el piloto, mantenida por un trigger, y se desglosa
+   línea por línea en la hoja.
+
+**El vale es opcional a propósito.** Ella fue explícita: «no siempre irá
+amarrado a un vale que ya se haya ingresado». De los tres combustibles del
+viaje solo el del Aeroclub tiene vale; Mundo Maya y Key West son de otros
+proveedores y los pagó el piloto. Obligar el amarre convertiría el caso normal
+en un bloqueo, así que `registro_combustible_id` es nullable y la hoja dice
+«sin vale · proveedor fuera de contrato», que es información y no un hueco.
+
+**La foto no estorba para capturar; estorba para cerrar.** También literal: «no
+será condicionante para seguir agregando consumos, pero sí al final para cerrar
+la liquidación». `avn_liquidacion_cerrar` exige, de cada gasto, su documento o
+la marca `sin_documento` —declarar que no hay factura es un acto deliberado, no
+un descuido— y **nombra los que faltan**, igual que el cierre del control de
+vales. La pantalla además lo dice antes de pulsar el botón, en vez de reventar
+al pulsarlo.
+
+**NO hizo falta catálogo de pilotos.** Ella preguntó si había que crearlo en
+Admin; `avn_pilotos` ya existía desde la fase de vuelos y es global, sin
+`aeronave_id`. Lo único que le faltaba era `usuario_id`, para el día que el
+piloto entre con su cuenta.
+
+**Un módulo propio, `avn_liquidacion`.** El piloto no puede tener «aeronaves»
+entero —ahí están la flota, los certificados, el estado de cuenta y el
+combustible de la empresa—. Y la política añade la regla de privacidad que ya
+rige el resto: **si quien entra es un piloto del catálogo, ve lo suyo**; si no
+lo es —ella, Zonia— ve todo. Para subir fotos hubo que abrir tres puertas que
+hasta hoy eran de admin y asistente: `documentos_read`, `documentos_write` y el
+`insert` del bucket, este último acotado a la carpeta `avn_liq_gasto/`.
+
+**La prueba en seco cargó el viaje de Miami entero** y comparó contra el papel.
+Cuadró todo salvo un centavo en Key West: $522.60 × 7.9100 = Q4,133.766, que
+redondea a .77, y el papel escribió .76. **El papel truncó.** No es que el
+modelo esté mal: es que el papel no es consistente con su propio tipo de
+cambio. Se dejó la igualdad exacta donde no hay conversión y un centavo de
+tolerancia donde la hay.
+
+**Dos despistes que cazó la propia migración o la prueba:** `auth_rol()`
+devuelve un enum, así que `coalesce(..., '')` reventaba —hay que castear a
+texto—; y el `coalesce` hacía falta porque sin él un `auth_rol()` nulo deja la
+comparación en NULL y **el guarda se desactiva justo para quien menos
+identificado está**. Y la comprobación quemaba un correlativo: se devuelve la
+secuencia a su sitio, porque un registro cuyo primer número es el 0002 invita a
+buscar el 0001 toda la vida.
+
+**Queda fuera** el envío a Pagos de la liquidación cerrada —el reembolso al
+piloto como SP— y el ciclo de estados posterior. `Enviada a SP` y `Reembolsada`
+ya están en el CHECK esperando.
+
+---
+
+## Fases 52 a 55 · 2026-11-07 · Puesta al día del diario
+
+Estas cuatro fases se trabajaron y se subieron el mismo día que la 51 y sus
+entradas quedaron sin escribir. Se anotan aquí en corto para no dejar el hueco.
+
+**Fase 52 · La aeronave que se abastecía, y el aceite en litros.** Un avión se
+puede abastecer a cuenta de otro, así que el registro de combustible ganó
+`matricula_abastecida`. El aceite se mide en litros y no en galones, así que la
+línea ganó `unidad`. Y `avn_vale_repetido` avisa —no impide— cuando un número
+de vale ya se registró, insensible a mayúsculas y a ceros a la izquierda,
+porque los talonarios del proveedor se reinician por serie.
+
+**Fase 53 · Firma quien es firmante, no quien tiene el módulo.** `firmantes()`
+salía del módulo concedido y no de `personas.es_firmante`, que es el dato que
+de verdad dice quién firma. Se redefinió sobre esa columna y se añadió
+`firma_firmar` como RPC, para que firmar sea un acto y no un `update`.
+
+**Fase 54 · Quien firma ve las suyas, no todas.** Lissa y Javier veían el
+listado completo de solicitudes de pago. Ahora `pagos_select` concede a
+admin/asistente **o a quien tenga una firma en esa SP**, y lo mismo se estrechó
+en notificaciones y firmas. Al probarlo salió un 401 en vez de una lista vacía:
+**una función usada como predicado de política tiene que ser ejecutable por
+`anon`**, o la consulta falla en vez de devolver cero filas. Quedó como regla,
+con una comprobación que recorre todas las políticas buscando sus funciones.
+
+**Fase 55 · El vale de caja chica cuenta en qué va, y el reintegro no sobrevive
+a su consumo.** Se montó el ciclo de siete estados del vale tal como ella lo
+describió, colgado de los actos que ya ocurren. Y el «PENDIENTE DE REINTEGRO»
+que no encontraba en el tablero resultó ser un reintegro vivo apuntando a un
+consumo borrado en julio: el tablero decía la verdad sobre la tabla. Es el
+**tercer huérfano de la misma forma en una semana** —el control de vales sin
+sus vales, la factura sin los suyos, el consumo sin su reintegro—: cada vez que
+un documento nace de otro, alguien tiene que acordarse de desatarlos al borrar.
+
+---
+
 ## Fase 51 · 2026-11-07 · Aeronaves, Javier, y quién firma no opera
 
 **Objetivo:** el combustible de aeronaves de punta a punta, y el usuario de

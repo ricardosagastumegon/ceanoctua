@@ -1,13 +1,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
 import { PrintableModal } from '@/components/ui/PrintableModal';
 import { TextInput } from '@/components/ui/TextInput';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
 import { describeError } from '@/modules/admin/hooks';
-import { puede, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { parseNumero } from '@/lib/money';
 import {
@@ -16,8 +15,7 @@ import {
 } from './api';
 import {
   useActualizarLiquidacion, useAdjuntos, useBorrarGasto, useCerrar,
-  useEnviarAPagos, useEnviarARevision, useEnviosDe, useGastos, useReabrir,
-  useResolverEnvio, useRevisores,
+  useEnviosDe, useGastos, useResolverEnvio, useRevisores,
 } from './hooks';
 import { GastoFormModal } from './GastoFormModal';
 import { LiquidacionPrintable } from './LiquidacionPrintable';
@@ -54,20 +52,17 @@ export function LiquidacionDetalle({
   const actualizar = useActualizarLiquidacion(liquidacion.id);
   const borrarGasto = useBorrarGasto(liquidacion.id);
   const cerrar = useCerrar(liquidacion.id);
-  const reabrir = useReabrir(liquidacion.id);
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [editando, setEditando] = useState<Gasto | null>(null);
   const [imprimir, setImprimir] = useState(false);
   const [verAdjuntos, setVerAdjuntos] = useState<Gasto | null>(null);
   const [editarTc, setEditarTc] = useState(false);
-  const [enviarRevision, setEnviarRevision] = useState(false);
 
   const [notaRevision, setNotaRevision] = useState('');
 
   const envios = useEnviosDe(liquidacion.id);
   const revisores = useRevisores();
-  const enviarPagos = useEnviarAPagos(liquidacion.id);
   const resolver = useResolverEnvio(liquidacion.id);
 
   /** El envío pendiente dirigido a mí, si lo hay. Es lo que me toca resolver. */
@@ -79,11 +74,9 @@ export function LiquidacionDetalle({
   );
 
   const abierta = liquidacion.estado === 'Borrador';
-  const esAdmin = profile?.rol === 'admin';
   // Quien revisa es quien opera: ella y Zonia. Decisión suya —«a Zonia y a mí
   // pónos la misma habilitación»— así que el permiso sale del rol y no de una
   // lista de nombres.
-  const esPiloto = !puede(profile, 'aeronaves', 'editor') && puede(profile, 'avn_liquidacion', 'editor');
   const revisa = profile?.rol === 'admin' || profile?.rol === 'asistente';
 
   // Mientras no salga hacia Pagos, quien revisa puede corregirla. Es la otra
@@ -145,42 +138,6 @@ export function LiquidacionDetalle({
       await resolver.mutateAsync({ envioId: miEnvio.id, acepta, nota: notaRevision });
       setNotaRevision('');
       toast.success(acepta ? 'Aceptada. Ya se puede mandar a Pagos.' : 'Devuelta al piloto.');
-    } catch (err) {
-      toast.error(describeError(err));
-    }
-  }
-
-  async function aPagos() {
-    const ok = await confirmar({
-      title: 'Enviar a Pagos',
-      message: (
-        <>
-          Se crea la solicitud de pago por el reembolso de <b>{q(liquidacion.piloto_gtq)}</b> al
-          piloto, y viaja con <b>todas las facturas</b> del viaje. Después de esto la
-          liquidación ya no se toca.
-        </>
-      ),
-      confirmLabel: 'Enviar a Pagos',
-    });
-    if (!ok) return;
-    try {
-      await enviarPagos.mutateAsync();
-      toast.success('Enviada a Pagos con su expediente.');
-    } catch (err) {
-      toast.error(describeError(err));
-    }
-  }
-
-  async function reabrirla() {
-    const ok = await confirmar({
-      title: 'Reabrir liquidación',
-      message: <>Vuelve a borrador y se le podrán cambiar los gastos. Queda registrado en la auditoría.</>,
-      confirmLabel: 'Reabrir',
-    });
-    if (!ok) return;
-    try {
-      await reabrir.mutateAsync();
-      toast.success('Liquidación reabierta.');
     } catch (err) {
       toast.error(describeError(err));
     }
@@ -419,33 +376,6 @@ export function LiquidacionDetalle({
             </button>
           )}
 
-          {/* El piloto la manda a revisar. El botón de Pagos no existe para él:
-              no está deshabilitado, no se le dibuja — y la base también se lo
-              niega si lo intentara. */}
-          {liquidacion.estado === 'Cerrada' && liquidacion.origen === 'piloto' && canEdit && (
-            <button type="button" onClick={() => setEnviarRevision(true)}
-              className="rounded-md bg-rust px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-              Enviar a…
-            </button>
-          )}
-
-          {/* Quien opera la manda directo; la del piloto, después de revisada. */}
-          {canEdit && !esPiloto && (
-            (liquidacion.estado === 'Cerrada' && liquidacion.origen === 'operacion') ||
-            liquidacion.estado === 'Revisada'
-          ) && (
-            <button type="button" onClick={() => void aPagos()} disabled={enviarPagos.isPending}
-              className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-d disabled:opacity-50">
-              {enviarPagos.isPending ? 'Enviando…' : 'Enviar a Pagos'}
-            </button>
-          )}
-
-          {!abierta && esAdmin && !['Enviada a SP', 'Reembolsada'].includes(liquidacion.estado) && (
-            <button type="button" onClick={() => void reabrirla()} disabled={reabrir.isPending}
-              className="rounded-md border border-rust px-4 py-2 text-sm font-semibold text-rust hover:bg-rust-l disabled:opacity-50">
-              Reabrir
-            </button>
-          )}
         </div>
       </div>
 
@@ -465,10 +395,6 @@ export function LiquidacionDetalle({
             accept="image/*,application/pdf"
           />
         </Modal>
-      )}
-
-      {enviarRevision && (
-        <EnviarARevision liquidacion={liquidacion} onClose={() => setEnviarRevision(false)} />
       )}
 
       {editarTc && (
@@ -501,76 +427,6 @@ function nombreRevisor(
   revisores: { id: string; nombre: string | null }[] | undefined,
 ): string {
   return revisores?.find((r) => r.id === id)?.nombre ?? 'quien la revisa';
-}
-
-/**
- * «Enviar a: Zonia o Mi». La lista sale de lo que la persona ES —quien opera
- * y no es piloto— y no de una lista de nombres, para que el día que exista el
- * usuario de Zonia aparezca solo.
- */
-function EnviarARevision({
-  liquidacion, onClose,
-}: {
-  liquidacion: LiquidacionFila;
-  onClose: () => void;
-}) {
-  const toast = useToast();
-  const revisores = useRevisores();
-  const enviar = useEnviarARevision(liquidacion.id);
-  const lista = revisores.data ?? [];
-  const [destinatario, setDestinatario] = useState('');
-  const [nota, setNota] = useState('');
-
-  const elegido = destinatario || lista[0]?.id || '';
-
-  return (
-    <Modal open onClose={onClose} title="Enviar a revisión">
-      <div className="space-y-3">
-        <p className="text-xs text-dark-3">
-          Va con <b>todo lo que cargaste</b>: los gastos y las fotos de las facturas. Quien la
-          reciba puede aceptarla —y mandarla a Pagos— o devolvértela con una nota.
-        </p>
-
-        {lista.length === 0 ? (
-          <p className="rounded-md border border-gold/40 bg-gold-light px-3 py-2 text-sm text-dark-2">
-            No hay a quién mandarla todavía. Se necesita un usuario con rol{' '}
-            <code>admin</code> o <code>asistente</code> que no sea piloto.
-          </p>
-        ) : (
-          <Select label="Enviar a" value={elegido} onChange={(e) => setDestinatario(e.target.value)}>
-            {lista.map((r) => (
-              <option key={r.id} value={r.id}>{r.nombre ?? r.id}</option>
-            ))}
-          </Select>
-        )}
-
-        <TextInput label="Nota (opcional)" value={nota} onChange={(e) => setNota(e.target.value)}
-          placeholder="Lo del combustible de Flores lo pagué yo" />
-
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose}
-            className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">
-            Cancelar
-          </button>
-          <button type="button" disabled={!elegido || enviar.isPending}
-            onClick={async () => {
-              try {
-                await enviar.mutateAsync({
-                  liquidacion, destinatarioId: elegido, nota: nota.trim() || null,
-                });
-                toast.success('Enviada a revisión.');
-                onClose();
-              } catch (err) {
-                toast.error(describeError(err));
-              }
-            }}
-            className="rounded-md bg-rust px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
-            {enviar.isPending ? 'Enviando…' : 'Enviar'}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
 }
 
 function EditarTipoCambio({

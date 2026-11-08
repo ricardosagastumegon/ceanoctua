@@ -14,6 +14,7 @@ import {
   useLiquidaciones, usePilotosActivos, usePorRevisar,
 } from './hooks';
 import { LiquidacionDetalle } from './LiquidacionDetalle';
+import { AccionesLiquidacion } from './AccionesLiquidacion';
 import { NavAeronaves } from '../NavAeronaves';
 
 function q(n: number | null | undefined): string {
@@ -203,41 +204,45 @@ export function LiquidacionesPage() {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {lista.map((l) => (
-          <button key={l.id} type="button" onClick={() => setAbierta(l.id)}
-            className="rounded-card border border-sand bg-white p-4 text-left shadow-sm transition hover:border-teal hover:shadow">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-mono text-sm font-extrabold text-dark">{l.serial ?? '—'}</div>
-                <div className="mt-0.5 truncate text-sm font-semibold text-teal-d">
-                  {l.matricula ?? '—'} · {l.ruta || 'sin ruta'}
+          <div key={l.id}
+            className="flex h-full flex-col overflow-hidden rounded-card border border-sand bg-white shadow-sm transition hover:border-teal hover:shadow">
+            <button type="button" onClick={() => setAbierta(l.id)}
+              className="flex-1 p-4 text-left">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-mono text-sm font-extrabold text-dark">{l.serial ?? '—'}</div>
+                  <div className="mt-0.5 truncate text-sm font-semibold text-teal-d">
+                    {l.matricula ?? '—'} · {l.ruta || 'sin ruta'}
+                  </div>
                 </div>
+                <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-extrabold uppercase ${ESTADO_COLOR[l.estado] ?? 'bg-sand'}`}>
+                  {ESTADO_LABEL[l.estado] ?? l.estado}
+                </span>
               </div>
-              <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-extrabold uppercase ${ESTADO_COLOR[l.estado] ?? 'bg-sand'}`}>
-                {ESTADO_LABEL[l.estado] ?? l.estado}
-              </span>
-            </div>
 
-            <div className="mt-1 text-[11px] text-dark-3">
-              {formatDate(l.fecha_inicio)} — {formatDate(l.fecha_fin)} · Piloto {l.piloto ?? '—'} · {l.gastos} gastos
-            </div>
+              <div className="mt-1 text-[11px] text-dark-3">
+                {formatDate(l.fecha_inicio)} — {formatDate(l.fecha_fin)} · Piloto {l.piloto ?? '—'} · {l.gastos} gastos
+              </div>
 
-            <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t border-sand pt-2">
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-dark-3">Total del viaje</div>
-                <div className="text-sm font-extrabold text-dark">{q(l.total_gtq)}</div>
+              <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t border-sand pt-2">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-dark-3">Total del viaje</div>
+                  <div className="text-sm font-extrabold text-dark">{q(l.total_gtq)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-rust">A reembolsar</div>
+                  <div className="text-sm font-extrabold text-rust">{q(l.piloto_gtq)}</div>
+                </div>
+                {esAdmin && (
+                  <span role="button" tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); void quitar(l); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); void quitar(l); } }}
+                    title="Borrar" className="px-1 text-xs opacity-40 hover:opacity-100">🗑</span>
+                )}
               </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider text-rust">A reembolsar</div>
-                <div className="text-sm font-extrabold text-rust">{q(l.piloto_gtq)}</div>
-              </div>
-              {esAdmin && (
-                <span role="button" tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); void quitar(l); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); void quitar(l); } }}
-                  title="Borrar" className="px-1 text-xs opacity-40 hover:opacity-100">🗑</span>
-              )}
-            </div>
-          </button>
+            </button>
+            <AccionesLiquidacion liquidacion={l} />
+          </div>
         ))}
       </div>
 

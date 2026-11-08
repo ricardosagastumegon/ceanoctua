@@ -37,6 +37,31 @@ const statusBg: Record<Vale['estado'], string> = {
   Anulado: 'bg-rust text-white',
 };
 
+/**
+ * Donde esta cada estado en el ciclo del vale. Es la misma escala que
+ * `cc_orden_vale` en la base --si se separan, la pantalla ofrecera botones
+ * que la base rechaza, o escondera los que deberia ofrecer.
+ *
+ *   0 Creado · 1 Solicitado · 2 Acreditado · 3 Pendiente de Liquidar
+ *   4 Liquidado · 5 Pendiente de Reintegro · 6 Reintegrado
+ */
+const ORDEN_VALE: Partial<Record<Vale['estado'], number>> = {
+  Creado: 0,
+  Aprobado: 0,
+  Solicitado: 1,
+  Acreditado: 2,
+  'Pendiente de Liquidar': 3,
+  'Asignado a Liquidación': 3,
+  EnLiquidacion: 3,
+  Liquidado: 4,
+  'Pendiente de Reintegro': 5,
+  Pagado: 5,
+  Reintegrado: 6,
+};
+
+/** Todavia se puede meter en una liquidacion: no esta en una ya. */
+const sePuedeLiquidar = (v: Vale) => (ORDEN_VALE[v.estado] ?? -1) >= 0 && (ORDEN_VALE[v.estado] ?? -1) < 3;
+
 export function ValesSection({ canEdit }: { canEdit: boolean }) {
   const query = useVales();
   const create = useCreateVale();
@@ -239,6 +264,13 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
             </button>
             {canEdit && (
               <>
+                {/*
+                  Desaparece en cuanto el vale entra en una liquidación. Antes
+                  seguía ahí y dejaba crear una segunda liquidación del mismo
+                  vale: el gasto se habría pedido dos veces y nada lo habría
+                  dicho.
+                */}
+                {sePuedeLiquidar(row) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -254,6 +286,7 @@ export function ValesSection({ canEdit }: { canEdit: boolean }) {
                 >
                   + Liquidar
                 </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setEditing(row)}

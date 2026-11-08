@@ -16,6 +16,26 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 
 > **Nota de numeración:** la sección «Deferred a polish futuro» del final usa su propia serie DT-5 a DT-8, de la Fase 19 y ya cerrada. Los items vivos de aquí siguen desde DT-10 para no chocar con ella.
 
+### DT-25 · El vale de caja chica no llega a «Solicitado» ni «Acreditado»
+
+**Origen:** fase 55, al montar el ciclo del vale. La usuaria lo describió
+entero y cuatro de los siete saltos quedaron automáticos; dos no.
+
+**Lo que falta:** la pantalla para **mandarle un vale de dinero a Victor**. Sin
+ella no hay acto que dispare `Solicitado` (al enviárselo) ni `Acreditado`
+(cuando él confirma que entregó el dinero, en efectivo o transferencia).
+
+**Lo que ya está listo y no hay que volver a tocar:** `envios` admite el
+`doc_tipo = 'cc_vale'`, y `envio_despacho_cc_vale` está escrita y cerrada a
+todo el mundo. `envio_aceptar` busca `envio_despacho_{doc_tipo}` y la llama si
+la encuentra, así que **el salto a «Acreditado» se activa solo** el día que la
+pantalla exista. Lo único que hay que construir es el envío.
+
+**Cuándo:** ella lo encuadró así — «cuando terminemos el perfil de Victor ya
+podremos finalizar eso». Va con su caja chica.
+
+---
+
 ### DT-24 · Travel & Tours se ve entero, o no se ve
 
 **Origen:** fase 51, al crear el usuario de Javier. La usuaria preguntó cómo se

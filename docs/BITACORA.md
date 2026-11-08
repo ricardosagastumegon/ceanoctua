@@ -62,6 +62,20 @@ responden 200 con lista vacía y no 401.
 salta la revisión, que una liquidación sin reembolso no genera una SP de cero
 —sería trabajo para quien firma sobre un papel vacío— y el salto de dos.
 
+**Después, dos arreglos sobre lo mismo:**
+
+- **La sección no se veía como una sección.** La había metido como un botón
+  pequeño al lado del título y ella no la encontró: «no encuentro en Aeronaves
+  la sección de LIQUIDACIÓN PILOTO, ¿dónde la metiste?». Había pedido *una
+  sección* y tenía razón. Ahora el módulo tiene sus dos —Flota y Liquidación
+  del piloto— en pestañas, y la liquidación gana el camino de vuelta que no
+  tenía. El piloto no ve «Flota», y con una sola sección la barra no se dibuja.
+  (`1d266e6`)
+- **Tres categorías más:** Repuestos, Mantenimiento y Pintura. Son gastos de
+  viaje reales —el viaje de Miami que originó todo esto era por un servicio
+  annual— y hasta entonces habrían caído en «Otros», que es donde se pierde lo
+  que después nadie puede sumar. (`20261108000003`)
+
 ---
 
 ## Fase 56 · 2026-11-08 · Aeronaves · La liquidación del piloto

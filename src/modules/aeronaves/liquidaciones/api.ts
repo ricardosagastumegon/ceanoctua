@@ -15,12 +15,16 @@ export type LiquidacionFila = Liquidacion & {
   gastos: number;
 };
 
+/** El orden es el de la hoja impresa. «Otros» va último a propósito. */
 export const CATEGORIAS = [
   'Combustible',
   'Servicios aeroportuarios',
   'Hotel y transporte',
   'Alimentacion',
   'Tramites',
+  'Repuestos',
+  'Mantenimiento',
+  'Pintura',
   'Otros',
 ] as const;
 export type Categoria = (typeof CATEGORIAS)[number];
@@ -32,6 +36,9 @@ export const CATEGORIA_LABEL: Record<string, string> = {
   'Hotel y transporte': 'Hotel y transporte terrestre',
   Alimentacion: 'Alimentación y viáticos',
   Tramites: 'Trámites',
+  Repuestos: 'Repuestos',
+  Mantenimiento: 'Mantenimiento',
+  Pintura: 'Pintura',
   Otros: 'Otros',
 };
 

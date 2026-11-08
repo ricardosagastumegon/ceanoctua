@@ -154,3 +154,64 @@ export function useReabrir(liquidacionId: string) {
     onSuccess: invalidar,
   });
 }
+
+const ENVIOS_LIQ = ['avn_liquidaciones', 'envios'] as const;
+
+export function useRevisores() {
+  return useQuery({ queryKey: ['avn_liq_revisores'], queryFn: liquidacionesApi.revisores });
+}
+
+/** Las liquidaciones que me mandaron a revisar. */
+export function usePorRevisar() {
+  return useQuery({ queryKey: ENVIOS_LIQ, queryFn: liquidacionesApi.porRevisar });
+}
+
+export function useEnviosDe(liquidacionId: string | undefined) {
+  return useQuery({
+    queryKey: [...ENVIOS_LIQ, liquidacionId ?? ''],
+    queryFn: () => liquidacionesApi.enviosDe(liquidacionId as string),
+    enabled: !!liquidacionId,
+  });
+}
+
+/**
+ * Los tres actos que mueven la liquidación fuera del borrador invalidan lo
+ * mismo: la lista, el detalle y la bandeja de envíos. Van juntos para que no
+ * quede una pantalla enseñando el estado de antes.
+ */
+function useActo(liquidacionId: string) {
+  const qc = useQueryClient();
+  const invalidar = useInvalidar(liquidacionId);
+  return () => {
+    invalidar();
+    void qc.invalidateQueries({ queryKey: ENVIOS_LIQ });
+  };
+}
+
+export function useEnviarARevision(liquidacionId: string) {
+  const onSuccess = useActo(liquidacionId);
+  return useMutation({
+    mutationFn: (input: Parameters<typeof liquidacionesApi.enviarARevision>[0]) =>
+      liquidacionesApi.enviarARevision(input),
+    onSuccess,
+  });
+}
+
+export function useEnviarAPagos(liquidacionId: string) {
+  const onSuccess = useActo(liquidacionId);
+  return useMutation({
+    mutationFn: () => liquidacionesApi.enviarAPagos(liquidacionId),
+    onSuccess,
+  });
+}
+
+export function useResolverEnvio(liquidacionId: string) {
+  const onSuccess = useActo(liquidacionId);
+  return useMutation({
+    mutationFn: ({ envioId, acepta, nota }: { envioId: string; acepta: boolean; nota: string }) =>
+      acepta
+        ? liquidacionesApi.aceptar(envioId, nota.trim() || null)
+        : liquidacionesApi.devolver(envioId, nota.trim()),
+    onSuccess,
+  });
+}

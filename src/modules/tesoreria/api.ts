@@ -27,7 +27,8 @@ export type DocTipo =
   | 'comb_reporte'
   | 'pago'
   | 'cc_vale'
-  | 'cc_liquidacion';
+  | 'cc_liquidacion'
+  | 'avn_liquidacion';
 
 export const DOC_TIPO_LABEL: Record<DocTipo, string> = {
   comb_solicitud: 'Solicitud de vale',
@@ -35,6 +36,7 @@ export const DOC_TIPO_LABEL: Record<DocTipo, string> = {
   pago: 'Solicitud de pago',
   cc_vale: 'Vale de caja chica',
   cc_liquidacion: 'Liquidación de caja chica',
+  avn_liquidacion: 'Liquidación del piloto',
 };
 
 /**

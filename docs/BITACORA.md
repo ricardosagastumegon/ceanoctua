@@ -6,6 +6,64 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 57 · 2026-11-08 · La liquidación del piloto viaja, y llega con todo
+
+**Objetivo:** los dos caminos que ella describió —el del piloto, que pasa por
+revisión, y el de la operación, que va directo— y que el expediente llegue
+entero al final de cualquiera de los dos.
+
+**No hubo que inventar el envío.** `envios` ya es exactamente lo que pedía
+—destinatario, copia congelada de lo que quien recibe debe ver, aceptar o
+rechazar, y cascada automática al aceptar— y es la misma tubería por la que el
+control de vales llega a Victor. Se enchufó un documento más.
+
+**El origen se graba al crearla, no se deduce después.** Si quien la crea es un
+piloto del catálogo, la liquidación nace con `origen = 'piloto'` y le toca
+revisión; si no, nace `'operacion'` y va directo. Un dato que se recalcula cada
+vez que alguien mira es un dato que cambia de respuesta. El botón «Enviar a
+Pagos» no se le dibuja al piloto, y la base también se lo niega si lo
+intentara.
+
+**Revisar es aceptar, devolver o corregir.** Ella eligió las dos últimas juntas:
+«Devolver al piloto y puede ser también corregirla nosotras mismas, porque
+pueden pasar las dos cosas, entonces a Zonia y a mí pónos la misma
+habilitación». Devolver la regresa a borrador **con la nota de por qué**,
+anotada en la propia liquidación. Corregir queda abierto a admin y asistente
+mientras no haya salido hacia Pagos; después no, porque ahí ya hay gente
+firmando lo que dice.
+
+**LO QUE HABRÍA FALLADO EN SILENCIO.** Ella insistió: «sin importar desde dónde
+se origine, cuando avance en el proceso esta liquidación debe de avanzar con
+toooodas las imágenes o pdfs adjuntos, hasta su destino final». Los demás
+orígenes cuelgan sus adjuntos de sí mismos; la liquidación del piloto **no**:
+cada foto cuelga de SU GASTO, porque es la factura de ese renglón —que es justo
+lo que hace bueno al formato—. La cadena resolvía en un salto y aquí hacen falta
+dos: foto → gasto → liquidación → SP. Sin eso Javier y Victor abrirían el
+expediente y lo verían **vacío, sin ningún error**. Misma forma que el fallo de
+las estampas de firma. La prueba en seco lo comprueba explícitamente.
+
+**Y EL MAPA ESTABA DUPLICADO.** El de orígenes vivía copiado en
+`ExpedienteDeLaSP` y otra vez dentro de `SPConAdjuntos`: añadir un origen
+exigía acordarse de los dos, y el que se olvidara daba una SP que se descarga
+sin la mitad de su respaldo. Ahora hay uno solo, con un `expandir` opcional
+para los orígenes cuyos adjuntos cuelgan de sus renglones.
+
+**ME CACÉ REINTRODUCIENDO UN FALLO YA RESUELTO.** Recrear
+`pago_del_documento` con el `revoke ... from anon` de costumbre **deshizo** el
+permiso que la fase 54 le había dado tras perder una tarde buscándolo: una
+función que aparece en una política y que `anon` no puede ejecutar devuelve 401
+en vez de una lista vacía. Peor: mi propia comprobación lo **excluía a mano**
+«porque va detrás de otra condición». Una lista de excepciones en una
+comprobación es una comprobación que no comprueba. Se quitó la excepción, se
+devolvió el permiso y se verificó por REST que las cinco tablas del circuito
+responden 200 con lista vacía y no 401.
+
+**Trece comprobaciones en la prueba en seco**, entre ellas que el piloto no se
+salta la revisión, que una liquidación sin reembolso no genera una SP de cero
+—sería trabajo para quien firma sobre un papel vacío— y el salto de dos.
+
+---
+
 ## Fase 56 · 2026-11-08 · Aeronaves · La liquidación del piloto
 
 **Objetivo:** sustituir el PDF de liquidación de viaje que ella describió como

@@ -43,13 +43,27 @@ export const MEDIO_LABEL: Record<string, string> = {
   Transferencia: 'Transferencia',
 };
 
-export const ESTADOS = ['Borrador', 'Cerrada', 'Enviada a SP', 'Reembolsada'] as const;
+export const ESTADOS = [
+  'Borrador', 'Cerrada', 'En revision', 'Revisada', 'Enviada a SP', 'Reembolsada',
+] as const;
+
+/** En la base van sin tilde; en pantalla, con ella. */
+export const ESTADO_LABEL: Record<string, string> = {
+  Borrador: 'Borrador',
+  Cerrada: 'Cerrada',
+  'En revision': 'En revisión',
+  Revisada: 'Revisada',
+  'Enviada a SP': 'Enviada a SP',
+  Reembolsada: 'Reembolsada',
+};
 
 export const ESTADO_COLOR: Record<string, string> = {
   Borrador: 'bg-sand text-dark-2',
   Cerrada: 'bg-gold-light text-gold',
-  'Enviada a SP': 'bg-teal-l text-teal-d',
-  Reembolsada: 'bg-purple-l text-purple',
+  'En revision': 'bg-rust-l text-rust',
+  Revisada: 'bg-teal-l text-teal-d',
+  'Enviada a SP': 'bg-purple-l text-purple',
+  Reembolsada: 'bg-teal text-white',
 };
 
 export const liquidacionesApi = {
@@ -176,6 +190,90 @@ export const liquidacionesApi = {
 
   async reabrir(id: string): Promise<void> {
     const { error } = await supabase.rpc('avn_liquidacion_reabrir', { p_liq: id });
+    if (error) throw error;
+  },
+
+  async enviarAPagos(id: string): Promise<void> {
+    const { error } = await supabase.rpc('avn_liquidacion_enviar_a_pagos', { p_liq: id });
+    if (error) throw error;
+  },
+
+  /** A quién le puede mandar un piloto su liquidación. */
+  async revisores() {
+    const { data, error } = await supabase.rpc('avn_liq_revisores');
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  /**
+   * Mandarla a revisar es crear un envío: el mismo camino que ya usa el
+   * control de vales para llegar a Victor. El estado de la liquidación lo
+   * mueve la base al ver el envío, así que no pueden quedar en desacuerdo.
+   */
+  async enviarARevision(input: {
+    liquidacion: LiquidacionFila;
+    destinatarioId: string;
+    nota: string | null;
+  }): Promise<void> {
+    const l = input.liquidacion;
+    const { error } = await supabase.from('envios').insert({
+      destinatario_id: input.destinatarioId,
+      doc_tipo: 'avn_liquidacion',
+      doc_id: l.id,
+      nota: input.nota,
+      // Copia congelada: quien recibe decide con esto, sin tener que leer la
+      // tabla de origen.
+      snapshot: {
+        titulo: `Liquidación ${l.serial ?? ''}`,
+        resumen: `${l.matricula ?? ''} · ${l.ruta ?? ''}`,
+        piloto: l.piloto,
+        fechas: `${l.fecha_inicio} — ${l.fecha_fin}`,
+        total: l.total_gtq,
+        reembolso: l.piloto_gtq,
+        moneda: 'GTQ',
+        gastos: l.gastos,
+      },
+    });
+    if (error) throw error;
+  },
+
+  /** Los envíos de una liquidación, para saber con quién está. */
+  async enviosDe(liquidacionId: string) {
+    const { data, error } = await supabase
+      .from('envios')
+      .select('*')
+      .eq('doc_tipo', 'avn_liquidacion')
+      .eq('doc_id', liquidacionId)
+      .is('deleted_at', null)
+      .order('enviado_at', { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  /** Lo que me mandaron a mí y todavía no resuelvo. */
+  async porRevisar() {
+    const { data, error } = await supabase
+      .from('envios')
+      .select('*')
+      .eq('doc_tipo', 'avn_liquidacion')
+      .eq('estado', 'enviado')
+      .is('deleted_at', null)
+      .order('enviado_at');
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async aceptar(envioId: string, nota: string | null): Promise<void> {
+    const { error } = await supabase.rpc('envio_aceptar', {
+      p_envio: envioId, p_datos: {}, p_nota: nota,
+    });
+    if (error) throw error;
+  },
+
+  async devolver(envioId: string, nota: string): Promise<void> {
+    const { error } = await supabase.rpc('envio_rechazar', {
+      p_envio: envioId, p_nota: nota,
+    });
     if (error) throw error;
   },
 

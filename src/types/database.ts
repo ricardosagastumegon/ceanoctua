@@ -1008,6 +1008,8 @@ export type Database = {
           tc_gtq_usd: number | null;
           tc_usd_gtq: number | null;
           estado: string;
+          origen: string;
+          creada_por: string | null;
           total_gtq: number;
           total_usd: number;
           empresa_gtq: number;
@@ -1033,6 +1035,8 @@ export type Database = {
           tc_gtq_usd?: number | null;
           tc_usd_gtq?: number | null;
           estado?: string;
+          origen?: string;
+          creada_por?: string | null;
           notas?: string | null;
           deleted_at?: string | null;
         };
@@ -4492,6 +4496,19 @@ export type Database = {
       avn_liquidacion_cerrar: {
         Args: { p_liq: string };
         Returns: undefined;
+      };
+      /**
+       * Crea el aviso en Pagos por el reembolso al piloto y devuelve su id.
+       * Exige «Revisada» si la hizo un piloto, «Cerrada» si la hizo la operacion.
+       */
+      avn_liquidacion_enviar_a_pagos: {
+        Args: { p_liq: string };
+        Returns: string;
+      };
+      /** A quien le puede mandar un piloto su liquidacion. */
+      avn_liq_revisores: {
+        Args: Record<string, never>;
+        Returns: { id: string; nombre: string | null; rol: string }[];
       };
       /** Devuelve la liquidacion a borrador. Solo admin. */
       avn_liquidacion_reabrir: {

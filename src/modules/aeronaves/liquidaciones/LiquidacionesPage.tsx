@@ -8,10 +8,10 @@ import { describeError } from '@/modules/admin/hooks';
 import { puede, useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { parseNumero } from '@/lib/money';
-import { ESTADOS, ESTADO_COLOR, type LiquidacionFila } from './api';
+import { ESTADOS, ESTADO_COLOR, ESTADO_LABEL, type LiquidacionFila } from './api';
 import {
   useAeronavesSimples, useBorrarLiquidacion, useCrearLiquidacion,
-  useLiquidaciones, usePilotosActivos,
+  useLiquidaciones, usePilotosActivos, usePorRevisar,
 } from './hooks';
 import { LiquidacionDetalle } from './LiquidacionDetalle';
 
@@ -31,6 +31,7 @@ export function LiquidacionesPage() {
   const toast = useToast();
   const confirmar = useConfirm();
   const q1 = useLiquidaciones();
+  const porRevisarQ = usePorRevisar();
   const borrar = useBorrarLiquidacion();
 
   const [nueva, setNueva] = useState(false);
@@ -42,6 +43,7 @@ export function LiquidacionesPage() {
   const esAdmin = profile?.rol === 'admin';
 
   const todas = useMemo(() => q1.data ?? [], [q1.data]);
+  const porRevisar = porRevisarQ.data ?? [];
 
   const resumen = useMemo(() => {
     const anio = new Date().getFullYear();
@@ -132,13 +134,49 @@ export function LiquidacionesPage() {
         </div>
       </div>
 
+      {/* Lo que me mandaron a revisar. Va arriba del todo: es lo que espera
+          por mí, y lo demás puede esperar a mañana. */}
+      {porRevisar.length > 0 && (
+        <div className="rounded-card border-2 border-rust bg-rust-l p-4">
+          <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-rust">
+            Te mandaron {porRevisar.length === 1 ? 'una liquidación' : `${porRevisar.length} liquidaciones`} para revisar
+          </h2>
+          <div className="mt-3 space-y-2">
+            {porRevisar.map((e) => {
+              const s = (e.snapshot ?? {}) as Record<string, unknown>;
+              return (
+                <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-extrabold text-dark">{String(s.titulo ?? 'Liquidación')}</div>
+                    <div className="text-[11px] text-dark-3">
+                      {String(s.resumen ?? '')} · Piloto {String(s.piloto ?? '—')} · {String(s.fechas ?? '')}
+                    </div>
+                    {e.nota && <div className="mt-0.5 text-[11px] italic text-dark-2">«{e.nota}»</div>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase tracking-wider text-rust">A reembolsar</div>
+                      <div className="text-sm font-extrabold text-rust">{q(Number(s.reembolso ?? 0))}</div>
+                    </div>
+                    <button type="button" onClick={() => setAbierta(e.doc_id)}
+                      className="rounded-md border border-sand px-3 py-1.5 text-xs font-semibold text-dark-2 hover:bg-sand-l">
+                      Revisar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-2">
         <TextInput value={busca} onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por correlativo, piloto, matrícula o ruta…" className="min-w-[240px] flex-1" />
         <Select value={filtro} onChange={(e) => setFiltro(e.target.value)} className="w-auto">
           <option value="">Todos los estados</option>
-          {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
+          {ESTADOS.map((e) => <option key={e} value={e}>{ESTADO_LABEL[e] ?? e}</option>)}
         </Select>
       </div>
 
@@ -172,7 +210,7 @@ export function LiquidacionesPage() {
                 </div>
               </div>
               <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-extrabold uppercase ${ESTADO_COLOR[l.estado] ?? 'bg-sand'}`}>
-                {l.estado}
+                {ESTADO_LABEL[l.estado] ?? l.estado}
               </span>
             </div>
 

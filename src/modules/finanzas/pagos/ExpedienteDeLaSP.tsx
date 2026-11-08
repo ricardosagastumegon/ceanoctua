@@ -25,12 +25,56 @@ import type { Pago } from './api';
  */
 
 /** De donde viene el aviso que genero esta SP, a donde cuelgan sus adjuntos. */
-export const ENTIDAD_DEL_ORIGEN: Record<string, { tipo: string; que: string }> = {
+export const ENTIDAD_DEL_ORIGEN: Record<string, {
+  tipo: string;
+  que: string;
+  /**
+   * Casi todos los orígenes cuelgan sus adjuntos DE SÍ MISMOS: el control de
+   * vales tiene los suyos, el consumo los suyos. La liquidación del piloto
+   * no: cada foto cuelga de SU GASTO, porque es la factura de ese renglón
+   * —que es justo lo que hace bueno al formato—. Para esos, `expandir` dice
+   * de qué entidades hay que recoger.
+   */
+  expandir?: (origenId: string) => Promise<{ id: string; etiqueta: string }[]>;
+}> = {
   combustible_vehiculos: { tipo: 'comb_reporte', que: 'el control de vales' },
   liquidacion: { tipo: 'caja_chica_liquidacion', que: 'la liquidación' },
   consumo_tc: { tipo: 'consumo', que: 'el consumo' },
   combustible: { tipo: 'avn_combustible', que: 'el registro de combustible' },
+  avn_liquidacion: {
+    tipo: 'avn_liq_gasto',
+    que: 'la liquidación del piloto',
+    expandir: async (id) => {
+      const { data, error } = await supabase
+        .from('avn_liquidacion_gastos')
+        .select('id, proveedor, documento')
+        .eq('liquidacion_id', id)
+        .order('orden');
+      if (error) throw error;
+      return (data ?? []).map((g) => ({
+        id: g.id,
+        etiqueta: [g.proveedor, g.documento].filter(Boolean).join(' · '),
+      }));
+    },
+  },
 };
+
+/**
+ * Las entidades de las que hay que recoger adjuntos para un origen. Un solo
+ * sitio: antes este mapa estaba copiado también en `SPConAdjuntos`, y añadir
+ * un origen exigía acordarse de los dos. El que se olvidara daba una SP que
+ * se imprime sin la mitad de su respaldo, sin ningún error.
+ */
+export async function entidadesDelOrigen(
+  origenTipo: string,
+  origenId: string,
+): Promise<{ tipo: string; id: string; etiqueta?: string }[]> {
+  const e = ENTIDAD_DEL_ORIGEN[origenTipo];
+  if (!e) return [];
+  if (!e.expandir) return [{ tipo: e.tipo, id: origenId }];
+  const hijos = await e.expandir(origenId);
+  return hijos.map((h) => ({ tipo: e.tipo, id: h.id, etiqueta: h.etiqueta }));
+}
 
 export type Origen = {
   id: string;
@@ -91,23 +135,43 @@ export function ExpedienteDeLaSP({ pago, canEdit }: { pago: Pago; canEdit: boole
         accept="application/pdf,image/*"
       />
 
-      {origenes.map((o) => {
-        const e = ENTIDAD_DEL_ORIGEN[o.origen_tipo];
-        return (
-          <div key={o.id} className="border-t border-sand pt-3">
-            <p className="mb-2 text-xs text-dark-3">
-              Viene de {e.que}
-              {o.resumen ? ` · ${o.resumen}` : ''}. Se quita desde ahí, no desde aquí.
-            </p>
-            <DocumentAttachment
-              entidadTipo={e.tipo}
-              entidadId={o.origen_id}
-              canEdit={false}
-              label={`Respaldo que trae ${e.que}`}
-            />
-          </div>
-        );
-      })}
+      {origenes.map((o) => (
+        <RespaldoDelOrigen key={o.id} origen={o} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * El respaldo que trae un origen. Casi siempre es un bloque; para la
+ * liquidacion del piloto son varios --uno por gasto-- porque cada factura
+ * pertenece a su renglon y no al viaje entero.
+ */
+function RespaldoDelOrigen({ origen: o }: { origen: Origen }) {
+  const e = ENTIDAD_DEL_ORIGEN[o.origen_tipo];
+  const partes = useQuery({
+    queryKey: ['expediente_origen_partes', o.origen_tipo, o.origen_id],
+    queryFn: () => entidadesDelOrigen(o.origen_tipo, o.origen_id as string),
+    enabled: !!o.origen_id && !!e,
+  });
+
+  if (!e) return null;
+
+  return (
+    <div className="border-t border-sand pt-3">
+      <p className="mb-2 text-xs text-dark-3">
+        Viene de {e.que}
+        {o.resumen ? ` · ${o.resumen}` : ''}. Se quita desde ahí, no desde aquí.
+      </p>
+      {(partes.data ?? []).map((p) => (
+        <DocumentAttachment
+          key={p.id}
+          entidadTipo={p.tipo}
+          entidadId={p.id}
+          canEdit={false}
+          label={p.etiqueta ? `Factura · ${p.etiqueta}` : `Respaldo que trae ${e.que}`}
+        />
+      ))}
     </div>
   );
 }

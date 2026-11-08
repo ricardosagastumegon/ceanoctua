@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { armarPdfConAdjuntos, type ArchivoAdjunto } from '@/lib/pdf-hojas';
 import { describeError } from '@/modules/admin/hooks';
 import type { Pago } from './api';
+import { entidadesDelOrigen } from './ExpedienteDeLaSP';
 
 /**
  * La solicitud de pago y su expediente, en UN solo PDF.
@@ -39,23 +40,20 @@ export function useArchivosDelExpediente(pago: Pago, origenes?: Origen[]) {
     queryFn: async () => {
       const claves: Origen[] = [{ tipo: 'pago', id: pago.id }];
 
-      if (origenes) {
-        claves.push(...origenes);
-      } else {
-        const { data } = await supabase
+      // El mapa de origenes vive en UN solo sitio --`ENTIDAD_DEL_ORIGEN`, via
+      // `entidadesDelOrigen`--. Antes estaba copiado aqui, y añadir un origen
+      // exigia acordarse de los dos: el que se olvidara daba una SP que se
+      // descarga sin la mitad de su respaldo y sin ningun error.
+      const avisos = origenes ?? (
+        await supabase
           .from('pagos_notificaciones')
           .select('origen_tipo, origen_id, pago_id, id')
-          .or(`pago_id.eq.${pago.id},id.eq.${pago.origen_notificacion_id ?? pago.id}`);
-        const mapa: Record<string, string> = {
-          combustible_vehiculos: 'comb_reporte',
-          liquidacion: 'caja_chica_liquidacion',
-          consumo_tc: 'consumo',
-          combustible: 'avn_combustible',
-        };
-        for (const n of data ?? []) {
-          const t = mapa[n.origen_tipo];
-          if (t && n.origen_id) claves.push({ tipo: t, id: n.origen_id });
-        }
+          .or(`pago_id.eq.${pago.id},id.eq.${pago.origen_notificacion_id ?? pago.id}`)
+      ).data ?? [];
+
+      for (const n of avisos as { origen_tipo: string; origen_id: string | null }[]) {
+        if (!n.origen_id) continue;
+        claves.push(...(await entidadesDelOrigen(n.origen_tipo, n.origen_id)));
       }
 
       const archivos: ArchivoAdjunto[] = [];

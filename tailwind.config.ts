@@ -35,7 +35,12 @@ const config: Config = {
         aqua: '#00b4c5',
         coral: '#e05c3a',
         green: '#2a6e24',
-        purple: '#5a3472',
+        // Fase 57 · el claro faltaba y `bg-purple-l` --que ya se usaba en el
+        // badge de «Enviada a SP» y en el sello de vale-- no pintaba nada.
+        purple: {
+          DEFAULT: '#5a3472',
+          l: '#ebe4f1',
+        },
         // Fase 19-3 · T&T · navy usado en gradients del módulo Arriaza.
         navy: '#0d2b2e',
       },

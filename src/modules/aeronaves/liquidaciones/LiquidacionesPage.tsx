@@ -14,6 +14,7 @@ import {
   useLiquidaciones, usePilotosActivos, usePorRevisar,
 } from './hooks';
 import { LiquidacionDetalle } from './LiquidacionDetalle';
+import { NavAeronaves } from '../NavAeronaves';
 
 function q(n: number | null | undefined): string {
   return `Q ${(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -92,6 +93,8 @@ export function LiquidacionesPage() {
 
   return (
     <div className="space-y-5">
+
+      <NavAeronaves />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>

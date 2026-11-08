@@ -6,6 +6,7 @@ import { useAeronaves } from './hooks';
 import { AeronaveFormModal } from './AeronaveFormModal';
 import { FotoAeronave } from './FotoAeronave';
 import { acento, ESTADO_COLOR } from './constants';
+import { NavAeronaves } from './NavAeronaves';
 import type { Aeronave } from './api';
 
 /**
@@ -23,23 +24,14 @@ export function FlotaPage() {
 
   return (
     <section className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl font-extrabold text-dark">Aeronaves</h1>
-          <p className="mt-0.5 text-sm text-dark-2">
-            Escoge una aeronave para ver su ficha, sus certificados y su operación.
-          </p>
-        </div>
-        {/* La liquidación del piloto no cuelga de una aeronave: un piloto la
-            llena por viaje y el viaje puede tocar más de una. Va aquí arriba,
-            al lado de la flota, y no dentro de una matrícula. */}
-        <Link
-          to="/aeronaves/liquidaciones"
-          className="rounded-md border border-teal bg-teal-l px-4 py-2.5 text-sm font-extrabold text-teal-d hover:bg-teal hover:text-white"
-        >
-          🧾 Liquidación del piloto
-        </Link>
+      <header>
+        <h1 className="font-heading text-2xl font-extrabold text-dark">Aeronaves</h1>
+        <p className="mt-0.5 text-sm text-dark-2">
+          Escoge una aeronave para ver su ficha, sus certificados y su operación.
+        </p>
       </header>
+
+      <NavAeronaves />
 
       {q.isLoading && <p className="text-sm text-dark-3">Cargando la flota…</p>}
 

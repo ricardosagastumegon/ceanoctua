@@ -75,6 +75,16 @@ salta la revisión, que una liquidación sin reembolso no genera una SP de cero
   viaje reales —el viaje de Miami que originó todo esto era por un servicio
   annual— y hasta entonces habrían caído en «Otros», que es donde se pierde lo
   que después nadie puede sumar. (`20261108000003`)
+- **Guardar un gasto una vez lo guarda una vez.** Al guardar un gasto nuevo el
+  modal se queda abierto a propósito —para subirle la foto ahí mismo— pero no
+  lo decía: el formulario quedaba idéntico y el botón solo pasaba de «Agregar
+  gasto» a «Guardar cambios», que se lee como *no guardó*. Ella hizo lo
+  razonable, volver a darle, y el segundo clic **insertó el gasto otra vez**:
+  el guardado mandaba `editando?.id`, que en un gasto nuevo es `undefined`.
+  Ahora manda el id del renglón recién creado, y el pie del modal tiene
+  estado: ya guardado dice «Listo» y cierra, con «Agregar otro gasto» al lado.
+  Un botón que sigue pidiendo guardar cuando no hay nada que guardar es un
+  botón que invita a guardar dos veces. (`9ab4dda`)
 
 ---
 

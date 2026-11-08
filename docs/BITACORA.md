@@ -85,6 +85,21 @@ salta la revisión, que una liquidación sin reembolso no genera una SP de cero
   estado: ya guardado dice «Listo» y cierra, con «Agregar otro gasto» al lado.
   Un botón que sigue pidiendo guardar cuando no hay nada que guardar es un
   botón que invita a guardar dos veces. (`9ab4dda`)
+- **El siguiente paso salió de la hoja y se fue a la tarjeta.** «El botón de
+  pagos debe de estar fuera, como lo tenemos en las demás cosas, porque puede
+  que no se envíe a pagos en ese mismo momento y se tendría que abrir para
+  editar para poder enviarlo.» Mandar a Pagos casi nunca ocurre en el mismo
+  momento en que se cierra, así que el camino real era abrir el documento
+  —entrar a editarlo— solo para empujarlo. «Enviar a Pagos», «Reabrir» y
+  «Enviar a…» viven ahora en la tarjeta de la lista, y adentro ya no: una
+  acción, un lugar. La tarjeta dejó de ser un `<button>` gigante para poder
+  llevar botones de verdad. (`cf0330a`)
+- **El morado claro que nunca existió.** `bg-purple-l` se usaba en el badge de
+  «Enviada a SP» y en el sello de vale, pero `purple` estaba declarado como
+  color plano: Tailwind no genera una clase que no existe, así que ninguno de
+  los dos pintaba fondo. Salió mirando la lista en pantalla, no compilando —TS
+  no sabe nada de las clases de Tailwind—. Misma familia que el resto de la
+  semana: degradación silenciosa, no rompe, solo deja de dibujar. (`4e4c066`)
 
 ---
 

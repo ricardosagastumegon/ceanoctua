@@ -51,6 +51,7 @@ export function GastoFormModal({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [nuevoId, setNuevoId] = useState<string | null>(null);
+  const [guardadoComo, setGuardadoComo] = useState<string | null>(null);
 
   useEffect(() => {
     setFecha(editando?.fecha ?? liquidacion.fecha_inicio);
@@ -67,6 +68,7 @@ export function GastoFormModal({
     setPrecio(editando?.precio_unitario != null ? String(editando.precio_unitario) : '');
     setValeId(editando?.registro_combustible_id ?? '');
     setNuevoId(editando?.id ?? null);
+    setGuardadoComo(null);
     setError(null);
   }, [editando, liquidacion.fecha_inicio]);
 
@@ -102,7 +104,41 @@ export function GastoFormModal({
 
   const esCombustible = categoria === 'Combustible';
 
+  // La huella de lo que hay escrito. Comparada con la de la última vez que se
+  // guardó, dice si lo que se ve en pantalla ya está en la base o no. Es lo
+  // que permite que el botón deje de pedir «Guardar» cuando no hay nada que
+  // guardar --el botón que seguía pidiéndolo fue el que trajo el duplicado--.
+  const huella = useMemo(
+    () => JSON.stringify([
+      fecha, categoria, proveedor.trim(), detalle.trim(), documento.trim(), sinDocumento,
+      pagadoPor, medio, moneda, monto, tc, galones, precio, valeId,
+    ]),
+    [fecha, categoria, proveedor, detalle, documento, sinDocumento,
+     pagadoPor, medio, moneda, monto, tc, galones, precio, valeId],
+  );
+
+  /** Guardado y sin tocar desde entonces. Solo aplica al gasto nuevo. */
+  const guardado = nuevoId != null && guardadoComo != null && guardadoComo === huella;
+  /** Guardado, pero algo cambió después. */
+  const conCambios = nuevoId != null && guardadoComo != null && guardadoComo !== huella;
+
+  /** Dejar la hoja lista para el siguiente recibo, sin cerrar ni volver a abrir. */
+  function otroGasto() {
+    setProveedor('');
+    setDetalle('');
+    setDocumento('');
+    setSinDocumento(false);
+    setMonto('');
+    setGalones('');
+    setPrecio('');
+    setValeId('');
+    setNuevoId(null);
+    setGuardadoComo(null);
+    setError(null);
+  }
+
   async function submit() {
+    if (guardando) return; // dos clics seguidos son un clic
     const m = parseNumero(monto);
     const t = parseNumero(tc);
     if (!fecha) return setError('Falta la fecha del gasto.');
@@ -132,8 +168,13 @@ export function GastoFormModal({
         precio_unitario: esCombustible ? parseNumero(precio) : null,
         registro_combustible_id: esCombustible && valeId ? valeId : null,
       };
-      const fila = await guardar.mutateAsync({ id: editando?.id, datos });
+      // El renglón que se está guardando es `nuevoId`: ya trae el del gasto
+      // que se edita, y después del primer guardado trae el recién creado.
+      // Mandar `editando?.id` --que en un gasto nuevo es undefined-- era la
+      // puerta por la que un segundo clic insertaba el gasto otra vez.
+      const fila = await guardar.mutateAsync({ id: nuevoId ?? undefined, datos });
       setNuevoId(fila.id);
+      setGuardadoComo(huella);
       toast.success(editando ? 'Gasto actualizado.' : 'Gasto agregado. Ya podés subirle la factura.');
       if (editando) onClose();
     } catch (err) {
@@ -247,7 +288,22 @@ export function GastoFormModal({
 
         {/* La foto NO estorba para seguir capturando; estorba para cerrar. */}
         {nuevoId ? (
-          <div className="rounded-md border border-sand p-3">
+          <div
+            className={`rounded-md border p-3 ${
+              guardado ? 'border-teal bg-teal-l/40' : conCambios ? 'border-rust bg-rust-l/40' : 'border-sand'
+            }`}
+          >
+            {guardado && (
+              <p className="mb-2 flex items-center gap-2 text-sm font-extrabold text-teal-d">
+                <span aria-hidden>✓</span>
+                Gasto guardado. Ya está en la liquidación.
+              </p>
+            )}
+            {conCambios && (
+              <p className="mb-2 text-sm font-extrabold text-rust">
+                Cambiaste algo después de guardar. Dale «Guardar cambios» para que quede.
+              </p>
+            )}
             <DocumentAttachment
               entidadTipo="avn_liq_gasto"
               entidadId={nuevoId}
@@ -270,14 +326,35 @@ export function GastoFormModal({
           <p className="rounded-md border border-rust/30 bg-rust-l px-3 py-2 text-sm text-rust">{error}</p>
         )}
 
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose}
-            className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">
-            {nuevoId && !editando ? 'Listo' : 'Cancelar'}
-          </button>
-          <button type="button" onClick={() => void submit()} disabled={guardando}
+        {/*
+          Ya guardado, el botón grande deja de decir «guardar» y pasa a decir
+          «Listo»: no hay nada pendiente, y un botón que sigue pidiendo guardar
+          es un botón que invita a guardar dos veces.
+        */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {guardado && !editando && (
+            <button type="button" onClick={otroGasto}
+              className="mr-auto rounded-md border border-teal px-4 py-2 text-sm font-semibold text-teal-d hover:bg-teal-l">
+              ＋ Agregar otro gasto
+            </button>
+          )}
+          {!guardado && (
+            <button type="button" onClick={onClose}
+              className="rounded-md border border-sand px-4 py-2 text-sm font-semibold text-dark-2 hover:bg-sand-l">
+              Cancelar
+            </button>
+          )}
+          <button type="button" onClick={guardado ? onClose : () => void submit()} disabled={guardando}
             className="rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-d disabled:opacity-60">
-            {guardando ? 'Guardando…' : editando ? 'Guardar' : nuevoId ? 'Guardar cambios' : 'Agregar gasto'}
+            {guardando
+              ? 'Guardando…'
+              : guardado
+                ? 'Listo'
+                : editando
+                  ? 'Guardar'
+                  : conCambios
+                    ? 'Guardar cambios'
+                    : 'Agregar gasto'}
           </button>
         </div>
       </div>

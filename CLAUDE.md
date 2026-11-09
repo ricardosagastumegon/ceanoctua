@@ -143,7 +143,7 @@ Lista corta y estricta. Cada una tuvo un incidente real que la justifica.
 
 El proyecto avanza en **fases numeradas**. Cada fase = 1 migración SQL + código correspondiente + commit(s) descriptivos + entrada en la bitácora.
 
-Estado actual: fase **57** (La liquidación del piloto viaja, y llega con todo). Historial completo en [`docs/BITACORA.md`](docs/BITACORA.md).
+Estado actual: fase **58** (El envío que no se repite, y la SP que lleva todo). Historial completo en [`docs/BITACORA.md`](docs/BITACORA.md).
 
 Cada fase sigue el ciclo:
 

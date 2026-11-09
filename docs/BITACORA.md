@@ -6,6 +6,56 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 58 · 2026-11-08 · El envío que no se repite, y la SP que lleva todo
+
+**Objetivo:** dos fallas de la misma familia en caja chica, las dos encontradas
+mirando la base y no la pantalla.
+
+**1 · La liquidación ya enviada se podía enviar otra vez.** El botón de PAGOS
+solo miraba si la paga una entidad; no preguntaba si esa liquidación ya había
+salido. Cada clic creaba otro aviso. El rastro quedó en producción:
+`CC-2026-0020` con dos, uno dentro de `SP-2026-0011` (ya Pagado) y otro suelto
+en la bandeja. Ahora el botón dice **dónde está** en vez de solo apagarse:
+«PAGOS», «EN BANDEJA» o el serial de la SP. Tres distinciones que el modelo
+tuvo que hacer:
+
+- La **✕ de la bandeja no borra**: marca `procesado` sin pago. Un aviso
+  descartado NO bloquea — si bloqueara, descartar algo dejaría esa liquidación
+  inservible para siempre. Hay cuatro así.
+- El enlace al pago se lee por `pagos_notificaciones.pago_id`, no por
+  `pagos.origen_notificacion_id`.
+- Estar en una SP y tener un aviso suelto **pueden pasar a la vez**, así que se
+  llevan por separado. La primera versión los colapsaba y habría escondido el
+  duplicado detrás de la SP, que es justo lo que hay que poder sacar.
+
+Y **Reabrir** (↩), solo admin: retira el aviso no procesado. Si ya hay SP, no
+la toca y lo dice. (`5bc9d91`)
+
+**2 · La SP no llevaba el respaldo de todas sus liquidaciones.** `SP-2026-0011`
+agrupa cuatro, pero preguntarle al sistema a qué SP pertenece `CC-2026-0021`
+devolvía **nada**. Una SP guarda su origen en dos lugares —
+`pagos.origen_notificacion_id`, que es UNA columna y por tanto solo alcanza a
+un aviso, y `pagos_notificaciones.pago_id`, que lo lleva cada aviso— y
+`pago_del_documento` leía solo el primero.
+
+La pantalla del expediente ya leía el segundo, así que las dos **no estaban
+hablando de lo mismo**: listaba las cuatro liquidaciones y dejaba leer los
+adjuntos de una. Como la política es `admin/asistente OR puede_ver_pago(...)`,
+la asistente veía todo igual y el hueco no se notaba: le pegaba **a quien
+firma**. Lissa o Javier abrían la SP y les faltaba el respaldo de tres de las
+cuatro. Sin error y sin aviso.
+
+Arreglado resolviendo por los dos caminos; el viejo se conserva porque las SP
+anteriores a `pago_id` solo tienen ese. Verificado en producción: las cuatro
+resuelven, y `CC-2026-0012` sigue en «nada» — correcto, su aviso se descartó y
+nunca fue SP. (`20261108000004`)
+
+**Comentarios:** tercera y cuarta de la misma forma esta semana — *degradación
+silenciosa*: no revienta, deja de encontrar. Y la segunda vez que **dos
+lecturas del mismo dato se escriben por separado y se desincronizan**: la
+pantalla por un camino, la política por otro.
+
+---
 ## Fase 57 · 2026-11-08 · La liquidación del piloto viaja, y llega con todo
 
 **Objetivo:** los dos caminos que ella describió —el del piloto, que pasa por

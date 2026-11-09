@@ -170,25 +170,3 @@ export function useLiquidacionesEnPagos() {
     },
   });
 }
-
-/**
- * Retirar el aviso que todavia no se proceso. No borra: lo marca procesado
- * sin pago, que es exactamente lo que hace la ✕ de la bandeja --un aviso es
- * una bandeja de trabajo, no un documento-- y lo que lo saca de ahi.
- */
-export function useRetirarDePagos() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (avisoId: string) => {
-      const { error } = await supabase
-        .from('pagos_notificaciones')
-        .update({ procesado: true, procesado_at: new Date().toISOString() })
-        .eq('id', avisoId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['caja_chica_liquidaciones', 'en-pagos'] });
-      void qc.invalidateQueries({ queryKey: ['pagos_notificaciones'] });
-    },
-  });
-}

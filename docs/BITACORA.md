@@ -50,6 +50,29 @@ anteriores a `pago_id` solo tienen ese. Verificado en producción: las cuatro
 resuelven, y `CC-2026-0012` sigue en «nada» — correcto, su aviso se descartó y
 nunca fue SP. (`20261108000004`)
 
+**3 · Revertir vive en Pagos, y devuelve el documento entero.** La primera
+versión puso el deshacer en Liquidaciones. Ella lo corrigió: «esta acción se
+podrá revertir única y exclusivamente desde PAGOS con un botón de REVERTIR,
+que devolverá la liquidación a LIQUIDACIONES dejándola tal cual estaba».
+Movido a la tarjeta del aviso, donde antes había una ✕ muda que decía «marcar
+como procesada».
+
+Y al moverlo apareció lo que lo hacía peligroso: **«tal cual estaba» no es lo
+mismo para los cinco orígenes** que caen en esa bandeja. Caja chica, consumos
+TC y combustible de aeronaves no cambian nada al enviarse; pero
+`avn_liquidacion` mueve el estado a «Enviada a SP» y `combustible_vehiculos` a
+«enviado_a_pagos». Un botón que solo borrara el aviso habría dejado la
+liquidación del piloto congelada en «Enviada a SP», sin aviso y sin camino de
+vuelta —la pantalla no ofrece reabrir desde ahí—. Habría sido construir la
+trampa en vez del botón.
+
+Por eso es una RPC y no un update desde el cliente: qué deshacer por origen
+vive donde no se puede saltar. Lo que ya es solicitud de pago no se toca.
+
+**De paso:** `pagos_notificaciones` **no tenía ningún trigger de auditoría**.
+Enviar, descartar o revertir no dejaban rastro de quién ni cuándo, contra la
+Regla 0. Se nota justo al darle a alguien un botón para deshacer.
+(`20261108000005`)
 **Comentarios:** tercera y cuarta de la misma forma esta semana — *degradación
 silenciosa*: no revienta, deja de encontrar. Y la segunda vez que **dos
 lecturas del mismo dato se escriben por separado y se desincronizan**: la

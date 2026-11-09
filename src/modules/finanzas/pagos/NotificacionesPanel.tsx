@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/query-client';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { describeError, useEntidades } from '@/modules/admin/hooks';
 import { formatDateTime } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
@@ -54,6 +55,7 @@ type Props = {
 export function NotificacionesPanel({ onCreateFromNotifs }: Props) {
   const qc = useQueryClient();
   const toast = useToast();
+  const confirm = useConfirm();
   const entidadesQ = useEntidades();
   const [sel, setSel] = useState<ReadonlySet<string>>(new Set());
 
@@ -70,20 +72,50 @@ export function NotificacionesPanel({ onCreateFromNotifs }: Props) {
     },
   });
 
-  const dismiss = useMutation({
+  /**
+   * Revertir el envio a Pagos. El aviso se marca --no se borra: es una
+   * bandeja de trabajo, y el audit_log tiene que poder contar que paso--
+   * y con eso desaparece de aqui. El documento de origen no se toca:
+   * mandar a Pagos no dispara ningun trigger, asi que quitar el aviso lo
+   * deja tal cual estaba antes de enviarse.
+   */
+  const revertir = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('pagos_notificaciones')
-        .update({ procesado: true, procesado_at: new Date().toISOString() })
-        .eq('id', id);
+      // Por RPC y no por update: deshacer el envio no es solo sacar el aviso.
+      // Dos origenes --la liquidacion del piloto y el control de vales de
+      // combustible-- mueven el estado de su documento al enviarlo, y hay que
+      // devolverlo. Esa regla vive en la base, donde no se puede saltar.
+      const { error } = await supabase.rpc('pago_notificacion_revertir', { p_aviso: id });
       if (error) throw error;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: PAGOS_NOTIF_KEY }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: PAGOS_NOTIF_KEY });
+      // Para que el boton de PAGOS vuelva a estar disponible alla sin
+      // tener que recargar. Por prefijo: alcanza a «en-pagos».
+      void qc.invalidateQueries({ queryKey: ['caja_chica_liquidaciones'] });
+      void qc.invalidateQueries({ queryKey: ['avn_liquidaciones'] });
+      void qc.invalidateQueries({ queryKey: ['comb_reportes'] });
+      void qc.invalidateQueries({ queryKey: ['tc_consumos'] });
+    },
   });
 
-  async function handleDismiss(id: string) {
+  async function handleRevertir(n: Notif) {
+    const ok = await confirm({
+      title: 'Revertir el envio a Pagos',
+      message: (
+        <>
+          <strong>{n.resumen ?? 'Este aviso'}</strong> desaparece de la bandeja y el
+          documento vuelve a su pantalla tal como estaba antes de enviarse, listo para
+          mandarse otra vez. No se crea ninguna solicitud de pago.
+        </>
+      ),
+      danger: true,
+      confirmLabel: 'Revertir',
+    });
+    if (!ok) return;
     try {
-      await dismiss.mutateAsync(id);
+      await revertir.mutateAsync(n.id);
+      toast.success('Envio revertido. El documento volvio a quedar disponible.');
     } catch (e) {
       toast.error(describeError(e));
     }
@@ -217,13 +249,15 @@ export function NotificacionesPanel({ onCreateFromNotifs }: Props) {
                 >
                   ＋ Nueva solicitud
                 </button>
+                {/* Revertir vive aqui y en ningun otro lado: deshacer el
+                    envio es asunto de quien recibe, no de quien mando. */}
                 <button
                   type="button"
-                  onClick={() => void handleDismiss(n.id)}
-                  className="rounded-md border border-sand px-2 py-1 text-[10px] font-semibold text-dark-3 hover:bg-sand-l"
-                  title="Marcar como procesada"
+                  onClick={() => void handleRevertir(n)}
+                  className="rounded-md border border-rust/40 px-2 py-1 text-[10px] font-semibold text-rust hover:bg-rust-l"
+                  title="Revertir el envio: el aviso desaparece y el documento vuelve a quedar disponible"
                 >
-                  ✕
+                  ↩ Revertir
                 </button>
               </div>
             </li>

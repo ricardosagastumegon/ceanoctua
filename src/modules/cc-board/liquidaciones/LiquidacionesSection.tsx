@@ -18,8 +18,6 @@ import {
   useReplaceLinkedVales,
   useUpdateLiquidacion,
   useLiquidacionesEnPagos,
-  useRetirarDePagos,
-  type SituacionEnPagos,
 } from './hooks';
 import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
@@ -80,8 +78,6 @@ export function LiquidacionesSection({
   // botones se comportan como si estuviera libre: la lista se ve igual de
   // rapido y el bloqueo aparece un instante despues.
   const enPagosQ = useLiquidacionesEnPagos();
-  const retirarDePagos = useRetirarDePagos();
-  const esAdmin = profile?.rol === 'admin';
 
   /** Retirar una firma ya pedida, para no duplicarla. */
   async function retirarFirma(firmaId: string, titulo: string) {
@@ -104,56 +100,6 @@ export function LiquidacionesSection({
       toast.error(describeError(e));
     }
   }
-  /**
-   * Reabrir: deshacer el envio a Pagos. Solo el admin, y solo mientras el
-   * aviso no se haya convertido en solicitud. Una SP ya emitida no se
-   * deshace desde aqui --se anula en Pagos-- porque sacarle una liquidacion
-   * a una solicitud ya pagada la deja sin cuadrar.
-   */
-  async function reabrirEnvio(row: Liquidacion, sit: SituacionEnPagos) {
-    // Lo unico retirable es el aviso que aun no se proceso. Si ademas ya hay
-    // una SP, retirarlo es limpiar un envio duplicado y no toca la solicitud.
-    if (!sit.pendienteId) {
-      await confirm({
-        title: 'Ya es una solicitud de pago',
-        message: (
-          <>
-            <strong>{row.serial}</strong> ya viaja en{' '}
-            <strong>{sit.sp?.serial ?? 'una solicitud de pago'}</strong>
-            {sit.sp?.status ? ` · ${sit.sp.status}` : ''}. Para reabrirla hay que anular esa
-            solicitud desde Pagos: sacarla de aquí la dejaría sin cuadrar.
-          </>
-        ),
-        confirmLabel: 'Entendido',
-      });
-      return;
-    }
-    const ok = await confirm({
-      title: sit.sp ? 'Retirar el aviso duplicado' : 'Retirar de Pagos',
-      message: sit.sp ? (
-        <>
-          <strong>{row.serial}</strong> ya viaja en{' '}
-          <strong>{sit.sp.serial ?? 'una solicitud'}</strong>, y además tiene un aviso suelto
-          esperando en la bandeja de Pagos. Ese aviso sobra. ¿Lo retiro? La solicitud no se toca.
-        </>
-      ) : (
-        <>
-          <strong>{row.serial}</strong> está esperando en la bandeja de Pagos. Al retirar el
-          aviso sale de ahí y la liquidación vuelve a quedar enviable.
-        </>
-      ),
-      danger: true,
-      confirmLabel: 'Retirar',
-    });
-    if (!ok) return;
-    try {
-      await retirarDePagos.mutateAsync(sit.pendienteId);
-      toast.success(sit.sp ? 'Aviso duplicado retirado.' : 'Aviso retirado. Ya se puede volver a enviar.');
-    } catch (e) {
-      toast.error(describeError(e));
-    }
-  }
-
   const replaceVales = useReplaceLinkedVales();
   const entidadesList = useEntidades();
   const [importerOpen, setImporterOpen] = useState(false);
@@ -563,18 +509,6 @@ export function LiquidacionesSection({
                 </button>
               )}
 
-              {/* Deshacer el envío: solo el admin, y solo si hay algo que
-                  deshacer. */}
-              {esAdmin && sit && (
-                <button
-                  type="button"
-                  onClick={() => void reabrirEnvio(row, sit)}
-                  className="rounded-md border border-rust/40 px-2 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
-                  title={sit.pendienteId ? 'Reabrir: retirar el aviso de Pagos' : 'Reabrir'}
-                >
-                  ↩
-                </button>
-              )}
               {canEdit && (
                 <>
                   <button

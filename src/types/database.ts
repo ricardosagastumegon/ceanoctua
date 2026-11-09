@@ -4505,6 +4505,11 @@ export type Database = {
         Args: { p_liq: string };
         Returns: string;
       };
+      /** Deshace un envio a Pagos pendiente y devuelve el documento de origen. */
+      pago_notificacion_revertir: {
+        Args: { p_aviso: string };
+        Returns: undefined;
+      };
       /** A quien le puede mandar un piloto su liquidacion. */
       avn_liq_revisores: {
         Args: Record<string, never>;

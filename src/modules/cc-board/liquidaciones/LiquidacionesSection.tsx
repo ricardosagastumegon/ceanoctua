@@ -17,6 +17,9 @@ import {
   useLiquidaciones,
   useReplaceLinkedVales,
   useUpdateLiquidacion,
+  useLiquidacionesEnPagos,
+  useRetirarDePagos,
+  type SituacionEnPagos,
 } from './hooks';
 import { LIQ_ESTADOS, type Liquidacion, type LiquidacionInsert } from './api';
 import { pushPagoNotificacion } from '@/modules/finanzas/pagos/NotificacionesPanel';
@@ -73,6 +76,12 @@ export function LiquidacionesSection({
   const [pidiendoFirma, setPidiendoFirma] = useState<Liquidacion | null>(null);
   const pendientesQ = useFirmasPendientes();
   const cancelarFirma = useCancelarFirma();
+  // Donde esta cada liquidacion respecto de Pagos. Mientras no se sepa, los
+  // botones se comportan como si estuviera libre: la lista se ve igual de
+  // rapido y el bloqueo aparece un instante despues.
+  const enPagosQ = useLiquidacionesEnPagos();
+  const retirarDePagos = useRetirarDePagos();
+  const esAdmin = profile?.rol === 'admin';
 
   /** Retirar una firma ya pedida, para no duplicarla. */
   async function retirarFirma(firmaId: string, titulo: string) {
@@ -95,6 +104,56 @@ export function LiquidacionesSection({
       toast.error(describeError(e));
     }
   }
+  /**
+   * Reabrir: deshacer el envio a Pagos. Solo el admin, y solo mientras el
+   * aviso no se haya convertido en solicitud. Una SP ya emitida no se
+   * deshace desde aqui --se anula en Pagos-- porque sacarle una liquidacion
+   * a una solicitud ya pagada la deja sin cuadrar.
+   */
+  async function reabrirEnvio(row: Liquidacion, sit: SituacionEnPagos) {
+    // Lo unico retirable es el aviso que aun no se proceso. Si ademas ya hay
+    // una SP, retirarlo es limpiar un envio duplicado y no toca la solicitud.
+    if (!sit.pendienteId) {
+      await confirm({
+        title: 'Ya es una solicitud de pago',
+        message: (
+          <>
+            <strong>{row.serial}</strong> ya viaja en{' '}
+            <strong>{sit.sp?.serial ?? 'una solicitud de pago'}</strong>
+            {sit.sp?.status ? ` · ${sit.sp.status}` : ''}. Para reabrirla hay que anular esa
+            solicitud desde Pagos: sacarla de aquí la dejaría sin cuadrar.
+          </>
+        ),
+        confirmLabel: 'Entendido',
+      });
+      return;
+    }
+    const ok = await confirm({
+      title: sit.sp ? 'Retirar el aviso duplicado' : 'Retirar de Pagos',
+      message: sit.sp ? (
+        <>
+          <strong>{row.serial}</strong> ya viaja en{' '}
+          <strong>{sit.sp.serial ?? 'una solicitud'}</strong>, y además tiene un aviso suelto
+          esperando en la bandeja de Pagos. Ese aviso sobra. ¿Lo retiro? La solicitud no se toca.
+        </>
+      ) : (
+        <>
+          <strong>{row.serial}</strong> está esperando en la bandeja de Pagos. Al retirar el
+          aviso sale de ahí y la liquidación vuelve a quedar enviable.
+        </>
+      ),
+      danger: true,
+      confirmLabel: 'Retirar',
+    });
+    if (!ok) return;
+    try {
+      await retirarDePagos.mutateAsync(sit.pendienteId);
+      toast.success(sit.sp ? 'Aviso duplicado retirado.' : 'Aviso retirado. Ya se puede volver a enviar.');
+    } catch (e) {
+      toast.error(describeError(e));
+    }
+  }
+
   const replaceVales = useReplaceLinkedVales();
   const entidadesList = useEntidades();
   const [importerOpen, setImporterOpen] = useState(false);
@@ -413,6 +472,9 @@ export function LiquidacionesSection({
         }
         rowKey={(r) => r.id}
         actions={(row) => {
+          // Una vez enviada, ni se vuelve a pedir firma ni se vuelve a
+          // mandar: el segundo clic no repetia el acto, creaba otra SP.
+          const sit = enPagosQ.data?.get(row.id) ?? null;
           return (
             <div className="flex justify-end gap-1">
               <button
@@ -431,6 +493,9 @@ export function LiquidacionesSection({
                   return (
                     <button
                       type="button"
+                      // Retirar una firma pendiente se permite siempre: es
+                      // limpieza, no duplicación.
+                      disabled={!!sit && !pendiente}
                       onClick={() =>
                         pendiente
                           ? void retirarFirma(pendiente, row.serial ?? row.motivo ?? '')
@@ -439,12 +504,14 @@ export function LiquidacionesSection({
                       className={
                         pendiente
                           ? 'rounded-md border border-gold bg-gold px-2 py-1 text-xs font-extrabold text-white hover:opacity-90'
-                          : 'rounded-md border border-gold/50 bg-gold-light px-2 py-1 text-xs font-semibold text-gold hover:opacity-90'
+                          : 'rounded-md border border-gold/50 bg-gold-light px-2 py-1 text-xs font-semibold text-gold hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40'
                       }
                       title={
                         pendiente
                           ? 'Ya está esperando firma. Tócalo para retirar la solicitud.'
-                          : 'Pedir firma de este documento'
+                          : sit
+                            ? 'Ya se envió a Pagos: de aquí en adelante la firma le toca a la solicitud.'
+                            : 'Pedir firma de este documento'
                       }
                     >
                       {pendiente ? '✍️ EN FIRMA' : '✍️ FIRMA'}
@@ -459,7 +526,7 @@ export function LiquidacionesSection({
               {canEdit && (
                 <button
                   type="button"
-                  disabled={!row.paga_entidad_id}
+                  disabled={!row.paga_entidad_id || !!sit}
                   onClick={async () => {
                     try {
                       await pushPagoNotificacion({
@@ -475,14 +542,37 @@ export function LiquidacionesSection({
                       toast.error(describeError(e));
                     }
                   }}
-                  className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-md border border-purple/40 bg-purple/10 px-2 py-1 text-xs font-semibold text-purple hover:bg-purple/20 disabled:cursor-not-allowed disabled:opacity-60"
                   title={
-                    row.paga_entidad_id
-                      ? 'Enviar a Pagos como notificación'
-                      : 'Solo se envían a Pagos las liquidaciones que paga una entidad'
+                    sit?.sp
+                      ? `Ya viajó en ${sit.sp.serial ?? 'una solicitud de pago'}${sit.sp.status ? ` · ${sit.sp.status}` : ''}.`
+                      : sit
+                        ? 'Ya está en la bandeja de Pagos esperando convertirse en solicitud.'
+                        : row.paga_entidad_id
+                          ? 'Enviar a Pagos como notificación'
+                          : 'Solo se envían a Pagos las liquidaciones que paga una entidad'
                   }
                 >
-                  💸 PAGOS
+                  {/* El botón dice a dónde se fue, no solo que no se puede: un
+                      botón apagado sin motivo es su propia clase de error. */}
+                  {sit?.sp
+                    ? `💸 ${sit.sp.serial ?? 'EN SP'}`
+                    : sit
+                      ? '💸 EN BANDEJA'
+                      : '💸 PAGOS'}
+                </button>
+              )}
+
+              {/* Deshacer el envío: solo el admin, y solo si hay algo que
+                  deshacer. */}
+              {esAdmin && sit && (
+                <button
+                  type="button"
+                  onClick={() => void reabrirEnvio(row, sit)}
+                  className="rounded-md border border-rust/40 px-2 py-1 text-xs font-semibold text-rust hover:bg-rust-l"
+                  title={sit.pendienteId ? 'Reabrir: retirar el aviso de Pagos' : 'Reabrir'}
+                >
+                  ↩
                 </button>
               )}
               {canEdit && (

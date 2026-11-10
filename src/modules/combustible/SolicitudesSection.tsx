@@ -24,6 +24,8 @@ import {
   mensajeDeError,
   useActualizarSolicitud,
   useBorrarSolicitud,
+  useRetirarEnvio,
+  useValesEnBandeja,
   useCrearSolicitud,
   useFacturas,
   useGuardarFactura,
@@ -51,7 +53,7 @@ import { SolicitudValePrintable } from './SolicitudValePrintable';
  */
 function useTesoreros() {
   return useQuery({
-    queryKey: ['usuarios_tesoreria'],
+    queryKey: ['usuarios', 'tesoreria-o-admin'],
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -97,6 +99,8 @@ export function SolicitudesSection({
   const crear = useCrearSolicitud();
   const actualizar = useActualizarSolicitud();
   const borrar = useBorrarSolicitud();
+  const retirar = useRetirarEnvio();
+  const enBandejaQ = useValesEnBandeja();
   const invalidarTrasEnvio = useInvalidarTrasEnvio();
   const { guardar: guardarFactura, guardando: guardandoFactura } = useGuardarFactura();
 
@@ -355,6 +359,44 @@ export function SolicitudesSection({
             {canEdit && !estadoAlcanzado(s.estado, 'en_reporte') && (
               <button className={boton} onClick={() => setDlg({ tipo: 'editar', s })}>
                 Editar
+              </button>
+            )}
+            {/*
+              Retirar: el camino de vuelta de «Al tesorero». Mandar una
+              solicitud la pone en «enviada_tesorero»; retirarla la devuelve a
+              borrador y saca el envio de la bandeja. Solo mientras la otra
+              persona no la haya resuelto --si ya emitio el vale, retirar
+              borraria su trabajo, y la base lo niega.
+            */}
+            {canEdit && enBandejaQ.data?.get(s.id) && (
+              <button
+                className={boton}
+                disabled={retirar.isPending}
+                title={`Está en la bandeja de ${enBandejaQ.data.get(s.id)?.conQuien}. Retirarla la devuelve a borrador.`}
+                onClick={async () => {
+                  const info = enBandejaQ.data?.get(s.id);
+                  if (!info) return;
+                  const ok = await confirm({
+                    title: `Retirar ${s.serial ?? 'la solicitud'}`,
+                    message: (
+                      <>
+                        Sale de la bandeja de <b>{info.conQuien}</b> y vuelve a{' '}
+                        <b>borrador</b>, tal como estaba antes de enviarse. Podrás
+                        corregirla y mandarla de nuevo.
+                      </>
+                    ),
+                    confirmLabel: 'Retirar',
+                  });
+                  if (!ok) return;
+                  try {
+                    await retirar.mutateAsync(info.envioId);
+                    toast.success('Envío retirado. La solicitud volvió a borrador.');
+                  } catch (e) {
+                    toast.error(describeError(e));
+                  }
+                }}
+              >
+                ↩ Retirar
               </button>
             )}
             {/*

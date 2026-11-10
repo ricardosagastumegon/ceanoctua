@@ -4517,6 +4517,11 @@ export type Database = {
         Args: { p_liq: string };
         Returns: string;
       };
+      /** Retira un envio pendiente y devuelve el documento a como estaba antes de mandarse. */
+      envio_retirar: {
+        Args: { p_envio: string };
+        Returns: undefined;
+      };
       /** Borra una SP, retira su envio al tesorero y devuelve sus avisos a la bandeja. */
       pago_borrar: {
         Args: { p_pago: string };

@@ -19,7 +19,10 @@ import { ENVIOS_KEY, enviosApi, type DocTipo, type Snapshot } from './api';
 /** Los usuarios que pueden recibir. Hoy: tesoreria y el administrador. */
 export function useDestinatariosTesoreria() {
   return useQuery({
-    queryKey: ['usuarios_tesoreria'],
+    // Clave propia: `useTesoreros` de combustible usaba esta misma y filtra
+    // distinto --tesoreria Y admin--. La primera en correr llenaba la cache y
+    // la otra leia la lista equivocada durante cinco minutos.
+    queryKey: ['usuarios', 'solo-tesoreria'],
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase

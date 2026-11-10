@@ -187,12 +187,21 @@ export const enviosApi = {
     return data as unknown as Envio;
   },
 
-  /** Retirar un envio que se mando por error. Borrado suave. */
+  /**
+   * Retirar un envio que se mando por error.
+   *
+   * Por RPC y no por el update que habia aqui: mandar un documento NO es solo
+   * crear el envio --quien lo manda mueve ademas el estado del documento-- asi
+   * que borrar la fila a secas deja el documento diciendo que esta en una
+   * bandeja que ya no existe. Era la misma trampa de la ✕ de Pagos, dormida
+   * en una funcion que nadie llamaba todavia.
+   *
+   * La funcion devuelve el documento a como estaba, se niega si la otra
+   * persona ya lo resolvio, y se niega tambien si ese tipo de documento
+   * todavia no tiene definido como devolverse --antes que romperlo callada.
+   */
   async retirar(envioId: string): Promise<void> {
-    const { error } = await supabase
-      .from('envios')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', envioId);
+    const { error } = await supabase.rpc('envio_retirar', { p_envio: envioId });
     if (error) throw error;
   },
 

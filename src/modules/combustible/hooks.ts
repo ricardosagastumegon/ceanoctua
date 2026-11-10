@@ -17,10 +17,67 @@ import {
   type SolicitudInsert,
   type SolicitudUpdate,
 } from './api';
-import { ENVIOS_KEY } from '@/modules/tesoreria/api';
+import { ENVIOS_KEY, enviosApi } from '@/modules/tesoreria/api';
+import { supabase } from '@/lib/supabase';
 import { describeError } from '@/modules/admin/hooks';
 
 export const SOLICITUDES_KEY = ['comb_solicitudes'];
+
+/** En qué bandeja está una solicitud de vale, y con quién. */
+export type EnBandeja = { envioId: string; conQuien: string };
+
+/**
+ * Las solicitudes de vale que ahora mismo están en la bandeja de alguien.
+ *
+ * Una consulta para toda la tabla y no `useEnvioPendiente` por renglón: los
+ * hooks no se llaman en un bucle, y además así el nombre de quien la tiene se
+ * resuelve una vez. Ese nombre es la mitad del valor del botón --«retirar»
+ * sin decir de dónde no le dice nada a nadie.
+ */
+export function useValesEnBandeja() {
+  return useQuery({
+    queryKey: [...ENVIOS_KEY, 'vales-pendientes'],
+    queryFn: async (): Promise<Map<string, EnBandeja>> => {
+      const { data, error } = await supabase
+        .from('envios_vivos')
+        .select('id, doc_id, destinatario_id')
+        .eq('doc_tipo', 'comb_solicitud')
+        .eq('estado', 'enviado');
+      if (error) throw error;
+
+      const ids = [...new Set((data ?? []).map((e) => e.destinatario_id))];
+      const nombres = new Map<string, string>();
+      if (ids.length > 0) {
+        const { data: us } = await supabase
+          .from('usuarios').select('id, nombre, email').in('id', ids);
+        for (const u of us ?? []) nombres.set(u.id, u.nombre ?? u.email ?? 'alguien');
+      }
+
+      const m = new Map<string, EnBandeja>();
+      for (const e of data ?? []) {
+        m.set(e.doc_id, {
+          envioId: e.id,
+          conQuien: nombres.get(e.destinatario_id) ?? 'alguien',
+        });
+      }
+      return m;
+    },
+  });
+}
+
+/**
+ * Retirar devuelve la solicitud a borrador, así que la lista cambia también.
+ */
+export function useRetirarEnvio() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (envioId) => enviosApi.retirar(envioId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ENVIOS_KEY });
+      void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+    },
+  });
+}
 export const REPORTES_KEY = ['comb_reportes'];
 export const RESPONSABLES_KEY = ['comb_responsables'];
 export const FACTURAS_KEY = ['comb_facturas'];

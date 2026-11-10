@@ -121,6 +121,41 @@ asignable a cualquier cosa. La consulta habría funcionado en runtime sin tipos
 y sin avisar. Al arreglarlo apareció un `.from(tabla)` dinámico en
 `service-counts.ts` que compilaba por la misma razón.
 
+**7 · Retirar un envío, pedido por ella misma al tropezar.** «Por error no
+seleccioné y le di enviar a mí misma la última solicitud de vale.» Hoy una vez
+enviada el único camino era borrar el documento y rehacerlo.
+
+`enviosApi.retirar` ya existía y hacía un `update envios set deleted_at`.
+**No lo llamaba nadie, y menos mal**: es la trampa de la ✕ dormida en una
+función. Mandar un documento no es solo crear el envío —quien lo manda mueve
+además el estado del documento— así que borrar la fila a secas habría dejado
+`SV-2026-0022` en «enviada_tesorero» para siempre, sin bandeja donde
+resolverla.
+
+**El espejo ya estaba escrito:** `envio_aceptar` no sabe de tipos, despacha a
+`envio_despacho_{doc_tipo}` si existe. Retirar se escribió igual, con
+`envio_retiro_{doc_tipo}`.
+
+**Con una asimetría deliberada:** aceptar llama a la función si existe y si no
+no hace nada; retirar **se niega** si no existe. No despachar de más es
+inofensivo —el envío queda aceptado y nada se movió—; no deshacer de más deja
+el documento varado, que es el defecto que esta fase lleva cinco migraciones
+arreglando. Así un tipo nuevo no puede colarse sin que alguien decida cómo se
+devuelve.
+
+La de `pago` **no** está escrita a propósito: mandar una SP a tesorería la
+avanza a «Presentado» y escribe su fecha en `step_dates`, así que retirarla es
+retroceder un paso —qué pasa con esa fecha, y qué si alguien ya avanzó más— y
+eso se decide antes de escribirlo. Mientras tanto se niega con su motivo en
+vez de romperla en silencio. (`20261110000006`)
+
+**Y una que no se ve:** las dos listas de destinatarios —`useTesoreros` de
+combustible, que incluye admin, y `useDestinatariosTesoreria`, que no—
+compartían la clave de caché `['usuarios_tesoreria']`. La primera en correr
+llenaba la caché y la otra leía la lista equivocada durante cinco minutos: el
+envío a tesorería de Pagos podía ofrecer a la administradora, que su propio
+filtro excluye a propósito. Claves distintas.
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

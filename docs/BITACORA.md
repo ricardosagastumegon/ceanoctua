@@ -73,6 +73,32 @@ vive donde no se puede saltar. Lo que ya es solicitud de pago no se toca.
 Enviar, descartar o revertir no dejaban rastro de quién ni cuándo, contra la
 Regla 0. Se nota justo al darle a alguien un botón para deshacer.
 (`20261108000005`)
+
+**4 · La trampa alcanzó a dispararse una vez, y la auditoría nueva fue lo
+único que lo delató.** El 2026-11-10 a las 18:05 UTC, en los 45 minutos entre
+aplicar la migración y desplegar la pantalla, se vaciaron los tres avisos
+pendientes con la ✕ vieja. Para `CC-2026-0020` fue correcto —caja chica no
+cambia nada al enviarse—, pero los otros dos quedaron **exactamente como el
+comentario de la migración decía que quedarían**: `LP-2026-0006` en «Enviada a
+SP» y `CV-2026-0001` en «enviado_a_pagos» con su `notificacion_id` colgando,
+los dos sin aviso en la bandeja y sin SP. Varados: la pantalla no ofrece
+reabrir desde ahí y el Revertir nuevo los rechaza —y debe rechazarlos— porque
+exige que el aviso siga pendiente.
+
+El rastro existe **solo** porque el trigger de auditoría de
+`pagos_notificaciones` se había aplicado minutos antes. Sin él, dos documentos
+inservibles y ninguna forma de saber por qué.
+
+El rescate no lleva los seriales a mano: encodea la invariante que nadie
+vigilaba —**un documento está en estado «enviado» solo si tiene al menos un
+aviso pendiente o uno atado a una SP viva**— y arregla todo lo que la viole.
+(`20261110000001`)
+
+**Comentario:** la ventana entre «la base ya sabe» y «la pantalla ya sabe» es
+un estado del sistema, no un detalle del deploy. Mientras dura, el botón viejo
+sigue ahí y sigue siendo clickeable. Vale pensarlo al ordenar los pasos:
+primero la pantalla que quita el botón peligroso, después la base que lo
+reemplaza —no al revés—. Esta vez el orden inverso costó dos documentos.
 **Comentarios:** tercera y cuarta de la misma forma esta semana — *degradación
 silenciosa*: no revienta, deja de encontrar. Y la segunda vez que **dos
 lecturas del mismo dato se escriben por separado y se desincronizan**: la

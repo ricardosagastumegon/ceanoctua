@@ -53,6 +53,19 @@ envío. El gasto se mandó a Pagos y sigue necesitando pagarse. Si además hay
 que deshacer el envío, ese es el otro botón. Dos pasos con significado propio
 en vez de uno que adivina cuál querías. (`20261110000002`)
 
+**4 · Y un error mío, que la propia verificación encontró.** La limpieza de
+avisos colgando de SPs ya borradas los devolvió a la bandeja. Para un borrado
+que pasa *ahora* eso es correcto —el gasto sigue necesitando pagarse— pero
+aplicarlo **hacia atrás**, a borrados viejos, es reescribir la historia sin el
+contexto en que ocurrieron. Se vio enseguida: el único aviso que resucitó fue
+el de `CB-2026-0005`, un registro **anulado**, pidiendo Q 1,088.00 por un
+papel que ya no vale.
+
+La regla que faltaba no depende de ese caso: **un documento anulado o borrado
+no pide que lo paguen**. Escrita sobre los cinco orígenes, porque la forma de
+fallar es la misma en todos — el aviso vive en una tabla y la vigencia del
+documento en otra, y nada las ata. (`20261110000003`)
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

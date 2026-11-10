@@ -4142,6 +4142,7 @@ export type Database = {
           numero: string | null;
           fecha: string | null;
           monto: number | null;
+          monto_manual: boolean;
           contrasena_num: string | null;
           contrasena_fecha: string | null;
           contrasena_vencimiento: string | null;
@@ -4159,6 +4160,7 @@ export type Database = {
           numero?: string | null;
           fecha?: string | null;
           monto?: number | null;
+          monto_manual?: boolean;
           contrasena_num?: string | null;
           contrasena_fecha?: string | null;
           contrasena_vencimiento?: string | null;
@@ -4176,6 +4178,7 @@ export type Database = {
           numero?: string | null;
           fecha?: string | null;
           monto?: number | null;
+          monto_manual?: boolean;
           contrasena_num?: string | null;
           contrasena_fecha?: string | null;
           contrasena_vencimiento?: string | null;

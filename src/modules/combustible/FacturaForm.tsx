@@ -93,7 +93,14 @@ export function FacturaForm({ inicial, preseleccion, onSubmit, onCancel, guardan
     .reduce((a, s) => a + (s.monto ?? 0), 0);
 
   // Mientras no se escriba nada, el monto ES la suma de los despachos.
-  const [montoManual, setMontoManual] = useState(inicial?.monto != null);
+  //
+  // Esto se adivinaba con `inicial?.monto != null`, y la pista no distingue
+  // los dos casos: una factura creada con un vale guarda el monto que la
+  // pantalla calculó sola, y al reabrirla ese número calculado pasaba por
+  // tecleado. Entonces agregar el vale que faltaba ya no podía moverlo, y la
+  // factura quedaba avisando de un descuadre que nadie eligió. Ahora la
+  // factura recuerda si alguien lo escribió.
+  const [montoManual, setMontoManual] = useState(inicial?.monto_manual ?? false);
   const montoEnPantalla = montoManual
     ? v.monto
     : sumaDespachos > 0
@@ -112,6 +119,7 @@ export function FacturaForm({ inicial, preseleccion, onSubmit, onCancel, guardan
         numero: v.numero.trim() || null,
         fecha: v.fecha || null,
         monto,
+        monto_manual: montoManual,
         contrasena_num: v.contrasena_num.trim() || null,
         contrasena_fecha: v.contrasena_fecha || null,
         contrasena_vencimiento: v.contrasena_vencimiento || null,
@@ -206,6 +214,20 @@ export function FacturaForm({ inicial, preseleccion, onSubmit, onCancel, guardan
             set('monto', x);
           }}
         />
+        {difiere && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setMontoManual(false);
+                set('monto', '');
+              }}
+              className="rounded-md border border-teal px-3 py-2 text-xs font-semibold text-teal hover:bg-teal-l"
+            >
+              Usar {formatMoney(sumaDespachos)}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border border-sand bg-sand-l/40 p-3">

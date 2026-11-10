@@ -193,6 +193,48 @@ yo sabiendo del patrón.** Vale la regla explícita: *cuando una vista o una
 política decide qué ve alguien, hay que mirarla desde sus ojos, no desde los
 nuestros.*
 
+**9 · El caso de estudio de la factura: la alerta tenía razón, el fallo estaba
+antes.** Ella ingresó la factura `DCA74135` con un solo vale (Q 559.01), luego
+capturó el vale que faltaba de esa misma factura, editó la factura y lo
+agregó. En vales todo bien; la factura quedó avisando «los vales escogidos
+suman Q 609.02» contra un monto de Q 559.01.
+
+**La alerta es exactamente lo que esa pantalla existe para hacer** — con sus
+propias palabras: «el ingreso del monto es manual y eso es causante de doble
+error, porque en el despacho también fue manual». No había que quitarla.
+
+El fallo estaba un paso antes. El formulario decidía así si el monto venía del
+papel o de la suma:
+
+```ts
+const [montoManual, setMontoManual] = useState(inicial?.monto != null);
+```
+
+**Lo adivinaba.** Y la pista no distingue los dos casos: al crear la factura
+con un vale, la pantalla calcula el monto sola —ese es su comportamiento por
+omisión— y lo guarda. Al reabrirla, ese número *calculado* pasaba por
+*tecleado*, el monto se congelaba, y agregar el vale que faltaba ya no podía
+moverlo. La factura quedó avisando de un descuadre que nadie eligió.
+
+Lo que faltaba era un dato que nadie guardó: **si una persona escribió ese
+número o lo puso la máquina**. Misma forma que la fase 57 resolvió al revés
+—«el origen se graba al crearla, no se deduce después»—; aquí ni siquiera se
+deducía, se adivinaba de una pista ambigua. Ahora es columna:
+
+```
+monto calculado + agrega un vale  ->  el monto sigue a la suma
+monto escrito   + agrega un vale  ->  el monto no se toca, y avisa
+```
+
+El relleno de las que ya existían usa la única pista disponible —si el monto
+coincide con la suma, lo puso la máquina— pero **una vez y queda escrito**, en
+vez de rehacerse cada vez que se abre la pantalla. Salieron ocho calculadas y
+una escrita: la suya, que debe seguir avisando hasta que la confirme.
+
+Y para confirmarla, un botón **«Usar Q 609.02»** junto al aviso. La decisión
+sigue siendo de ella —el papel manda— pero deja de costar teclear.
+(`20261110000008`)
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

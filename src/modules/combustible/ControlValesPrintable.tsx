@@ -12,10 +12,12 @@ import logoOl from './logo-ol.png';
  * columna, altos de fila, combinaciones y que lado de cada celda lleva linea.
  * Las tres cosas que estaban mal y se notaban al imprimir:
  *
- *   1. SALIA EN VERTICAL. La hoja es horizontal («landscape» en el page
- *      setup). Nueve columnas en una letter vertical no caben, y de ahi
- *      venia el descuadre entero. El `@page` global del proyecto es vertical,
- *      asi que este documento se trae el suyo mientras esta abierto.
+ *   1. LA ORIENTACION. El page setup del .xlsx viene en «landscape» y asi se
+ *      reconstruyo. Pero el papel que ella usa es VERTICAL --fase 59, al
+ *      imprimirlo de verdad: «me sale en HORIZONTAL, tiene que ser en
+ *      vertical»--. Manda el papel, no el archivo: el .xlsx es la fuente de
+ *      la geometria del cuadro, no de como se imprime. El `@page` global del
+ *      proyecto ya es vertical, asi que este documento solo ajusta su margen.
  *
  *   2. LA HOJA NO EMPIEZA EN LA COLUMNA B. El area de impresion es A1:K107:
  *      A (2.1 de ancho) y K (3.3) son margenes interiores, no columnas con
@@ -200,7 +202,16 @@ function Cuadro({ bloque }: { bloque: Bloque }) {
         <Td colSpan={asignado ? 2 : 1} alto={16.9} lados={{ r: false }} al="left" negrita>
           Responsable:
         </Td>
-        <Td colSpan={asignado ? 1 : 2} tam={11} negrita al={asignado ? 'left' : 'center'}>
+        {/* Un respiro a la izquierda: la etiqueta de al lado no lleva linea
+            que las separe, y en vertical --columnas mas estrechas-- el valor
+            quedaba pegado al «Responsable:». */}
+        <Td
+          colSpan={asignado ? 1 : 2}
+          tam={11}
+          negrita
+          al={asignado ? 'left' : 'center'}
+          style={{ paddingLeft: pt(6) }}
+        >
           {puesto}
         </Td>
         <Td colSpan={3} lados={{ l: false }} tam={11} negrita>
@@ -340,14 +351,14 @@ function Cuadro({ bloque }: { bloque: Bloque }) {
 
 export function ControlValesPrintable({ reporte, bloques, realizadoPor }: Props) {
   /**
-   * La hoja es horizontal. El `@page` de index.css es vertical porque lo son
-   * casi todos los documentos del sistema; este se trae el suyo mientras esta
-   * en pantalla y lo retira al cerrarse. Solo hay un imprimible abierto a la
-   * vez, asi que no se pisan.
+   * Vertical, como el papel. El `@page` global ya lo es; esto solo aprieta el
+   * margen a 10mm --el de la hoja original-- porque con los 12mm del proyecto
+   * las once columnas quedan mas estrechas de lo que deben. Se retira al
+   * cerrarse, y solo hay un imprimible abierto a la vez, asi que no se pisan.
    */
   useEffect(() => {
     const el = document.createElement('style');
-    el.textContent = '@media print { @page { size: letter landscape; margin: 10mm; } }';
+    el.textContent = '@media print { @page { size: letter portrait; margin: 10mm; } }';
     document.head.appendChild(el);
     return () => {
       el.remove();

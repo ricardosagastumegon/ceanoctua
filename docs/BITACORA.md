@@ -327,6 +327,39 @@ control, y lo único que lo delató fue generar el PDF y mirarlo. Esto no se ve
 compilando, no se ve en los tipos y no da ningún error: el documento
 simplemente llega sin su firma.
 
+**13 · El control de vales va en VERTICAL, y en una hoja.** «Acabo de imprimir
+el control de vales sin expediente y me sale en horizontal, tiene que ser en
+vertical, corrígelo que me salen 3 hojas.»
+
+**Esto corrige una decisión mía de la fase 56.** Al reconstruir la hoja desde
+el `.xlsx` original, el *page setup* del archivo venía en «landscape» y lo
+tomé como la verdad del documento —quedó escrito en el código como el arreglo
+número 1—. Pero el papel que ella usa es vertical. **Manda el papel, no el
+archivo:** el `.xlsx` es la fuente de la geometría del cuadro, no de cómo se
+imprime.
+
+Y el horizontal costaba caro: **3 hojas contra 1**. Una carta vertical tiene
+735pt de alto útil frente a los 555 de una horizontal, así que cabe un tercio
+más de renglones aunque las columnas se estrechen.
+
+**Verificado por el camino que ella usó**, no por el otro: `page.pdf()` de
+Playwright imprime con el CSS de impresión real, así que es literalmente lo
+que sale del botón «Imprimir». Antes y después: 1 página, 612×792, completa.
+
+Dos cosas que arrastró el cambio y se arreglaron en la misma vuelta:
+
+- **Una hoja en blanco al final del PDF con respaldo.** El recorte deja unos
+  píxeles de respiro y, si caían al otro lado del corte, salía una página
+  vacía detrás del documento. Ahora un trozo sin tinta no merece una página.
+- **«Responsable:Gerente Administrativo», pegados.** Las celdas llevan 2pt de
+  aire y en horizontal alcanzaba; al estrecharse las columnas, el valor quedó
+  contra su etiqueta —que no lleva línea que las separe—. Un respiro a la
+  izquierda del valor.
+
+**Comentario:** una decisión tomada de un archivo fuente puede ser fiel al
+archivo y falsa al uso. El `.xlsx` decía horizontal y el papel decía vertical;
+solo lo dijo imprimiéndolo.
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

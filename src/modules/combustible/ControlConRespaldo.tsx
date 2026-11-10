@@ -33,10 +33,10 @@ import type { Reporte } from './api';
  * que hace el navegador al imprimir.
  */
 
-/** Carta horizontal, que es como sale este formato. */
-const CARTA_HORIZONTAL = {
-  ancho: 792,
-  alto: 612,
+/** Carta vertical, que es el papel en el que ella lo imprime. */
+const CARTA_VERTICAL = {
+  ancho: 612,
+  alto: 792,
   /** El mismo `margin: 10mm` del `@page` que el imprimible se trae. */
   margen: 10 * MM,
   largo: 'paginar' as const,
@@ -87,7 +87,7 @@ export function BotonControlConRespaldo({
         'documentos',
         archivos,
         (p) => setPaso(p.paso),
-        CARTA_HORIZONTAL,
+        CARTA_VERTICAL,
       );
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);

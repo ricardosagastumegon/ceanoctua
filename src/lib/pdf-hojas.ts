@@ -339,6 +339,17 @@ async function capturarFiel(nodo: HTMLElement, escala = 2): Promise<HTMLCanvasEl
   return canvas;
 }
 
+/** Si un canvas tiene algo dibujado, o es papel en blanco. */
+function tieneTinta(canvas: HTMLCanvasElement): boolean {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return true;
+  const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 0; i < d.length; i += 16) {
+    if (d[i] < 246 || d[i + 1] < 246 || d[i + 2] < 246) return true;
+  }
+  return false;
+}
+
 /** Un canvas en bytes PNG, que es lo que pdf-lib sabe incrustar. */
 function pngDeCanvas(canvas: HTMLCanvasElement): Uint8Array {
   const dataUrl = canvas.toDataURL('image/png');
@@ -441,6 +452,11 @@ async function pegarHoja(
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, trozo.width, trozo.height);
     ctx.drawImage(canvas, 0, y, canvas.width, altoTrozo, 0, 0, canvas.width, altoTrozo);
+
+    // Un trozo sin tinta no merece una pagina. Pasaba al final: el recorte
+    // deja unos pixeles de respiro y, si caian al otro lado del corte, salia
+    // una hoja en blanco detras del documento.
+    if (y > 0 && !tieneTinta(trozo)) break;
 
     const img = await doc.embedPng(pngDeCanvas(trozo));
     const w = canvas.width * escala;

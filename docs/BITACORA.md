@@ -66,6 +66,28 @@ no pide que lo paguen**. Escrita sobre los cinco orígenes, porque la forma de
 fallar es la misma en todos — el aviso vive en una tabla y la vigencia del
 documento en otra, y nada las ata. (`20261110000003`)
 
+**5 · Y con el mensaje ya llegando, se vio que decía media cosa.** Con los
+errores por fin visibles, ella intentó borrar un vale y leyó: *«La SV-2026-0021
+está en un control de vales ya cerrado. Borrarla descuadraría un total que ya
+salió.»* El candado es correcto —un control cerrado tiene su total congelado y
+sacarle un renglón deja el papel diciendo una cosa y sus vales otra— pero el
+mensaje la dejaba parada: sabía por qué no podía, no qué hacer. Y lo que había
+que hacer eran dos clics en **otra pestaña**.
+
+Además mentía en el caso más común: en «cerrado» el total **no ha salido** a
+ningún lado. El que ya salió es «enviado a Pagos», y tiene otra salida. Ahora
+el mensaje nombra el control, dice su total, y dice el camino según dónde esté.
+(`20261110000004`)
+
+Nota sobre la comprobación: el primer intento de verificarlo llamando a la
+función devolvió «Hace falta una sesión» —la migración corre sin usuario— y
+**la comprobación lo dijo en vez de pasar en silencio**. Reescrita para leer el
+cuerpo real de la función desplegada: comprobar una copia del texto contra sí
+misma no comprueba nada.
+
+**Regla:** un mensaje de error que solo dice que no se puede es medio mensaje.
+Quien lo lee no está auditando el sistema, está tratando de terminar algo.
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

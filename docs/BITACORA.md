@@ -235,6 +235,51 @@ Y para confirmarla, un botón **«Usar Q 609.02»** junto al aviso. La decisión
 sigue siendo de ella —el papel manda— pero deja de costar teclear.
 (`20261110000008`)
 
+**10 · El control de vales, con su respaldo y sin perder sus márgenes.** «Al
+imprimir no me da la opción de que se imprima el control de vale + el respaldo
+cargado.» La máquina ya existía —`lib/pdf-hojas`, la misma de la solicitud de
+pago— pero traía la geometría clavada: **carta vertical, 24 puntos, siempre**.
+
+Y ella avisó de lo que iba a pasar antes de que pasara: «cuida los márgenes
+porque no recuerdo en qué otro documento oficial vi que cuando le das imprimir
+con expediente, se mueve todo el margen del documento oficial». Tenía razón, y
+el motivo es ese: **este control se imprime en carta HORIZONTAL con 10mm** —se
+trae su propio `@page` mientras está abierto—, así que meterlo en una página
+vertical lo encogía hasta caber. No era el margen: era la hoja entera reducida
+para entrar donde no iba.
+
+Dos cambios en la librería, los dos con el comportamiento de antes por
+omisión para no mover nada más:
+
+- **La geometría se declara.** `HojaGeometria { ancho, alto, margen, largo }`.
+  El control pide carta horizontal con `10 * MM`, que es su `@page` literal.
+- **`largo: 'paginar'`.** Encoger está bien para una hoja del tamaño de una
+  página; un control de doce vales es más alto, y reducirlo al 25% para que
+  quepa en una lo vuelve ilegible. Paginar es lo que hace el navegador.
+
+**Y el corte no es a ciegas.** La primera prueba —generada y mirada, no
+supuesta— partió el pie en dos: el recuadro de la firma en una página y su
+contenido en la otra. Ahora, desde el corte ideal, se busca hacia arriba una
+franja de píxeles toda blanca y se corta ahí; si no aparece en el último
+tercio, se corta donde tocaba. El pie quedó entero.
+
+Verificado generando el PDF de verdad en el navegador y leyéndolo con
+`pdfjs`: dos páginas de 792×612 pt (carta horizontal) y el margen izquierdo en
+~45 pt, que son los 10mm del papel más la columna A —margen interior del
+formato oficial—. Lo mismo que hace `window.print()`.
+
+**11 · Y el botón de Pagos que «no estaba».** `CV-2026-0007` estaba *Abierto*,
+y el botón solo se dibujaba en *Cerrado*. El proceso no estaba roto —se probó
+la cadena entera ejecutando las funciones reales con su identidad: cerrar
+congela Q 4,427.23, enviar deja el aviso pendiente en la bandeja de Pagos—
+pero **un botón ausente no enseña el paso que falta**. Ella abrió el control,
+cargó las doce facturas con sus contraseñas, y preguntó por qué no tenía
+botón.
+
+Ahora se dibuja siempre y dice en qué va: «💸 Pagos · cierra primero»
+(apagado), «Enviar a Pagos», «💸 EN PAGOS» (apagado). El mismo trato que los
+botones de caja chica desde la fase 58.
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

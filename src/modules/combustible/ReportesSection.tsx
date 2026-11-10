@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { DocumentAttachment } from '@/components/ui/DocumentAttachment';
@@ -24,6 +24,7 @@ import {
   useSolicitudes,
 } from './hooks';
 import { ControlValesPrintable, type Bloque } from './ControlValesPrintable';
+import { BotonControlConRespaldo } from './ControlConRespaldo';
 
 /**
  * El control de vales de la quincena.
@@ -72,6 +73,9 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
 
   const [nuevo, setNuevo] = useState(false);
   const [imprimir, setImprimir] = useState<Reporte | null>(null);
+  // La hoja que se captura para el PDF con respaldo. `window.print()` no
+  // puede meter un PDF ajeno dentro de lo que imprime.
+  const hoja = useRef<HTMLDivElement | null>(null);
   const [gestionar, setGestionar] = useState<Reporte | null>(null);
   /**
    * El PDF que respalda la quincena --vales, despachos, facturas y
@@ -300,10 +304,24 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
                 Cerrar
               </button>
             )}
-            {canEdit && r.estado === 'cerrado' && (
+            {/*
+              El botón se dibuja SIEMPRE y dice dónde está, en vez de
+              aparecer solo cuando toca. Desaparecido no enseña el paso que
+              falta --ella abrió el control, cargó todo y preguntó por qué no
+              tenía botón de Pagos--; apagado con su motivo, sí. Es el mismo
+              trato que los botones de caja chica desde la fase 58.
+            */}
+            {canEdit && (
               <button
                 className={boton}
-                disabled={enviar.isPending}
+                disabled={r.estado !== 'cerrado' || enviar.isPending}
+                title={
+                  r.estado === 'abierto'
+                    ? 'Primero cierra el control: a Pagos va un total congelado.'
+                    : r.estado === 'cerrado'
+                      ? 'Manda el aviso para que se le genere la solicitud de pago'
+                      : 'Ya salió. Para devolverlo, revierte el envío desde Finanzas → Pagos.'
+                }
                 onClick={async () => {
                   try {
                     await enviar.mutateAsync(r.id);
@@ -313,7 +331,11 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
                   }
                 }}
               >
-                Enviar a Pagos
+                {r.estado === 'abierto'
+                  ? '💸 Pagos · cierra primero'
+                  : r.estado === 'cerrado'
+                    ? 'Enviar a Pagos'
+                    : '💸 EN PAGOS'}
               </button>
             )}
             {/* El camino de vuelta de «Cerrar». Solo admin, y solo desde
@@ -444,8 +466,12 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
         open={imprimir != null}
         onClose={() => setImprimir(null)}
         title={imprimir?.serial ?? ''}
+        acciones={
+          imprimir ? <BotonControlConRespaldo reporte={imprimir} hoja={hoja} /> : null
+        }
       >
         {imprimir && (
+          <div ref={hoja}>
           <ControlValesPrintable
             reporte={imprimir}
             bloques={bloquesDe(imprimir)}
@@ -458,6 +484,7 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
                 : null
             }
           />
+          </div>
         )}
       </PrintableModal>
 

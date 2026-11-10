@@ -62,8 +62,20 @@ export const pagosApi = {
     if (error) throw error;
     return data;
   },
+  /**
+   * Borrar una SP arrastra mas que la fila.
+   *
+   * El update suelto que habia aqui dejaba vivos el ENVIO al tesorero --Victor
+   * siguio viendo «SP-2026-0018, esperando que la recibas» de un documento que
+   * ya no existia, sin poder abrirlo ni quitarselo-- y los AVISOS que la
+   * originaron, apuntando a una solicitud muerta.
+   *
+   * La funcion retira el envio y devuelve los avisos a la bandeja, pendientes:
+   * el gasto se mando a Pagos y sigue necesitando pagarse, asi que vuelve a la
+   * fila para entrar en otra SP. Deshacer tambien el envio es el otro boton.
+   */
   async remove(id: string): Promise<void> {
-    const { error } = await supabase.from('pagos').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+    const { error } = await supabase.rpc('pago_borrar', { p_pago: id });
     if (error) throw error;
   },
   /**

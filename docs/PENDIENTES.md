@@ -16,6 +16,44 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 
 > **Nota de numeración:** la sección «Deferred a polish futuro» del final usa su propia serie DT-5 a DT-8, de la Fase 19 y ya cerrada. Los items vivos de aquí siguen desde DT-10 para no chocar con ella.
 
+### DT-27 · El chip «Ver SP» de combustible de aeronaves lee un solo enlace
+
+**Origen:** fase 59, mirando `src/modules/aeronaves/combustible/api.ts` al
+rastrear por qué `CB-2026-0005` seguía mostrando una SP borrada.
+
+**Qué pasa:** la consulta resuelve la solicitud por
+`pagos.origen_notificacion_id` únicamente — el lado «uno». Es exactamente el
+mismo hueco que la fase 58 cerró en `pago_del_documento`. Hoy no se nota
+porque cada registro de combustible manda su propio aviso y ninguna SP agrupa
+dos. **El día que alguien agrupe dos registros en una SP, uno de los dos
+pierde su chip** — sin error y sin aviso.
+
+**Lo que lo arregla:** leer también por `pagos_notificaciones.pago_id`, igual
+que `useLiquidacionesEnPagos`. Unas 5 líneas.
+
+**Impacto:** cosmético hoy, degradación silenciosa mañana. Estimado 15 min.
+
+---
+
+### DT-26 · Borrar una SP no pregunta en qué paso iba
+
+**Origen:** fase 59, al escribir `pago_borrar`.
+
+**Qué pasa:** `pago_borrar` es tan permisivo como el update suelto que
+reemplazó — borra una SP esté donde esté, incluso ya firmada, recibida por
+tesorería o pagada. Se dejó así a propósito: la fase cerraba un hueco de
+limpieza y **no era el momento de meter un candado nuevo** que ella no pidió y
+que podría trabarla a mitad de una limpieza.
+
+**Lo que habría que decidir con ella:** desde qué paso dejar de borrar y
+empezar a *anular* — que es un acto distinto, con su nota y su rastro. Caja
+chica ya tiene esa distinción; Pagos no.
+
+**Impacto:** ninguno hoy (solo admin y asistente llegan al botón). Es una
+decisión de producto pendiente, no un bug.
+
+---
+
 ### DT-25 · El vale de caja chica no llega a «Solicitado» ni «Acreditado»
 
 **Origen:** fase 55, al montar el ciclo del vale. La usuaria lo describió

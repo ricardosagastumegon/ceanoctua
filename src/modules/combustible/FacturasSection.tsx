@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import { useProveedores } from '@/modules/admin/hooks';
+import { describeError, useProveedores } from '@/modules/admin/hooks';
 import { FacturaForm } from './FacturaForm';
 import type { Factura, FacturaInsert } from './api';
 import { mensajeDeError, useBorrarFactura, useFacturas, useGuardarFactura, useSolicitudes } from './hooks';
@@ -196,7 +196,7 @@ export function FacturasSection({ canEdit, canDelete }: { canEdit: boolean; canD
                     await borrar.mutateAsync(f.id);
                     toast.success('Factura borrada.');
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : 'No se pudo borrar.');
+                    toast.error(describeError(e));
                   }
                 }}
               >

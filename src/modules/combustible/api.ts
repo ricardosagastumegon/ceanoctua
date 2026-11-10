@@ -229,6 +229,21 @@ export const reportesApi = {
     return data as unknown as Reporte;
   },
 
+  /**
+   * Reabrir es el inverso de cerrar, y hasta ahora no existia: un control
+   * cerrado solo podia ir hacia adelante. Si se cerro antes de tiempo --o con
+   * un vale de mas-- no habia forma de volver, y los vales de adentro quedaban
+   * sin poder tocarse.
+   *
+   * No reabre uno ya enviado a Pagos: ese camino de vuelta es el Revertir de
+   * la bandeja, y tener dos puertas para lo mismo es tener dos verdades.
+   */
+  async reabrir(id: string): Promise<Reporte> {
+    const { data, error } = await supabase.rpc('comb_reabrir_reporte', { p_reporte: id });
+    if (error) throw error;
+    return data as unknown as Reporte;
+  },
+
   async enviarAPagos(id: string): Promise<void> {
     const { error } = await supabase.rpc('comb_enviar_a_pagos', { p_reporte: id });
     if (error) throw error;

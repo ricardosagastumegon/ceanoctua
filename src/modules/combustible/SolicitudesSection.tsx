@@ -10,7 +10,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/dates';
 import { formatMoney, parseNumero } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
-import { useEmpleados, usePersonas } from '@/modules/admin/hooks';
+import { describeError, useEmpleados, usePersonas } from '@/modules/admin/hooks';
 import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
 import { enviosApi } from '@/modules/tesoreria/api';
 import {
@@ -175,7 +175,7 @@ export function SolicitudesSection({
       toast.success('Solicitud enviada al tesorero.');
       setDlg({ tipo: 'cerrado' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'No se pudo enviar.');
+      toast.error(describeError(e));
     }
   }
 
@@ -185,7 +185,7 @@ export function SolicitudesSection({
       toast.success(mensaje);
       setDlg({ tipo: 'cerrado' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'No se pudo guardar.');
+      toast.error(describeError(e));
     }
   }
 
@@ -372,7 +372,7 @@ export function SolicitudesSection({
                     await borrar.mutateAsync(s.id);
                     toast.success('Solicitud borrada.');
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : 'No se pudo borrar.');
+                    toast.error(describeError(e));
                   }
                 }}
               >
@@ -412,7 +412,7 @@ export function SolicitudesSection({
               }
               setDlg({ tipo: 'cerrado' });
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : 'No se pudo guardar.');
+              toast.error(describeError(e));
             }
           }}
         />

@@ -18,6 +18,7 @@ import {
   type SolicitudUpdate,
 } from './api';
 import { ENVIOS_KEY } from '@/modules/tesoreria/api';
+import { describeError } from '@/modules/admin/hooks';
 
 export const SOLICITUDES_KEY = ['comb_solicitudes'];
 export const REPORTES_KEY = ['comb_reportes'];
@@ -94,6 +95,18 @@ export function useCerrarReporte() {
   const qc = useQueryClient();
   return useMutation<Reporte, Error, string>({
     mutationFn: (id) => reportesApi.cerrar(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: REPORTES_KEY });
+      void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+    },
+  });
+}
+
+/** Reabrir descongela el total y devuelve los vales a su estado. */
+export function useReabrirReporte() {
+  const qc = useQueryClient();
+  return useMutation<Reporte, Error, string>({
+    mutationFn: (id) => reportesApi.reabrir(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: REPORTES_KEY });
       void qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
@@ -216,7 +229,7 @@ export function useGuardarFactura() {
  * nada a nadie. Lo que pasó es sencillo y se puede decir con palabras.
  */
 export function mensajeDeError(e: unknown): string {
-  const m = e instanceof Error ? e.message : 'No se pudo guardar.';
+  const m = describeError(e);
   return m.includes('comb_facturas_unica')
     ? 'Esa factura ya está registrada. Búscala en la lista y edítala.'
     : m;

@@ -4505,6 +4505,16 @@ export type Database = {
         Args: { p_liq: string };
         Returns: string;
       };
+      /** Borra una SP, retira su envio al tesorero y devuelve sus avisos a la bandeja. */
+      pago_borrar: {
+        Args: { p_pago: string };
+        Returns: undefined;
+      };
+      /** Inverso de cerrar: devuelve el control de vales a «abierto». */
+      comb_reabrir_reporte: {
+        Args: { p_reporte: string };
+        Returns: Database['public']['Tables']['comb_reportes']['Row'];
+      };
       /** Deshace un envio a Pagos pendiente y devuelve el documento de origen. */
       pago_notificacion_revertir: {
         Args: { p_aviso: string };

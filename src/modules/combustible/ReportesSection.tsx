@@ -8,7 +8,8 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import { useEmpleados, usePersonas } from '@/modules/admin/hooks';
+import { describeError, useEmpleados, usePersonas } from '@/modules/admin/hooks';
+import { useAuth } from '@/lib/auth';
 import { useVehiculos } from '@/modules/admin/vehiculos/hooks';
 import { REPORTE_ESTADO_LABEL, type Reporte, type Solicitud } from './api';
 import {
@@ -17,6 +18,7 @@ import {
   useCerrarReporte,
   useCrearReporte,
   useEnviarAPagos,
+  useReabrirReporte,
   useReportes,
   useResponsables,
   useSolicitudes,
@@ -51,6 +53,8 @@ function quincenaActual(): { ini: string; fin: string } {
 export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canDelete: boolean }) {
   const toast = useToast();
   const confirm = useConfirm();
+  const { profile } = useAuth();
+  const esAdmin = profile?.rol === 'admin';
 
   const reportesQ = useReportes();
   const solicitudesQ = useSolicitudes();
@@ -64,6 +68,7 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
   const enviar = useEnviarAPagos();
   const asignar = useAsignarAReporte();
   const borrar = useBorrarReporte();
+  const reabrir = useReabrirReporte();
 
   const [nuevo, setNuevo] = useState(false);
   const [imprimir, setImprimir] = useState<Reporte | null>(null);
@@ -288,7 +293,7 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
                     await cerrar.mutateAsync(r.id);
                     toast.success('Control cerrado. Ya puedes enviarlo a Pagos.');
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : 'No se pudo cerrar.');
+                    toast.error(describeError(e));
                   }
                 }}
               >
@@ -304,15 +309,43 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
                     await enviar.mutateAsync(r.id);
                     toast.success('Aviso enviado a Pagos.');
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : 'No se pudo enviar.');
+                    toast.error(describeError(e));
                   }
                 }}
               >
                 Enviar a Pagos
               </button>
             )}
-            {/* Solo mientras esta abierto: uno cerrado ya respalda un pago. */}
-            {canDelete && r.estado === 'abierto' && (
+            {/* El camino de vuelta de «Cerrar». Solo admin, y solo desde
+                «cerrado»: uno ya enviado se devuelve con el Revertir de la
+                bandeja de Pagos, que es donde ella pidió que viviera. */}
+            {esAdmin && r.estado === 'cerrado' && (
+              <button
+                className={boton}
+                disabled={reabrir.isPending}
+                title="Descongela el total y deja volver a tocar sus vales"
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Reabrir ${r.serial ?? 'el control'}`,
+                    message:
+                      'El total se descongela y sus vales vuelven a poder editarse, ' +
+                      'salir del control o borrarse. Queda registrado en auditoría.',
+                  });
+                  if (!ok) return;
+                  try {
+                    await reabrir.mutateAsync(r.id);
+                    toast.success('Control reabierto.');
+                  } catch (e) {
+                    toast.error(describeError(e));
+                  }
+                }}
+              >
+                Reabrir
+              </button>
+            )}
+            {/* Mientras no se haya enviado. Uno ya en Pagos respalda una
+                solicitud: ese se devuelve primero con el Revertir. */}
+            {canDelete && (r.estado === 'abierto' || r.estado === 'cerrado') && (
               <button
                 className={botonRojo}
                 disabled={borrar.isPending}
@@ -331,7 +364,7 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
                     await borrar.mutateAsync(r.id);
                     toast.success('Control borrado.');
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : 'No se pudo borrar.');
+                    toast.error(describeError(e));
                   }
                 }}
               >
@@ -352,7 +385,7 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
               toast.success('Control creado con los vales de esas fechas.');
               setNuevo(false);
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : 'No se pudo crear.');
+              toast.error(describeError(e));
             }
           }}
         />
@@ -373,7 +406,7 @@ export function ReportesSection({ canEdit, canDelete }: { canEdit: boolean; canD
               try {
                 await asignar.mutateAsync({ ids, reporteId });
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : 'No se pudo actualizar.');
+                toast.error(describeError(e));
               }
             }}
           />

@@ -6,6 +6,59 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 59 · 2026-11-10 · El camino de vuelta
+
+**Objetivo:** ella quiso borrar datos de prueba en Combustible y no pudo
+ninguna de las tres cosas. Las tres eran el mismo hueco.
+
+**El patrón.** Cada paso hacia adelante de esta cadena tiene su función en el
+servidor —`comb_cerrar_reporte`, `comb_enviar_a_pagos`—, pero los pasos de
+vuelta no existían o estaban a medias:
+
+```
+abierto  --Cerrar-->  cerrado  --Enviar-->  enviado_a_pagos
+   ^                     ?                        |
+   +---- no había ------ +   <---- Revertir (ya existía, fase 58)
+```
+
+Quien se equivoca a mitad se queda ahí. Ella se quedó ahí.
+
+**1 · «No se pudo borrar.» no decía por qué, y el motivo era el bueno.** Los
+tres vales de prueba viven en `CV-2026-0001` y `comb_borrar_solicitud` se
+niega —correctamente— a sacarle un renglón a un control que ya no está
+abierto. Pero el mensaje real nunca llegó a la pantalla: **las once llamadas
+del módulo usaban `e instanceof Error ? e.message : '…'`, y un error de
+Supabase NO es un `Error`**, así que siempre caía al texto genérico. Un módulo
+entero que no podía explicar ninguna de sus negativas. Cambiadas a
+`describeError`, que para eso existe desde hace fases.
+
+**2 · Reabrir un control de vales.** El inverso exacto de Cerrar: descongela el
+total y devuelve cada vale a su estado. No se *acuerda* de cuál era —lo
+reconstruye de los datos del vale, igual que el trigger— porque un estado que
+se guarda aparte es un estado que se desincroniza. Solo admin. Desde
+«enviado a Pagos» no reabre: ese camino es el ↩ Revertir, donde ella pidió que
+viviera.
+
+**3 · Borrar una SP no soltaba lo que arrastraba.** Borró `SP-2026-0018` y
+**Victor la seguía viendo en su bandeja**, esperando recibir un documento que
+ya no existe, sin poder abrirlo ni quitárselo. Más los avisos que la
+originaron, apuntando a una solicitud muerta.
+
+La regla ya estaba escrita —en `comb_borrar_solicitud`, de la fase 56: «un
+envío cuyo documento ya no existe es una bandeja que el Tesorero no puede
+resolver ni quitarse de encima»— solo que no se había aplicado a los pagos.
+Ahora `pago_borrar` retira el envío y devuelve los avisos a la bandeja
+**pendientes, no más atrás**: borrar la solicitud deshace la solicitud, no el
+envío. El gasto se mandó a Pagos y sigue necesitando pagarse. Si además hay
+que deshacer el envío, ese es el otro botón. Dos pasos con significado propio
+en vez de uno que adivina cuál querías. (`20261110000002`)
+
+**Comentario:** la asimetría es el olor. Cada vez que un documento gana un
+paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
+respuesta es «nadie», el primer usuario que se equivoque se queda encerrado
+ahí. Van tres fases seguidas arreglando la misma forma.
+
+---
 ## Fase 58 · 2026-11-08 · El envío que no se repite, y la SP que lleva todo
 
 **Objetivo:** dos fallas de la misma familia en caja chica, las dos encontradas

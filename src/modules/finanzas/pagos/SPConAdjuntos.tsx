@@ -2,7 +2,7 @@ import { useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/Toast';
 import { supabase } from '@/lib/supabase';
-import { armarPdfConAdjuntos, type ArchivoAdjunto } from '@/lib/pdf-hojas';
+import { armarPdfConAdjuntos, MM, type ArchivoAdjunto } from '@/lib/pdf-hojas';
 import { describeError } from '@/modules/admin/hooks';
 import type { Pago } from './api';
 import { entidadesDelOrigen } from './ExpedienteDeLaSP';
@@ -102,6 +102,12 @@ export function BotonSPConAdjuntos({
         'documentos',
         archivos,
         (p) => setPaso(p.paso),
+        // `fiel` porque esto es un formato oficial y tiene que salir igual
+        // que al imprimirlo: html2canvas le pasaba la raya de cada campo por
+        // encima del dato. Y el margen es el del `@page` del proyecto --12mm--
+        // y no los 24 puntos que traía la librería por omisión: la hoja no se
+        // toca por llevar el expediente detrás.
+        { margen: 12 * MM, captura: 'fiel' },
       );
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);

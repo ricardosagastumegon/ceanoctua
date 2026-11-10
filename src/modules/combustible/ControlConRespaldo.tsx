@@ -40,6 +40,8 @@ const CARTA_HORIZONTAL = {
   /** El mismo `margin: 10mm` del `@page` que el imprimible se trae. */
   margen: 10 * MM,
   largo: 'paginar' as const,
+  /** Formato oficial: lo dibuja el navegador, no html2canvas. */
+  captura: 'fiel' as const,
 };
 
 /** El respaldo que alguien subió a este control. */

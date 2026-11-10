@@ -280,6 +280,53 @@ Ahora se dibuja siempre y dice en qué va: «💸 Pagos · cierra primero»
 (apagado), «Enviar a Pagos», «💸 EN PAGOS» (apagado). El mismo trato que los
 botones de caja chica desde la fase 58.
 
+**12 · «La primera hoja NO debería de tocarse al agregar el expediente».** Al
+bajar la solicitud de pago con su expediente, el formato oficial salía con
+**una raya atravesando cada dato**: «AGROATLANTIC S.A», «QUETZALES»,
+«Q 4,427.23», todos tachados.
+
+No era la hoja: era **quien la fotografía**. `html2canvas` redibuja el
+documento con su propio motor y coloca el texto más abajo de lo que le toca
+dentro de la celda, así que el `border-bottom` —que es la línea del campo— le
+pasa por encima. Se montó un banco con seis variantes de CSS
+—`vertical-align` middle, bottom y baseline, `line-height` fijo, alto de fila
+fijo— y **las seis salieron tachadas**. No había arreglo por CSS.
+
+**La captura `fiel`:** la hoja se mete en un `<foreignObject>` de SVG, o sea
+que la rasteriza el navegador con su propio motor de layout. El resultado es
+idéntico a la pantalla, que es exactamente lo que ella pidió. Comparado lado a
+lado antes y después, píxel a píxel.
+
+**Dos cosas que hubo que resolver para que fuera honesto:**
+
+- Dentro del SVG no existen ni las hojas de estilo ni los archivos externos,
+  así que los estilos calculados se copian nodo por nodo al clon y las
+  imágenes pasan a `data:` URI. Sin lo primero, los imprimibles que visten con
+  clases saldrían en blanco.
+- **La hoja no mide dentro lo que mide fuera.** El control de vales da 739px
+  en la página y ~805 dentro del SVG: las métricas de fuente redondean
+  distinto y la diferencia se acumula fila a fila. Con el alto justo, el SVG
+  recortaba el pie —la firma y los totales desaparecían sin ningún error—.
+  Perseguir ese 9% sería adivinar; se le da aire de sobra y después se busca
+  **la última fila con tinta**, que sí es el alto exacto, medido y no
+  calculado.
+
+**No es el valor por omisión, a propósito.** `foreignObject` no descarga
+recursos, y Nunito y Montserrat vienen de Google. Las hojas oficiales declaran
+Calibri/Arial en línea y no les afecta; las que visten con las clases de la
+app cambiarían de letra sin avisar. Entre arreglar una cosa y romper otra en
+silencio, se elige documento por documento. Queda anotado como **DT-28** con
+lo que haría falta para generalizarlo.
+
+**De paso:** el margen de la solicitud pasó de los 24 puntos que traía la
+librería a los **12mm de su `@page`**, que es el de verdad. La hoja no se toca
+por llevar el expediente detrás.
+
+**Comentario:** la primera versión de la captura fiel perdía el pie del
+control, y lo único que lo delató fue generar el PDF y mirarlo. Esto no se ve
+compilando, no se ve en los tipos y no da ningún error: el documento
+simplemente llega sin su firma.
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

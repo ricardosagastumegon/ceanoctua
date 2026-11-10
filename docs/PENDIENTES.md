@@ -16,6 +16,38 @@ _(vacío al 2026-07-12 · el C-1 se resolvió en commit `895ad26`)_
 
 > **Nota de numeración:** la sección «Deferred a polish futuro» del final usa su propia serie DT-5 a DT-8, de la Fase 19 y ya cerrada. Los items vivos de aquí siguen desde DT-10 para no chocar con ella.
 
+### DT-28 · Los demás imprimibles siguen con la captura que tacha el texto
+
+**Origen:** fase 59, al arreglar la solicitud de pago.
+
+**Qué pasa:** html2canvas dibuja el texto más abajo de lo que le toca dentro
+de su celda, así que **en toda celda con texto y `border-bottom` la raya le
+pasa por encima**. Se probaron seis variantes de CSS —`vertical-align` middle,
+bottom y baseline, `line-height` fijo, alto de fila fijo— y las seis salieron
+tachadas: no hay arreglo por CSS.
+
+La captura `fiel` (`<foreignObject>`, que rasteriza el navegador) lo resuelve y
+**ya la usan las dos hojas de formato oficial**: solicitud de pago y control de
+vales. Las demás —liquidación de T&T, crucero, vuelo, ticket, hotel…— siguen
+con la clásica.
+
+**Por qué no se cambiaron todas:** `foreignObject` no descarga recursos
+externos, y Nunito y Montserrat vienen de Google Fonts. Las hojas oficiales
+declaran Calibri/Arial en línea y no les afecta; las que visten con las clases
+de la app **cambiarían de letra sin avisar**. Entre arreglar una cosa y romper
+otra en silencio, se eligió documento por documento.
+
+**Lo que lo cerraría:** incrustar las dos tipografías como `@font-face` con el
+woff2 en base64 dentro del SVG. Entonces `fiel` podría ser el valor por
+omisión para todo. Estimado ~1h, más una vuelta de verificación visual por
+cada imprimible.
+
+**Impacto:** cualquier imprimible con campos subrayados sale con los datos
+atravesados al bajarlo con adjuntos. Solo afecta al PDF descargado, no a
+`window.print()`.
+
+---
+
 ### DT-27 · El chip «Ver SP» de combustible de aeronaves lee un solo enlace
 
 **Origen:** fase 59, mirando `src/modules/aeronaves/combustible/api.ts` al

@@ -48,6 +48,31 @@ export type HojaGeometria = {
    * encoge al 25% para caber en una sola.
    */
   largo?: 'encoger' | 'paginar';
+  /**
+   * Quien rasteriza la hoja.
+   *
+   * `clasica` es html2canvas, que REDIBUJA el documento con su propio motor
+   * --y se equivoca--. El caso que lo destapó: en toda celda con texto y
+   * `border-bottom`, la raya le pasa por encima al texto. Pasa con
+   * `vertical-align` middle, bottom, baseline, con `line-height` fijo y con
+   * alto de fila fijo: se probaron las seis y las seis salieron tachadas, así
+   * que no hay arreglo por CSS. El formato oficial de la solicitud de pago
+   * salía con todos sus datos atravesados por una línea.
+   *
+   * `fiel` mete la hoja en un `<foreignObject>` de SVG, o sea que **la
+   * rasteriza el navegador con su propio motor de layout**: el resultado es
+   * idéntico a lo que se ve en pantalla, que es justo lo que ella pidió --«la
+   * primera hoja, que es del formato oficial, NO debería de tocarse al
+   * agregar el expediente»--.
+   *
+   * NO es el valor por omisión, y la razón es una sola: `foreignObject` no
+   * descarga recursos externos, y las tipografías del sistema --Nunito,
+   * Montserrat-- vienen de Google. Las hojas que reproducen un formato
+   * oficial declaran Calibri/Arial en línea y no les afecta; las que visten
+   * con las clases de la app cambiarían de letra sin avisar. Entre arreglar
+   * una cosa y romper otra en silencio, se elige documento por documento.
+   */
+  captura?: 'clasica' | 'fiel';
 };
 
 function geometria(g?: HojaGeometria) {
@@ -56,6 +81,7 @@ function geometria(g?: HojaGeometria) {
     alto: g?.alto ?? ALTO,
     margen: g?.margen ?? MARGEN,
     largo: g?.largo ?? 'encoger',
+    captura: g?.captura ?? 'clasica',
   };
 }
 
@@ -204,6 +230,115 @@ async function capturarNodo(nodo: HTMLElement): Promise<HTMLCanvasElement> {
   });
 }
 
+/**
+ * Captura por `<foreignObject>`: el navegador dibuja su propio layout.
+ *
+ * El clon viaja dentro de un SVG, y ahí dentro NO existen ni las hojas de
+ * estilo de la página ni los archivos externos. Por eso hay dos pasos antes:
+ *
+ *   · los estilos calculados se copian nodo por nodo al clon, porque casi
+ *     todos los imprimibles visten con clases y dentro del SVG una clase no
+ *     significa nada;
+ *   · las imágenes se pasan a `data:` URI --el logo del membrete-- porque un
+ *     `src` relativo no se resuelve ahí dentro.
+ */
+async function capturarFiel(nodo: HTMLElement, escala = 2): Promise<HTMLCanvasElement> {
+  const w = nodo.offsetWidth;
+  const h = nodo.offsetHeight;
+  const clon = nodo.cloneNode(true) as HTMLElement;
+
+  // Los dos árboles tienen la misma forma, así que el mismo índice es el
+  // mismo nodo. `cssText` del estilo calculado trae todo de una.
+  const origen = [nodo, ...nodo.querySelectorAll<HTMLElement>('*')];
+  const copia = [clon, ...clon.querySelectorAll<HTMLElement>('*')];
+  for (let i = 0; i < origen.length && i < copia.length; i++) {
+    const css = window.getComputedStyle(origen[i]).cssText;
+    if (css) copia[i].style.cssText = css;
+  }
+  clon.style.width = `${w}px`;
+  clon.style.margin = '0';
+  clon.style.background = '#ffffff';
+
+  await Promise.all(
+    [...clon.querySelectorAll('img')].map(async (im) => {
+      if (im.src.startsWith('data:')) return;
+      try {
+        const blob = await (await fetch(im.src)).blob();
+        im.src = await new Promise<string>((res) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result as string);
+          fr.readAsDataURL(blob);
+        });
+      } catch {
+        // Una imagen que no se pudo traer deja su hueco; el resto de la hoja
+        // sale igual. Perderla entera por el membrete sería peor.
+      }
+    }),
+  );
+
+  // AIRE Y RECORTE, en vez de confiar en `offsetHeight`.
+  //
+  // Dentro del `<foreignObject>` la hoja no mide exactamente lo que mide en
+  // la página: el control de vales da 739px fuera y ~805 dentro. Las métricas
+  // de fuente redondean distinto y la diferencia se acumula fila a fila --un
+  // 9% en cuarenta renglones--. Con el alto justo, el SVG recortaba el pie: la
+  // firma y los totales se perdían sin ningún error.
+  //
+  // Perseguir ese 9% sería adivinar. Se le da aire de sobra, se rasteriza, y
+  // después se busca la última fila con tinta: eso SÍ es el alto exacto del
+  // contenido, medido y no calculado.
+  const conAire = Math.ceil(h * 1.8) + 200;
+
+  const xml = new XMLSerializer().serializeToString(clon);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${conAire}">` +
+    `<foreignObject width="100%" height="100%">` +
+    `<div xmlns="http://www.w3.org/1999/xhtml">${xml}</div>` +
+    `</foreignObject></svg>`;
+
+  const img = new Image();
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error('No se pudo preparar la hoja para el PDF.'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+
+  const ancho = Math.round(w * escala);
+  const altoAmplio = Math.round(conAire * escala);
+  const amplio = document.createElement('canvas');
+  amplio.width = ancho;
+  amplio.height = altoAmplio;
+  const ctxAmplio = amplio.getContext('2d', { willReadFrequently: true });
+  if (!ctxAmplio) throw new Error('El navegador no pudo preparar la hoja para el PDF.');
+  ctxAmplio.fillStyle = '#ffffff';
+  ctxAmplio.fillRect(0, 0, ancho, altoAmplio);
+  ctxAmplio.drawImage(img, 0, 0, ancho, altoAmplio);
+
+  // La última fila con tinta. Se deja un respiro de 8px por debajo para no
+  // comerse el filo de la línea inferior del cuadro.
+  const datos = ctxAmplio.getImageData(0, 0, ancho, altoAmplio).data;
+  let ultima = 0;
+  for (let y = altoAmplio - 1; y >= 0; y--) {
+    let tinta = false;
+    for (let x = 0; x < ancho; x += 2) {
+      const i = (y * ancho + x) * 4;
+      if (datos[i] < 246 || datos[i + 1] < 246 || datos[i + 2] < 246) { tinta = true; break; }
+    }
+    if (tinta) { ultima = y; break; }
+  }
+  const altoFinal = Math.min(altoAmplio, ultima + 1 + Math.round(8 * escala));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = ancho;
+  canvas.height = Math.max(1, altoFinal);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('El navegador no pudo preparar la hoja para el PDF.');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(amplio, 0, 0, ancho, canvas.height, 0, 0, ancho, canvas.height);
+  return canvas;
+}
+
 /** Un canvas en bytes PNG, que es lo que pdf-lib sabe incrustar. */
 function pngDeCanvas(canvas: HTMLCanvasElement): Uint8Array {
   const dataUrl = canvas.toDataURL('image/png');
@@ -237,8 +372,19 @@ function corteLimpio(datos: Uint8ClampedArray, ancho: number, ideal: number, min
     }
     return true;
   };
+  // Se busca una FRANJA de blanco, no una fila suelta: entre el borde de un
+  // cuadro y lo que sigue hay un hueco de un píxel, y cortar ahí dejaba un
+  // hilo de línea asomando arriba de la página siguiente. Doce píxeles
+  // seguidos ya son un espacio de verdad, y se corta por su mitad.
+  const FRANJA = 12;
+  let seguidas = 0;
   for (let y = ideal; y > minimo; y--) {
-    if (blanca(y)) return y;
+    if (blanca(y)) {
+      seguidas += 1;
+      if (seguidas >= FRANJA) return y + Math.floor(FRANJA / 2);
+    } else {
+      seguidas = 0;
+    }
   }
   return ideal;
 }
@@ -249,8 +395,8 @@ async function pegarHoja(
   nodo: HTMLElement,
   g?: HojaGeometria,
 ): Promise<void> {
-  const { ancho, alto, margen, largo } = geometria(g);
-  const canvas = await capturarNodo(nodo);
+  const { ancho, alto, margen, largo, captura } = geometria(g);
+  const canvas = captura === 'fiel' ? await capturarFiel(nodo) : await capturarNodo(nodo);
   const util = { w: ancho - margen * 2, h: alto - margen * 2 };
 
   if (largo === 'encoger') {

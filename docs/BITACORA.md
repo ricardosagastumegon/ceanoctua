@@ -88,6 +88,39 @@ misma no comprueba nada.
 **Regla:** un mensaje de error que solo dice que no se puede es medio mensaje.
 Quien lo lee no está auditando el sistema, está tratando de terminar algo.
 
+**6 · El vale que no llegó, y el historial que no se fue.** Ella mandó una
+solicitud de vale al tesorero y a Victor no le apareció. No era la bandeja:
+**el vale se envió a la persona equivocada**. `useTesoreros` incluía
+`rol === 'admin'` en la lista de quién puede recibir un vale de gasolinera, la
+consulta no ordenaba, y el selector arrancaba en `tesoreros[0]` — que resultó
+ser la administradora. Se lo envió a sí misma, el desplegable lo decía, y
+nadie lo leyó porque ya venía elegido.
+
+Arreglado en tres sitios: tesorería va primero y el admin queda detrás (sigue
+en la lista por si algún día no hay tesorero, pero nunca por omisión); cada
+opción dice su rol; y el valor por defecto se deriva en vez de fijarse al
+montar — `useState(tesoreros[0])` solo mira la lista una vez, así que si el
+modal abre antes de que responda la consulta el valor se queda vacío para
+siempre aunque el desplegable ya muestre nombres.
+
+**Y los tres vales de prueba seguían en «Lo último que resolviste» de Victor.**
+`comb_borrar_solicitud` retiraba el envío solo si estaba *pendiente*; el ya
+resuelto seguía vivo, y el historial lee justo el complemento. La regla que
+faltaba vale para los seis tipos de documento: **un envío es la sombra de un
+documento; si el documento se borra, su sombra se va con él.** Lo que pasó de
+verdad queda en `audit_log` — los tableros son listas de trabajo, no archivos.
+
+Se resolvió con una vista, `envios_vivos`, y no con seis triggers: el envío se
+apaga **al mirarlo**, así que una puerta nueva de borrado no puede dejar
+basura en el tablero de nadie. Con `security_invoker` para heredar la RLS en
+vez de saltársela. (`20261110000005`)
+
+Y al registrarla en los types saltó otra cosa: `Views: Record<string, never>`
+hacía que `.from('envios_vivos')` compilara **devolviendo `never[]`**, que es
+asignable a cualquier cosa. La consulta habría funcionado en runtime sin tipos
+y sin avisar. Al arreglarlo apareció un `.from(tabla)` dinámico en
+`service-counts.ts` que compilaba por la misma razón.
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

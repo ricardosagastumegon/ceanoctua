@@ -4461,7 +4461,19 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      /**
+       * Los envios cuyo documento de origen sigue existiendo. Un envio es la
+       * sombra de un documento: si el documento se borra, su sombra se va con
+       * el. Misma forma que `envios`, filtrada.
+       */
+      envios_vivos: {
+        Row: Database['public']['Tables']['envios']['Row'];
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
     Functions: {
       /**
        * Firmar una solicitud. Solo pone estado, fecha y quien --y el quien

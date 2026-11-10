@@ -36,7 +36,19 @@ import { FacturaForm } from './FacturaForm';
 import { SolicitudForm } from './SolicitudForm';
 import { SolicitudValePrintable } from './SolicitudValePrintable';
 
-/** Quien puede recibir una solicitud de vale: los usuarios de tesoreria. */
+/**
+ * Quien puede recibir una solicitud de vale.
+ *
+ * Tesoreria primero, y el admin solo detras: un vale de gasolinera lo entrega
+ * quien tiene la chequera, no quien administra el sistema. El admin sigue en
+ * la lista porque el dia que no haya usuario de tesoreria alguien tiene que
+ * poder recibirlo --pero de ultimo, nunca como opcion por omision--.
+ *
+ * Se ordena aqui y no se deja al orden que devuelva la tabla: era justo eso
+ * lo que mandaba el vale a la persona equivocada. El `select` tomaba el
+ * primero de la lista y el primero resulto ser la administradora, asi que
+ * ella se envio a si misma el vale --y Victor nunca lo vio--.
+ */
 function useTesoreros() {
   return useQuery({
     queryKey: ['usuarios_tesoreria'],
@@ -47,7 +59,9 @@ function useTesoreros() {
         .select('id, nombre, email, rol')
         .eq('activo', true);
       if (error) throw error;
-      return (data ?? []).filter((u) => u.rol === 'tesoreria' || u.rol === 'admin');
+      return (data ?? [])
+        .filter((u) => u.rol === 'tesoreria' || u.rol === 'admin')
+        .sort((a, b) => Number(a.rol !== 'tesoreria') - Number(b.rol !== 'tesoreria'));
     },
   });
 }
@@ -513,11 +527,16 @@ function EnviarAlTesorero({
   onCancel,
 }: {
   solicitud: Solicitud;
-  tesoreros: { id: string; nombre: string | null; email: string | null }[];
+  tesoreros: { id: string; nombre: string | null; email: string | null; rol: string }[];
   onEnviar: (id: string) => void;
   onCancel: () => void;
 }) {
-  const [destinatario, setDestinatario] = useState(tesoreros[0]?.id ?? '');
+  // `useState(tesoreros[0])` solo mira la lista al montar: si el modal se
+  // abre antes de que la consulta responda, el valor se queda vacio para
+  // siempre aunque el desplegable ya muestre nombres. Derivarlo arregla las
+  // dos cosas --el que llega tarde, y el primero que ahora si es el correcto.
+  const [destinatario, setDestinatario] = useState('');
+  const elegido = destinatario || tesoreros[0]?.id || '';
   return (
     <div className="space-y-4">
       <p className="text-sm text-dark-2">
@@ -526,13 +545,14 @@ function EnviarAlTesorero({
       </p>
       <Select
         label="Destinatario"
-        value={destinatario}
+        value={elegido}
         onChange={(e) => setDestinatario(e.target.value)}
       >
         {tesoreros.length === 0 && <option value="">No hay usuarios de tesorería</option>}
         {tesoreros.map((t) => (
           <option key={t.id} value={t.id}>
             {t.nombre ?? t.email}
+            {t.rol === 'tesoreria' ? ' · Tesorería' : ' · Administración'}
           </option>
         ))}
       </Select>
@@ -546,8 +566,8 @@ function EnviarAlTesorero({
         </button>
         <button
           type="button"
-          disabled={!destinatario}
-          onClick={() => onEnviar(destinatario)}
+          disabled={!elegido}
+          onClick={() => onEnviar(elegido)}
           className="rounded-md bg-teal px-4 py-2 text-sm font-medium text-white hover:bg-teal/90 disabled:opacity-60"
         >
           Enviar

@@ -95,10 +95,17 @@ export function leerSnapshot(e: Envio): Snapshot {
 }
 
 export const enviosApi = {
-  /** La bandeja: lo que me mandaron y todavia no resuelvo. */
+  /**
+   * La bandeja: lo que me mandaron y todavia no resuelvo.
+   *
+   * Lee `envios_vivos` y no `envios`: un envio es la sombra de un documento,
+   * y si el documento se borro no tiene por que seguir aqui. La vista lo
+   * resuelve al mirarlo, asi que una puerta nueva de borrado no puede dejar
+   * basura en el tablero de nadie.
+   */
   async pendientes(): Promise<Envio[]> {
     const { data, error } = await supabase
-      .from('envios')
+      .from('envios_vivos')
       .select('*')
       .eq('estado', 'enviado')
       .is('deleted_at', null)
@@ -110,7 +117,7 @@ export const enviosApi = {
   /** El historial, para no perder de vista lo ya resuelto. */
   async resueltos(limite = 50): Promise<Envio[]> {
     const { data, error } = await supabase
-      .from('envios')
+      .from('envios_vivos')
       .select('*')
       .neq('estado', 'enviado')
       .is('deleted_at', null)
@@ -123,7 +130,7 @@ export const enviosApi = {
   /** Los de un documento concreto, para saber si ya se mando. */
   async porDocumento(docTipo: DocTipo, docId: string): Promise<Envio[]> {
     const { data, error } = await supabase
-      .from('envios')
+      .from('envios_vivos')
       .select('*')
       .eq('doc_tipo', docTipo)
       .eq('doc_id', docId)

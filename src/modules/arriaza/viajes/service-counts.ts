@@ -113,7 +113,12 @@ export function useServiceSummary(viajeId: string | undefined, enabled: boolean)
             };
           }
           const { count, error } = await supabase
-            .from(tabla)
+            // Mismo molde que arriba: `tabla` es dinamica y el cliente tipado
+            // pide un nombre concreto. Se elige una tabla cualquiera de las
+            // que comparten `viaje_id` y `deleted_at`, que es lo unico que se
+            // lee aqui. (Compilaba sin el cast solo porque `Views` estaba
+            // vacio y la sobrecarga se resolvia a lo que fuera.)
+            .from(tabla as 'att_tickets')
             .select('id', { count: 'exact', head: true })
             .eq('viaje_id', viajeId as string)
             .is('deleted_at', null);

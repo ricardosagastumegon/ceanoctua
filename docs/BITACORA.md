@@ -156,6 +156,43 @@ llenaba la caché y la otra leía la lista equivocada durante cinco minutos: el
 envío a tesorería de Pagos podía ofrecer a la administradora, que su propio
 filtro excluye a propósito. Claves distintas.
 
+**8 · Y le vacié el tablero a Victor.** Error mío, en la vista del punto 6.
+`envios_vivos` quedó `security_invoker` —correcto para que las filas de
+`envios` obedezcan su RLS— pero `security_invoker` no afecta solo a las filas:
+**todo lo que la vista lee corre con los permisos de quien mira**. Y la vista
+comprobaba la existencia del documento leyendo su tabla.
+
+Las dos políticas no dicen lo mismo:
+
+```
+envios_read            destinatario_id = auth.uid() OR rol in (admin, asistente)
+comb_solicitudes_read                                 rol in (admin, asistente)
+```
+
+Victor es `tesoreria`: puede leer **sus** envíos y no puede leer las
+solicitudes. El `exists` le daba falso para todo y la vista le devolvía **cero
+filas**. «Ahora a Victor no le aparece ni uno» — sin un solo error en pantalla.
+
+**Por qué no lo vi:** probé la vista con el PAT, que es superusuario y ve
+todas las tablas. **Una comprobación que corre con más permisos que la persona
+real no comprueba el caso que importa.** La verificación nueva asume el rol
+`authenticated` y la identidad de cada uno —Victor y la administradora— y mide
+lo que cada cual ve; antes de aplicarla la corrí contra la vista rota para
+confirmar que **detecta** el fallo: «Victor ve 8 en envios y 0 en
+envios_vivos». Una prueba que no falla cuando debe no es una prueba.
+
+El arreglo es el patrón que el proyecto ya usa en `pago_del_documento`: la
+pregunta «¿existe el documento?» vive en una función `security definer`, que
+la contesta sin pedirle permisos a quien mira. La vista sigue
+`security_invoker`, así que cada quien ve sus filas. Y la función se concede a
+`anon` también —si no, 401 en vez de lista vacía, que es lo que se rompió en
+las fases 54, 57 y 58. (`20261110000007`)
+
+**Esta es la cuarta degradación silenciosa de la fase, y la única que escribí
+yo sabiendo del patrón.** Vale la regla explícita: *cuando una vista o una
+política decide qué ve alguien, hay que mirarla desde sus ojos, no desde los
+nuestros.*
+
 **Comentario:** la asimetría es el olor. Cada vez que un documento gana un
 paso hacia adelante hay que preguntarse quién lo trae de vuelta —y si la
 respuesta es «nadie», el primer usuario que se equivoque se queda encerrado

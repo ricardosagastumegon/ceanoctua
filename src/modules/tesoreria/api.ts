@@ -79,6 +79,8 @@ export type DocumentoSP = {
   origenes?: { id: string; resumen: string | null; monto: number | null; moneda: string | null }[];
   firmoPor?: string | null;
   firmoFecha?: string | null;
+  /** Lo ya solicitado en las SP anteriores, congelado al enviarla. */
+  previos?: number | null;
 };
 
 /** El documento de un envio de solicitud de pago, si lo trae. */

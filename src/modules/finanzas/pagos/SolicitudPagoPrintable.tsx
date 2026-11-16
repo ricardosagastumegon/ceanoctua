@@ -5,6 +5,7 @@ import { formatMoney } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 import { useEstampaDe } from '@/modules/cea/firmas/estampa';
 import type { Pago } from './api';
+import { sumaDeLaCadena, useCadenaSP } from './hooks';
 import logoFz from './logo-fz.png';
 
 /**
@@ -151,6 +152,15 @@ export type SPCongelada = {
   origenes?: { id: string; resumen: string | null; monto: number | null; moneda: string | null }[];
   firmoPor?: string | null;
   firmoFecha?: string | null;
+  /**
+   * Lo ya solicitado en las SP anteriores, al momento de mandarla.
+   *
+   * Viaja congelado como todo lo demas: quien firma y quien recibe no leen
+   * `pagos`, asi que no pueden recorrer la cadena. Si no viajara, la hoja que
+   * ellos abren diria «Anticipos previos Q 0.00» y la que ella imprime diria
+   * otra cosa --dos versiones del mismo papel.
+   */
+  previos?: number | null;
 };
 
 export function SolicitudPagoPrintable({
@@ -166,6 +176,7 @@ export function SolicitudPagoPrintable({
   // Los hooks se llaman siempre --no pueden ir dentro de un `if`-- pero
   // cuando viene congelada manda lo congelado. Para quien no lee esas tablas
   // las consultas devuelven vacio, no error, asi que no estorban.
+  const cadenaViva = useCadenaSP(congelada ? null : pago.id).data;
   const origenesVivos = useOrigenes(pago).data ?? [];
   const firmoVivo = useQuienFirmo(pago.id).data ?? null;
   const origenes = congelada?.origenes ?? origenesVivos;
@@ -205,7 +216,10 @@ export function SolicitudPagoPrintable({
   const monto = Number(pago.monto);
   const esAnticipo = (pago.tipo_label ?? '').includes('Anticipo');
   const total = pago.cotizacion != null ? Number(pago.cotizacion) : null;
-  const previos = 0;
+  // Estaba clavado en `0`: el papel no podia decir otra cosa aunque se
+  // capturara. Ahora sale de la cadena --la suma de las SP que esta continua--
+  // o del valor congelado cuando la hoja viaja a quien no lee `pagos`.
+  const previos = congelada?.previos ?? sumaDeLaCadena(cadenaViva);
   // El tope de caracteres deja aire a los lados: el texto va centrado y la
   // etiqueta de la izquierda se desborda sobre la celda, igual que en Excel.
   const concepto = wrapLines(pago.concepto ?? '', 78, 3);
@@ -219,6 +233,18 @@ export function SolicitudPagoPrintable({
       : pago.pct_anticipo != null
         ? Number(pago.pct_anticipo) / 100
         : null;
+  // Cada renglon contra la cotizacion DE ESTA hoja, no contra la de la cadena.
+  // Ella lo advirtio --«un monto cotizado puede variar»-- y el formato oficial
+  // ya lo resuelve asi: «Monto total de compra o proyecto» se declara en cada
+  // papel. Si la cotizacion cambio, los porcentajes de esta hoja hablan de su
+  // propio total, que es lo que se firma.
+  const pctPrevios = total && total > 0 ? previos / total : previos > 0 ? null : 0;
+  const pctTotal = total && total > 0 ? (previos + monto) / total : pctSolicitado;
+  // El cuadro tambien es de la LIQUIDACION, no solo del anticipo: asi lo dice
+  // el propio formato --«Llenar para tramites de anticipo y liquidacion»--.
+  // Por eso tambien sale cuando la hoja continua a otra, que es exactamente el
+  // caso del pago que cierra un proyecto.
+  const muestraAnticipo = esAnticipo || previos > 0 || total != null;
 
   const base: CSSProperties = {
     fontFamily: "Gisha, 'Segoe UI', Tahoma, sans-serif",
@@ -431,15 +457,15 @@ export function SolicitudPagoPrintable({
           <tr style={{ height: pt(19.5) }}>
             <td />
             <GridCell colSpan={2}>Anticipos previos</GridCell>
-            <GridCell strong>{esAnticipo ? money(previos, moneda) : ''}</GridCell>
-            <GridCell>{esAnticipo ? '0%' : ''}</GridCell>
+            <GridCell strong>{muestraAnticipo ? money(previos, moneda) : ''}</GridCell>
+            <GridCell>{muestraAnticipo && pctPrevios != null ? pct(pctPrevios) : ''}</GridCell>
             <td />
           </tr>
           <tr style={{ height: pt(19.5) }}>
             <td />
             <GridCell colSpan={2}>Anticipo solicitado en este trámite</GridCell>
-            <GridCell strong>{esAnticipo ? money(monto, moneda) : ''}</GridCell>
-            <GridCell>{esAnticipo && pctSolicitado != null ? pct(pctSolicitado) : ''}</GridCell>
+            <GridCell strong>{muestraAnticipo ? money(monto, moneda) : ''}</GridCell>
+            <GridCell>{muestraAnticipo && pctSolicitado != null ? pct(pctSolicitado) : ''}</GridCell>
             <td />
           </tr>
           <tr style={{ height: pt(19.5) }}>
@@ -447,8 +473,8 @@ export function SolicitudPagoPrintable({
             <GridCell colSpan={2} bold>
               Total de Pagos
             </GridCell>
-            <GridCell strong>{esAnticipo ? money(previos + monto, moneda) : ''}</GridCell>
-            <GridCell bold>{esAnticipo && pctSolicitado != null ? pct(pctSolicitado) : ''}</GridCell>
+            <GridCell strong>{muestraAnticipo ? money(previos + monto, moneda) : ''}</GridCell>
+            <GridCell bold>{muestraAnticipo && pctTotal != null ? pct(pctTotal) : ''}</GridCell>
             <td />
           </tr>
 

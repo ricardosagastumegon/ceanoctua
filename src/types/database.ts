@@ -3968,6 +3968,7 @@ export type Database = {
           consumo_id: string | null;
           tipo_cambio: number | null;
           origen_notificacion_id: string | null;
+          sp_anterior_id: string | null;
           step_idx: number;
           step_dates: string[];
           comprobante_storage_path: string | null;
@@ -4000,6 +4001,7 @@ export type Database = {
           consumo_id?: string | null;
           tipo_cambio?: number | null;
           origen_notificacion_id?: string | null;
+          sp_anterior_id?: string | null;
           step_idx?: number;
           step_dates?: string[];
           comprobante_storage_path?: string | null;
@@ -4029,6 +4031,7 @@ export type Database = {
           consumo_id?: string | null;
           tipo_cambio?: number | null;
           origen_notificacion_id?: string | null;
+          sp_anterior_id?: string | null;
           step_idx?: number;
           step_dates?: string[];
           comprobante_storage_path?: string | null;
@@ -4519,6 +4522,20 @@ export type Database = {
       avn_liquidacion_enviar_a_pagos: {
         Args: { p_liq: string };
         Returns: string;
+      };
+      /** Las solicitudes de pago anteriores en la cadena, de la mas reciente a la mas vieja. */
+      pago_cadena: {
+        Args: { p_pago: string };
+        Returns: {
+          id: string;
+          serial: string | null;
+          fecha: string;
+          monto: number;
+          moneda: string;
+          status: string;
+          cotizacion: number | null;
+          nivel: number;
+        }[];
       };
       /** Retira un envio pendiente y devuelve el documento a como estaba antes de mandarse. */
       envio_retirar: {

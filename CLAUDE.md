@@ -143,7 +143,7 @@ Lista corta y estricta. Cada una tuvo un incidente real que la justifica.
 
 El proyecto avanza en **fases numeradas**. Cada fase = 1 migración SQL + código correspondiente + commit(s) descriptivos + entrada en la bitácora.
 
-Estado actual: fase **59** (El camino de vuelta). Historial completo en [`docs/BITACORA.md`](docs/BITACORA.md).
+Estado actual: fase **60** (La solicitud que continúa a otra). Historial completo en [`docs/BITACORA.md`](docs/BITACORA.md).
 
 Cada fase sigue el ciclo:
 

@@ -11,6 +11,8 @@ import { formatMoney } from '@/lib/money';
 import {
   useAdvancePago,
   useStepBackPago,
+  sumaDeLaCadena,
+  useCadenaSP,
   useCreatePago,
   useDeletePago,
   usePagos,
@@ -101,6 +103,7 @@ export function PagosSection({
   const origenesDelEnvio = useOrigenes(
     enviandoATesoreria ?? ({ id: '', origen_notificacion_id: null } as unknown as Pago),
   );
+  const cadenaDelEnvio = useCadenaSP(enviandoATesoreria?.id ?? null);
   const firmaDelEnvio = useFirmaDePago(enviandoATesoreria?.id ?? null);
   const pendientesQ = useFirmasPendientes();
   const cancelarFirma = useCancelarFirma();
@@ -854,6 +857,11 @@ export function PagosSection({
               })),
               firmoPor: firmaDelEnvio.data?.por ?? null,
               firmoFecha: firmaDelEnvio.data?.fecha ?? null,
+              // Lo ya solicitado en las SP anteriores. Viaja congelado porque
+              // ni quien firma ni el Tesorero leen `pagos`, asi que no pueden
+              // recorrer la cadena: sin esto su hoja diria «Anticipos previos
+              // Q 0.00» y la de ella diria otra cosa.
+              previos: sumaDeLaCadena(cadenaDelEnvio.data),
             },
             // De donde nacio, para que su expediente tambien le llegue: el
             // respaldo no esta en la SP, esta en el control de vales o en la

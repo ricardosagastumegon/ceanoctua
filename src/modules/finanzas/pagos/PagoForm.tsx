@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { TextInput } from '@/components/ui/TextInput';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
@@ -7,6 +7,7 @@ import { PAGO_TIPO_LABELS, type Pago, type PagoInsert } from './api';
 import type { Database } from '@/types/database';
 import { useAutorizadores, useEntidades, useProveedores, useStatusSp } from '@/modules/admin/hooks';
 import { useConsumos } from '../consumos/hooks';
+import { sumaDeLaCadena, useCadenaSP, usePagos } from './hooks';
 
 type Currency = Database['public']['Enums']['currency'];
 type PagoEstado = Database['public']['Enums']['pago_estado'];
@@ -29,6 +30,7 @@ type FormState = {
   cotizacion: string;
   pct_anticipo: string;
   pct_pendiente: string;
+  sp_anterior_id: string;
   tipo: PagoTipo;
   tipo_label: string;
   referencia: string;
@@ -54,6 +56,7 @@ const empty: FormState = {
   cotizacion: '',
   pct_anticipo: '0',
   pct_pendiente: '100',
+  sp_anterior_id: '',
   tipo: 'transferencia',
   tipo_label: 'Pago de Contado',
   referencia: '',
@@ -77,6 +80,7 @@ function fromRow(r: Pago | null | undefined): FormState {
     concepto: r.concepto ?? '',
     monto: String(r.monto),
     moneda: r.moneda,
+    sp_anterior_id: r.sp_anterior_id ?? '',
     cotizacion: r.cotizacion != null ? String(r.cotizacion) : '',
     pct_anticipo: r.pct_anticipo != null ? String(r.pct_anticipo) : '0',
     pct_pendiente: r.pct_pendiente != null ? String(r.pct_pendiente) : '100',
@@ -108,6 +112,7 @@ function toInput(s: FormState): PagoInsert {
     concepto: s.concepto.trim() || null,
     monto: Number.isFinite(monto) ? monto : 0,
     moneda: s.moneda,
+    sp_anterior_id: s.sp_anterior_id || null,
     cotizacion: n(s.cotizacion),
     pct_anticipo: n(s.pct_anticipo),
     pct_pendiente: n(s.pct_pendiente),
@@ -131,6 +136,35 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
   const autorizadores = useAutorizadores();
   const consumos = useConsumos();
   const statusSpList = useStatusSp();
+  const todosLosPagos = usePagos();
+
+  /**
+   * A que otra solicitud puede continuar esta.
+   *
+   * Se filtra por proveedor: encadenar dos pagos a personas distintas no es
+   * un proyecto en partes, es un error de dedo. La base ademas se niega a
+   * cerrar un ciclo, asi que lo peor que puede pasar aqui es elegir mal y
+   * volver a elegir.
+   */
+  const anteriores = useMemo(() => {
+    const prov = v.proveedor_id;
+    return (todosLosPagos.data ?? [])
+      .filter((x) => x.id !== initial?.id)
+      .filter((x) => (prov ? x.proveedor_id === prov : false))
+      .sort((a, b) => (b.fecha ?? '').localeCompare(a.fecha ?? ''));
+  }, [todosLosPagos.data, v.proveedor_id, initial?.id]);
+
+  const cadena = useCadenaSP(initial?.id ?? null);
+  // Lo ya solicitado: de la cadena guardada si no se toco el enlace, y del
+  // pago elegido mientras se esta eligiendo --para que el numero se vea antes
+  // de guardar y no despues.
+  const previos = useMemo(() => {
+    if (v.sp_anterior_id && v.sp_anterior_id !== (initial?.sp_anterior_id ?? '')) {
+      const ant = anteriores.find((x) => x.id === v.sp_anterior_id);
+      return Number(ant?.monto ?? 0);
+    }
+    return sumaDeLaCadena(cadena.data);
+  }, [v.sp_anterior_id, initial?.sp_anterior_id, anteriores, cadena.data]);
 
   useEffect(() => {
     setV(fromRow(initial));
@@ -160,13 +194,47 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
           next.referencia = c.voucher_num ?? next.referencia;
         }
       }
-      if (k === 'pct_anticipo') {
-        const a = Number(val);
-        if (Number.isFinite(a)) next.pct_pendiente = String(Math.max(0, 100 - a));
+      // El porcentaje NO se teclea: es `monto / cotizacion`, que es lo que el
+      // papel imprime desde hace fases. Tecleado estaba mal en 2 de 14 --una
+      // SP decia 100% guardado mientras la hoja imprimia 50%-- porque era una
+      // segunda copia de un numero que el sistema ya sabia.
+      if (k === 'monto' || k === 'cotizacion') {
+        const cot = Number(k === 'cotizacion' ? val : next.cotizacion);
+        const mon = Number(k === 'monto' ? val : next.monto);
+        if (Number.isFinite(cot) && cot > 0 && Number.isFinite(mon)) {
+          const a = Math.round((mon / cot) * 10000) / 100;
+          next.pct_anticipo = String(a);
+          next.pct_pendiente = String(Math.max(0, Math.round((100 - a) * 100) / 100));
+        }
+      }
+      // Encadenar propone la cotizacion de la anterior, no la impone: un monto
+      // cotizado puede variar a mitad de proyecto, y entonces cada hoja lleva
+      // la suya --el formato oficial declara el total en cada papel.
+      if (k === 'sp_anterior_id' && val) {
+        const ant = anteriores.find((x) => x.id === val);
+        if (ant?.cotizacion != null && !next.cotizacion) {
+          next.cotizacion = String(ant.cotizacion);
+        }
       }
       return next;
     });
   }
+
+  const cot = Number(v.cotizacion) || 0;
+  const monto = Number(v.monto) || 0;
+  const pctDe = (x: number) => (cot > 0 ? `${Math.round((x / cot) * 1000) / 10}%` : '—');
+  // Pasarse de la cotizacion no se bloquea: puede ser que el monto este mal, o
+  // que la cotizacion haya cambiado. Solo quien captura sabe cual de las dos.
+  const sobrepasa = cot > 0 && previos + monto > cot + 0.005;
+  // Y si la anterior cotizaba otra cosa, se dice. No es un error --un monto
+  // cotizado puede variar-- pero verlo sin querer es peor que verlo a tiempo.
+  const cotAnterior = v.sp_anterior_id
+    ? (anteriores.find((x) => x.id === v.sp_anterior_id)?.cotizacion ?? null)
+    : null;
+  const cambioCotizacion =
+    cotAnterior != null && cot > 0 && Math.abs(Number(cotAnterior) - cot) > 0.005
+      ? Number(cotAnterior)
+      : null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -254,8 +322,11 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
         </Select>
       </div>
 
-      {/* Campos de anticipo solo visibles si tipo_label contiene "Anticipo" */}
-      {v.tipo_label.includes('Anticipo') && (
+      {/* El cuadro es del anticipo Y DE LA LIQUIDACION --asi lo dice el propio
+          formato: «Llenar para tramites de anticipo y liquidacion»--. Antes
+          solo salia si el tipo decia «Anticipo», y por eso el pago que CIERRA
+          un proyecto habia que marcarlo como anticipo para poder llenarlo. */}
+      {(v.tipo_label.includes('Anticipo') || v.sp_anterior_id || v.cotizacion) && (
         <fieldset className="rounded-md border border-gold/40 bg-gold-light/30 p-3">
           <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-gold">
             Anticipo · {v.tipo_label}
@@ -271,26 +342,88 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
               onChange={(e) => upd('cotizacion', e.target.value)}
               hint="Monto del proyecto completo"
             />
+            <Select
+              name="sp_anterior_id"
+              label="Continúa a"
+              value={v.sp_anterior_id}
+              onChange={(e) => upd('sp_anterior_id', e.target.value)}
+              hint={
+                v.proveedor_id
+                  ? 'La solicitud anterior de este proyecto'
+                  : 'Elige primero el proveedor'
+              }
+            >
+              <option value="">— ninguna, es la primera —</option>
+              {anteriores.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.serial ?? '(sin serial)'} · {a.fecha} · {a.moneda}{' '}
+                  {Number(a.monto).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </option>
+              ))}
+            </Select>
             <TextInput
               name="pct_anticipo"
-              label="% anticipo"
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={v.pct_anticipo}
-              onChange={(e) => upd('pct_anticipo', e.target.value)}
-            />
-            <TextInput
-              name="pct_pendiente"
-              label="% pendiente"
+              label="% de este trámite"
               type="text"
-              value={`${v.pct_pendiente}%${v.cotizacion ? ` (${v.moneda} ${(Number(v.cotizacion) * Number(v.pct_pendiente) / 100).toFixed(2)})` : ''}`}
+              value={cot > 0 ? `${pctDe(monto)} (${v.moneda} ${monto.toFixed(2)})` : '—'}
               onChange={() => undefined}
               readOnly
-              hint="100 − anticipo (auto)"
+              hint="monto entre cotización (auto)"
             />
           </div>
+
+          {/* El mismo cuadro que va al papel, antes de guardarlo. Se ve aqui
+              para que el descuadre se note al capturarlo y no al imprimirlo. */}
+          {cot > 0 && (
+            <table className="mt-3 w-full border-separate border-spacing-0 text-xs">
+              <tbody>
+                <tr className="text-dark-3">
+                  <td className="pb-1">Descripción</td>
+                  <td className="pb-1 text-right">Monto</td>
+                  <td className="w-16 pb-1 text-right">%</td>
+                </tr>
+                <tr>
+                  <td className="border-t border-sand py-1">Anticipos previos</td>
+                  <td className="border-t border-sand py-1 text-right tabular-nums">
+                    {v.moneda} {previos.toFixed(2)}
+                  </td>
+                  <td className="border-t border-sand py-1 text-right">{pctDe(previos)}</td>
+                </tr>
+                <tr>
+                  <td className="border-t border-sand py-1">Solicitado en este trámite</td>
+                  <td className="border-t border-sand py-1 text-right tabular-nums">
+                    {v.moneda} {monto.toFixed(2)}
+                  </td>
+                  <td className="border-t border-sand py-1 text-right">{pctDe(monto)}</td>
+                </tr>
+                <tr className="font-bold">
+                  <td className="border-t border-dark-3 py-1">Total de pagos</td>
+                  <td className="border-t border-dark-3 py-1 text-right tabular-nums">
+                    {v.moneda} {(previos + monto).toFixed(2)}
+                  </td>
+                  <td className="border-t border-dark-3 py-1 text-right">
+                    {pctDe(previos + monto)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+
+          {sobrepasa && (
+            <p className="mt-2 rounded-md border border-rust/40 bg-rust-l px-3 py-2 text-xs text-rust">
+              Con esta solicitud el proyecto suma <b>{v.moneda} {(previos + monto).toFixed(2)}</b>,
+              más que la cotización de <b>{v.moneda} {cot.toFixed(2)}</b>. Si la cotización
+              cambió, actualízala aquí; si no, revisa el monto.
+            </p>
+          )}
+
+          {cambioCotizacion != null && (
+            <p className="mt-2 rounded-md border border-gold/40 bg-gold-light px-3 py-2 text-xs text-dark-2">
+              La solicitud anterior cotizaba <b>{v.moneda} {cambioCotizacion.toFixed(2)}</b>.
+              Los porcentajes de esta hoja salen contra <b>{v.moneda} {cot.toFixed(2)}</b>, que es
+              lo que ella declara.
+            </p>
+          )}
         </fieldset>
       )}
 

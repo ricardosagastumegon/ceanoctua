@@ -6,6 +6,68 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 60 · 2026-11-16 · La solicitud que continúa a otra
+
+**Objetivo:** «No tengo dónde colocar la información para rellenar ANTICIPOS
+PREVIOS. Este pago es el 50% restante, pero al poner el monto total del
+proyecto tuve que poner que iba a pagar el 100%. Sería ideal que una SP
+pudiera encadenarse con otra para cerrarla.»
+
+**Lo que encontró, y lo que no vio.** «Anticipos previos» estaba **clavado en
+cero** en el imprimible —`const previos = 0`—. No es que faltara el campo: el
+papel no podía decir otra cosa aunque se capturara.
+
+Lo que no se veía: **`pct_anticipo` ya estaba mal en 2 de 14 pagos.**
+`SP-2026-0007` guardaba 0% cuando lo real era 100%, y su `SP-2026-0035`
+guardaba 100% cuando lo real era 50%. El papel ni lo mira —cuando hay
+cotización calcula `monto / cotización`— así que la hoja imprimía 50% mientras
+la base decía 100%. Un número tecleado que duplicaba uno que el sistema ya
+sabía, y que se separó.
+
+**La decisión: encadenar, no teclear.** Una SP apunta a la anterior
+(`sp_anterior_id`) y «anticipos previos» es la **suma de la cadena**. Pedirle
+que volviera a escribir Q 2,520 —que ya está en `SP-2026-0009`, pagada— habría
+creado la segunda copia que después se separa. Es literalmente lo que acababa
+de pasarle al porcentaje.
+
+**La cotización se hereda, no se comparte.** Ella lo advirtió sin tener el
+caso todavía: «un monto cotizado puede variar». Así que cada hoja conserva la
+suya —se propone la de la anterior, es editable— y los tres renglones salen
+contra la cotización **de esa** hoja. Es como funciona el formato oficial:
+«Monto total de compra o proyecto» se declara en cada papel. Si la cadena
+cambia de cotización, la pantalla **lo dice** en vez de callarlo.
+
+**El cuadro también es de la liquidación.** Solo aparecía si el tipo decía
+«Anticipo», y por eso el pago que CIERRA un proyecto había que marcarlo como
+anticipo para poder llenarlo. El propio formato dice «Llenar para trámites de
+anticipo **y liquidación**». Ahora sale también cuando la hoja continúa a otra
+o declara una cotización.
+
+**Tres cosas que el diseño tuvo que resolver:**
+
+- **El ciclo.** Un A→B→A deja la suma recursiva dando vueltas para siempre, y
+  basta con corregir un enlace al revés. Un disparador lo impide, y la
+  comprobación de la migración **lo provoca de verdad** —enlaza dos SP reales,
+  intenta cerrar el ciclo, y deshace todo—: un candado que existe y no salta
+  no sirve de nada.
+- **Quién puede ver la cadena.** `pago_cadena` es `security definer` para
+  poder recorrerla —quien firma no lee `pagos` suelto— pero va gatillada por
+  `puede_ver_pago`: no puede volverse una puerta para leer montos ajenos.
+- **La hoja congelada.** Quien firma y el Tesorero no leen `pagos`, así que el
+  número viaja dentro del envío. Sin eso, la hoja que ellos abren diría
+  «Anticipos previos Q 0.00» y la de ella diría otra cosa — dos versiones del
+  mismo papel.
+
+Verificado contra su caso real: `SP-2026-0035` encadenada a `SP-2026-0009`
+imprime **previos Q 2,520 (50%) · este trámite Q 2,520 (50%) · TOTAL Q 5,040
+(100%)**. (`20261116000001`)
+
+**Comentario:** el `pct_anticipo` es el mismo defecto que la factura de
+combustible de la fase 59 —un número que el sistema puede deducir y que
+alguien teclea igual—. Van dos seguidos. Vale la regla: **si el sistema ya
+tiene con qué calcularlo, pedirlo es crear la copia que se va a separar.**
+
+---
 ## Fase 59 · 2026-11-10 · El camino de vuelta
 
 **Objetivo:** ella quiso borrar datos de prueba en Combustible y no pudo

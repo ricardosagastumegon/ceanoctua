@@ -439,6 +439,7 @@ export default function TesoreriaPage() {
                   origenes: d.origenes,
                   firmoPor: d.firmoPor,
                   firmoFecha: d.firmoFecha,
+                  previos: d.previos ?? 0,
                 }}
               />
             );

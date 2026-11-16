@@ -72,6 +72,32 @@ en `reference/facturas/` y la comprobación en
 una cuarta plantilla puede romper las tres que ya funcionaban **sin dar ningún
 error** — simplemente dejaría de encontrar un campo.
 
+**Al día siguiente de subirlo, la cuarta plantilla.** Ella fue a cargar una
+factura de verdad y la pasó antes de usarla. Era de un emisor nuevo —Travesía
+sobre Ruedas, Volcán Pacaya— y rompió **cuatro** campos de once:
+
+| Campo | Por qué |
+|---|---|
+| Fecha | dice `16/11/2026`; se leía ISO o `16-nov-2026` |
+| NIT del comprador | bajo «Datos del Comprador» y con `Nit:` en minúscula |
+| Nombre del cliente | el rótulo en un renglón y **el nombre en el siguiente** |
+| Concepto | sin columna «DESCRIPCIÓN»: solo `Cantidad  Precio` |
+
+**Ninguno dio error. Salieron vacíos** — que es exactamente como se diseñó
+para romperse, y por qué la pantalla propone en vez de imponer. Los siete
+campos que sí salieron incluyen los que más pesan: el NIT del emisor —que
+encontró el proveedor en el catálogo— el total y la serie.
+
+Arreglados los cuatro, y **las tres plantillas anteriores siguen en pie**: la
+comprobación pasó de 33 campos en 3 a **44 campos en 4, 0 diferencias**. Esa
+es toda la razón de que el script exista.
+
+**Comentario:** se tardó más en pelear con los escapes de las expresiones
+regulares --un `` que acabó siendo un carácter de retroceso invisible dentro
+del archivo-- que en entender la plantilla nueva. La lección operativa: una
+regex no se mete por un heredoc anidado; se escribe con cadenas crudas o
+directo en el archivo.
+
 ---
 ## Fase 60 · 2026-11-16 · La solicitud que continúa a otra
 

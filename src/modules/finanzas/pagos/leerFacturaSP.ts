@@ -106,6 +106,16 @@ export function parsearFacturaSP(texto: string): FacturaSP {
     }
   }
   if (!fecha) {
+    // Y en barras: «16/11/2026 11:46:37».
+    const barras = uno(
+      /Fecha (?:y hora )?de (?:certificaci[oó]n|emisi[oó]n)[:\s]*(\d{1,2}\/\d{1,2}\/\d{4})/i,
+    );
+    if (barras) {
+      const [d, m, a] = barras.split('/');
+      fecha = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+  }
+  if (!fecha) {
     // «DIA MES AÑO» en un renglón y sus tres valores en el siguiente. El mes
     // viene en número en una plantilla y escrito en otra.
     const iDia = renglones.findIndex((r) => /^DIA\s+MES\s+A[NÑ]O$/i.test(r.replace(/\s+/g, ' ')));
@@ -133,7 +143,14 @@ export function parsearFacturaSP(texto: string): FacturaSP {
   const nitReceptor =
     nitLimpio(uno(/NIT\s*Receptor:?\s*([0-9A-Za-z-]+)/i)) ||
     nitLimpio(uno(/Nombre:\s*.+?\s{2,}NIT:\s*([0-9A-Za-z-]+)/i)) ||
-    nitLimpio(uno(/DATOS DEL CLIENTE[\s\S]{0,200}?NIT:\s*([0-9A-Za-z-]+)/i)) ||
+    // Anclado en la SECCIÓN del comprador y no en el rótulo suelto: más
+    // arriba de esa misma hoja está el NIT del certificador --el del SAT-- y
+    // tomarlo sería decir que la factura se la cobran a la SAT. Una plantilla
+    // encabeza la sección con «DATOS DEL CLIENTE» y otra con «Datos del
+    // Comprador», y una escribe «Nit:» en minúscula.
+    nitLimpio(
+      uno(/Datos del (?:Comprador|Cliente|Receptor)[\s\S]{0,200}?Nit:?\s*([0-9A-Za-z-]+)/i),
+    ) ||
     null;
 
   // Un valor termina donde empieza otra etiqueta: dos columnas distintas caen
@@ -142,8 +159,15 @@ export function parsearFacturaSP(texto: string): FacturaSP {
   const hastaLaSiguienteEtiqueta = (v: string | null): string | null =>
     v == null ? null : v.split(/\s{2,}(?=[A-Za-zÁÉÍÓÚÑ][^:]{2,40}:)/)[0].trim() || null;
 
+  // El rótulo y el valor no siempre van en el mismo renglón: en una plantilla
+  // «Nombre del Cliente:» está solo y el nombre viene debajo.
   const nombreReceptor = hastaLaSiguienteEtiqueta(
-    uno(/Nombre\s*Receptor:?\s*(.+)/i) ?? uno(/Nombre:\s*(.+?)(?:\s{2,}NIT:|$)/im),
+    // El rótulo y el valor no siempre van en el mismo renglón: en una
+    // plantilla «Nombre del Cliente:» está solo y el nombre viene debajo.
+    // `[^\S\n]` es «espacio que no sea salto de línea»: deja cruzar UN salto,
+    // y ni uno más.
+    uno(/Nombre(?:\s+del)?\s*(?:Cliente|Receptor|Comprador):?[^\S\n]*\n?[^\S\n]*(.+)/i) ??
+      uno(/Nombre:\s*(.+?)(?:\s{2,}NIT:|$)/im),
   );
 
   // ── El emisor encabeza la hoja, pero no siempre en el primer renglón ─
@@ -200,13 +224,15 @@ export function parsearFacturaSP(texto: string): FacturaSP {
   }
 
   // ── El concepto ─────────────────────────────────────────────────────
-  const iCabecera = renglones.findIndex((r) => /DESCRIPCI[OÓ]N/i.test(r));
+  // La cabecera de la tabla: no todas dicen «DESCRIPCIÓN» --una solo pone
+  // «Cantidad  Precio»-- pero todas nombran la cantidad.
+  const iCabecera = renglones.findIndex((r) => /DESCRIPCI[OÓ]N|CANTIDAD/i.test(r));
   let descripcion: string | null = null;
   if (iCabecera >= 0) {
     for (let i = iCabecera + 1; i < Math.min(iCabecera + 5, renglones.length); i++) {
       const partes = renglones[i].split(/\s{2,}/).map((x) => x.trim()).filter(Boolean);
       const soloTexto = partes.filter(
-        (x) => !/^[\d.,]+$/.test(x) && !/^Q\s/.test(x) && x.length > 4,
+        (x) => !/^[\d.,]+$/.test(x) && !/^(Q|GTQ|USD)\s/i.test(x) && x.length > 4,
       );
       if (soloTexto.length) {
         descripcion = [...soloTexto].sort((a, b) => b.length - a.length)[0];

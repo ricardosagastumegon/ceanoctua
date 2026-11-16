@@ -1,0 +1,27 @@
+Factura Pequeño Contribuyente
+NERY ALFONSO , PINEDA PERALTA
+TRAVESÍA SOBRE RUEDAS VOLCÁN PACAYA
+NIT Emisor: 10612947
+CALLE PRINCIPAL LOTE 89 ALDEA CONCEPCION
+EL CEDRO, Zona 0, SAN VICENTE PACAYA,
+ESCUINTLA
+Número de Autorización
+D131673B-27CB-40D5-A80C-254631737D88
+Serie: D131673B
+Número de DTE: 667631829
+Fecha y Hora de emisión: 16/11/2026 11:46:37
+---------- Datos del Certificador ----------
+NIT: 16693949
+SAT
+---------- Datos del Comprador ----------
+Nit: 7507658
+Nombre del Cliente:
+AGRO ATLANTIC, SOCIEDAD ANONIMA
+DETALLE DE FACTURA PEQUEÑO
+CONTRIBUYENTE
+Cantidad  Precio
+1.00  Servicios de tour en cuatrimoto  15,000.00
+Descuentos  GTQ 0.00
+Sub - Total  GTQ 15,000.00
+Total  GTQ 15,000.00
+*No genera derecho a crédito fiscal

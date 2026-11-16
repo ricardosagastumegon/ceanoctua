@@ -65,6 +65,25 @@ const ESPERADO = {
     nombreReceptor: 'AGRO ATLANTIC, SOCIEDAD ANONIMA',
     descripcion: 'Renta de Bus Pullman',
   },
+  // Cuarta plantilla, traida por ella al usarlo de verdad. Rompia cuatro
+  // campos: la fecha en barras «16/11/2026», el NIT del comprador bajo
+  // «Datos del Comprador» con el rotulo en minuscula, el nombre del cliente
+  // en el renglon de ABAJO de su rotulo, y la tabla sin columna
+  // «DESCRIPCION» --solo «Cantidad  Precio»--. Ninguno dio error: salieron
+  // vacios, que es como esto se rompe.
+  'travesia-pacaya-pequenio-contribuyente.txt': {
+    autorizacion: 'D131673B-27CB-40D5-A80C-254631737D88',
+    serie: 'D131673B',
+    numero: '667631829',
+    fecha: '2026-11-16',
+    total: 15000,
+    moneda: 'GTQ',
+    nitEmisor: '10612947',
+    nombreEmisor: 'NERY ALFONSO , PINEDA PERALTA',
+    nitReceptor: '7507658',
+    nombreReceptor: 'AGRO ATLANTIC, SOCIEDAD ANONIMA',
+    descripcion: 'Servicios de tour en cuatrimoto',
+  },
 };
 
 const salida = path.join(RAIZ, 'node_modules', '.cache', 'lector-facturas.mjs');

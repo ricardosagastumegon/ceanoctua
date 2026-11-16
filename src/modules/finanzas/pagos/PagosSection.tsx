@@ -104,6 +104,10 @@ export function PagosSection({
     enviandoATesoreria ?? ({ id: '', origen_notificacion_id: null } as unknown as Pago),
   );
   const cadenaDelEnvio = useCadenaSP(enviandoATesoreria?.id ?? null);
+  // El PDF que el lector de facturas abrio. Se adjunta al expediente despues
+  // de guardar: en una SP nueva el documento todavia no tiene id al que
+  // colgarlo, y hacerla subir dos veces el mismo archivo seria absurdo.
+  const [facturaPdf, setFacturaPdf] = useState<File | null>(null);
   const firmaDelEnvio = useFirmaDePago(enviandoATesoreria?.id ?? null);
   const pendientesQ = useFirmasPendientes();
   const cancelarFirma = useCancelarFirma();
@@ -300,14 +304,49 @@ export function PagosSection({
   }, [all]);
 
   function closeForm() {
+    setFacturaPdf(null);
     setEditing(undefined);
     setFromNotifs([]);
+  }
+
+  /**
+   * Cuelga la factura leida del expediente de la SP.
+   *
+   * Falla en voz baja a proposito: el pago YA se guardo, y un adjunto que no
+   * subio no tiene por que parecer que se perdio la solicitud. Se avisa y se
+   * sigue --el expediente admite subirlo a mano.
+   */
+  async function adjuntarFactura(pagoId: string, file: File) {
+    const limpio = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `pago/${pagoId}/${Date.now()}_${limpio}`;
+    try {
+      const { error } = await supabase.storage.from('documentos').upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (error) throw error;
+      const { error: e2 } = await supabase.from('documentos').insert({
+        nombre: file.name,
+        tipo_mime: file.type || null,
+        tamano_bytes: file.size,
+        storage_path: path,
+        entidad_tipo: 'pago',
+        entidad_id: pagoId,
+      });
+      if (e2) {
+        await supabase.storage.from('documentos').remove([path]);
+        throw e2;
+      }
+    } catch (err) {
+      toast.error(`La solicitud se guardó, pero la factura no se adjuntó: ${describeError(err)}`);
+    }
   }
 
   async function handleSave(values: PagoInsert) {
     try {
       if (editing && editing.id) {
         await update.mutateAsync({ id: editing.id, patch: values });
+        if (facturaPdf) await adjuntarFactura(editing.id, facturaPdf);
         toast.success('Pago actualizado.');
       } else {
         // El origen se guarda en el pago: sin esto la notificación que lo
@@ -319,6 +358,7 @@ export function PagosSection({
             ? { ...values, origen_notificacion_id: fromNotifs[0] }
             : values,
         );
+        if (facturaPdf) await adjuntarFactura(creado.id, facturaPdf);
         if (fromNotifs.length > 0) {
           try {
             await marcarNotifProcesada.mutateAsync({ ids: fromNotifs, pagoId: creado.id });
@@ -926,6 +966,7 @@ export function PagosSection({
           submitting={create.isPending || update.isPending}
           onSubmit={handleSave}
           onCancel={closeForm}
+          onFacturaLeida={setFacturaPdf}
         />
       </Modal>
 

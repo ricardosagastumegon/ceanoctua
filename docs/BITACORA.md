@@ -6,6 +6,73 @@ Formato: `## Fase N · YYYY-MM-DD · Título` seguido de bullets Objetivo / Camb
 
 ---
 
+## Fase 61 · 2026-11-16 · La factura se lee sola
+
+**Objetivo:** «¿Es posible que en PAGOS, al agregar una nueva SP, pueda
+cargarse la factura en PDF y leerse? Que no sea obligatorio pero sí opcional.»
+
+**Se puede, y no es magia.** Toda factura guatemalteca es un Documento
+Tributario Electrónico: el PDF trae el texto adentro. Esto no adivina ni usa
+inteligencia artificial — lee datos que el régimen FEL obliga a que estén— así
+que o sale o no sale, y no sale distinto dos veces.
+
+**Lo que el régimen NO fija es el diseño**, y ahí estaba el riesgo. El lector
+que ya existía para el combustible de aeronaves se midió contra UNA sola
+factura; su propio comentario lo dice. Antes de escribir nada se pidieron
+plantillas reales, y ella pasó tres, cada una distinta:
+
+```
+A · Aeronaves, S. A.              «SERIE 75ED0611»   «No. 4244261453»
+B · Carlos Manuel Ovalle Leranoz  «Serie: E1C87A9C»  «No.: 2647409584»
+C · Ceily Yuviksa Morales         «Serie: 6320149F»  «Número de DTE: …»
+```
+
+Cambia el rótulo, cambia el orden, y hasta si el mes va en número o en letra.
+
+**El primer obstáculo no se veía venir: el texto no sale en el orden en que se
+lee.** `pdfjs` devuelve los fragmentos como el generador los metió en el
+archivo, y en estas facturas eso no tiene nada que ver con la hoja. La primera
+salía con tres «NIT:» sueltos y sin forma de saber cuál era de quién. Se
+resolvió reconstruyendo el orden visual desde las coordenadas de cada
+fragmento —agrupar por renglón, ordenar por columna— en `lib/pdf-texto.ts`.
+Con la hoja bien armada, «Nit Emisor:» y su número vuelven a estar pegados.
+
+**El ancla que lo hace robusto:** el número de autorización es un UUID y está
+en las tres, y **sus primeros ocho caracteres SON la serie** —`75ED0611`,
+`E1C87A9C`, `6320149F`—. Aunque el rótulo de la serie no se reconozca, la
+serie sale igual.
+
+**Y lo que vale de verdad son los NIT, no los nombres.** En la factura B el
+emisor se llama «CARLOS MANUEL OVALLE LERANOZ» y en el catálogo está como
+«CORDON OVALLLE & ASOCIADOS»: **por nombre no se encuentra nunca, por NIT es
+exacto.** Los nombres se leen igual, pero solo de respaldo. Los NIT se
+comparan sin guiones, porque el catálogo guarda `1689663-7` y la factura dice
+`16896637`.
+
+**La pantalla propone, no impone.** Enseña lo que encontró antes de tocar
+nada; un campo viene marcado si el formulario está vacío o ya dice lo mismo, y
+**desmarcado si choca**, mostrando los dos valores. Pisar en silencio lo que
+alguien escribió es como se pierde un dato sin que nadie se entere de que lo
+hubo. Lo que no encuentra queda vacío, nunca inventado: un número mal leído en
+el monto de un pago es peor que teclearlo.
+
+**Dos casos que el diseño tuvo que admitir:** dos entidades distintas comparten
+el NIT `22931406` (SUREÑA y BALY), así que con más de una coincidencia **no se
+elige ninguna**; y si el PDF es un escaneo —sin texto adentro— lo dice en vez
+de rellenar con nada.
+
+**El PDF se adjunta solo** al expediente de la SP al guardar. Ya lo subió para
+leerlo; hacerla subirlo dos veces sería absurdo. Falla en voz baja a propósito:
+el pago ya se guardó y un adjunto que no subió no tiene por qué parecer que se
+perdió la solicitud.
+
+**Verificado contra las tres: 33 campos, 0 diferencias.** Los textos quedaron
+en `reference/facturas/` y la comprobación en
+`scripts/probar-lector-facturas.mjs`, porque afinar una regex para que entre
+una cuarta plantilla puede romper las tres que ya funcionaban **sin dar ningún
+error** — simplemente dejaría de encontrar un campo.
+
+---
 ## Fase 60 · 2026-11-16 · La solicitud que continúa a otra
 
 **Objetivo:** «No tengo dónde colocar la información para rellenar ANTICIPOS

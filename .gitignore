@@ -47,6 +47,12 @@ reference/*
 !reference/finanzas-mockups/**
 # HTML standalone de Control de Caja Chica (mockup + herramienta usable)
 !reference/CajaChica_control.html
+# El texto de las facturas con las que se midio el lector. Van al repo porque
+# `scripts/probar-lector-facturas.mjs` los necesita: afinar una regex para que
+# entre una plantilla nueva puede romper las que ya funcionaban SIN dar ningun
+# error, y sin estos no hay forma de notarlo.
+!reference/facturas/
+!reference/facturas/**
 # Mock de la flota de aeronaves, para que lo revisen piloto, admin y duenos
 !reference/aeronaves-mockup/
 !reference/aeronaves-mockup/**

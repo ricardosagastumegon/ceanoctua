@@ -7,6 +7,8 @@ import { PAGO_TIPO_LABELS, type Pago, type PagoInsert } from './api';
 import type { Database } from '@/types/database';
 import { useAutorizadores, useEntidades, useProveedores, useStatusSp } from '@/modules/admin/hooks';
 import { useConsumos } from '../consumos/hooks';
+import { LectorFacturaSP, PanelFactura, mismoNit, type CampoLeido } from './LectorFacturaSP';
+import { nitLimpio, type FacturaSP } from './leerFacturaSP';
 import { sumaDeLaCadena, useCadenaSP, usePagos } from './hooks';
 
 type Currency = Database['public']['Enums']['currency'];
@@ -128,9 +130,20 @@ function toInput(s: FormState): PagoInsert {
   };
 }
 
-export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFormProps<Pago, PagoInsert>) {
+export function PagoForm({
+  initial,
+  submitting,
+  onSubmit,
+  onCancel,
+  onFacturaLeida,
+}: CatalogFormProps<Pago, PagoInsert> & {
+  /** El PDF leido, para que quien guarda lo adjunte al expediente. */
+  onFacturaLeida?: (archivo: File | null) => void;
+}) {
   const [v, setV] = useState<FormState>(fromRow(initial));
   const [error, setError] = useState<string | null>(null);
+  const [leida, setLeida] = useState<FacturaSP | null>(null);
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const entidades = useEntidades();
   const proveedores = useProveedores();
   const autorizadores = useAutorizadores();
@@ -236,6 +249,73 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
       ? Number(cotAnterior)
       : null;
 
+  /**
+   * Lo que la factura propone, campo por campo.
+   *
+   * Un campo viene marcado si el formulario esta vacio o si ya dice lo mismo.
+   * Si dice otra cosa, viene DESMARCADO y se ven los dos valores: pisar en
+   * silencio lo que alguien escribio es como se pierde un dato sin que nadie
+   * se entere de que lo hubo.
+   */
+  const camposLeidos: CampoLeido[] = useMemo(() => {
+    if (!leida) return [];
+    const provCat = (proveedores.data ?? []).find((x) => mismoNit(x.nit, leida.nitEmisor));
+    const entCat = (entidades.data ?? []).filter((x) => mismoNit(x.nit, leida.nitReceptor));
+    const filas: { clave: string; etiqueta: string; valor: string; actual: string }[] = [];
+    const mete = (clave: string, etiqueta: string, valor: string | null, actual: string) => {
+      if (valor == null || valor === '') return;
+      filas.push({ clave, etiqueta, valor: String(valor), actual });
+    };
+
+    if (provCat) mete('proveedor_id', 'Proveedor', provCat.id, v.proveedor_id);
+    mete('proveedor', 'Proveedor (texto)', provCat?.nombre ?? leida.nombreEmisor, v.proveedor);
+    mete('nit', 'NIT', leida.nitEmisor, nitLimpio(v.nit));
+    // Una sola entidad con ese NIT se puede elegir sin dudar; dos no.
+    if (entCat.length === 1) {
+      mete('entidad_id', 'Entidad que paga', entCat[0].id, v.entidad_id);
+      mete('entidad', 'Entidad (texto)', entCat[0].nombre, v.entidad);
+    }
+    mete('monto', 'Monto', leida.total != null ? String(leida.total) : null, v.monto);
+    mete('fecha', 'Fecha', leida.fecha, v.fecha);
+    mete('concepto', 'Concepto', leida.descripcion, v.concepto);
+    mete(
+      'referencia',
+      'Referencia',
+      leida.serie && leida.numero ? `${leida.serie}-${leida.numero}` : leida.numero,
+      v.referencia,
+    );
+
+    return filas.map((f) => ({ ...f, enConflicto: !!f.actual && f.actual !== f.valor }));
+  }, [leida, proveedores.data, entidades.data, v]);
+
+  function aplicarLeidos() {
+    setV((p) => {
+      const next = { ...p };
+      for (const c of camposLeidos) {
+        if (!marcados.has(c.clave)) continue;
+        (next as unknown as Record<string, string>)[c.clave] = c.valor;
+      }
+      // El porcentaje se recalcula solo, como con cualquier cambio de monto.
+      const cotN = Number(next.cotizacion);
+      const monN = Number(next.monto);
+      if (Number.isFinite(cotN) && cotN > 0 && Number.isFinite(monN)) {
+        const a = Math.round((monN / cotN) * 10000) / 100;
+        next.pct_anticipo = String(a);
+        next.pct_pendiente = String(Math.max(0, Math.round((100 - a) * 100) / 100));
+      }
+      return next;
+    });
+    setLeida(null);
+    setMarcados(new Set());
+  }
+
+  const provDeLaFactura = leida
+    ? (proveedores.data ?? []).find((x) => mismoNit(x.nit, leida.nitEmisor))
+    : undefined;
+  const entsDeLaFactura = leida
+    ? (entidades.data ?? []).filter((x) => mismoNit(x.nit, leida.nitReceptor))
+    : [];
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!v.monto || Number(v.monto) <= 0) {
@@ -248,6 +328,57 @@ export function PagoForm({ initial, submitting, onSubmit, onCancel }: CatalogFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Opcional, y arriba del todo porque ahorra teclear lo que sigue. */}
+      <div className="flex items-center justify-between gap-3 rounded-md border border-sand bg-sand-l/40 px-3 py-2">
+        <p className="text-xs text-dark-2">
+          ¿Tienes la factura en PDF? Puedo leerla y proponerte los datos.{' '}
+          <span className="text-dark-3">No es obligatorio.</span>
+        </p>
+        <LectorFacturaSP
+          disabled={submitting}
+          onLeida={(f, archivo) => {
+            setLeida(f);
+            onFacturaLeida?.(archivo);
+          }}
+        />
+      </div>
+
+      {leida && (
+        <PanelFactura
+          campos={camposLeidos}
+          marcados={marcados}
+          onMarcar={(clave) =>
+            setMarcados((p) => {
+              const n = new Set(p);
+              if (n.has(clave)) n.delete(clave);
+              else n.add(clave);
+              return n;
+            })
+          }
+          onAplicar={aplicarLeidos}
+          onDescartar={() => {
+            setLeida(null);
+            setMarcados(new Set());
+            onFacturaLeida?.(null);
+          }}
+          proveedor={{
+            estado: !leida.nitEmisor ? 'sin-nit' : provDeLaFactura ? 'encontrado' : 'nuevo',
+            nombre: provDeLaFactura?.nombre ?? leida.nombreEmisor,
+            nit: leida.nitEmisor,
+          }}
+          entidad={{
+            estado: !leida.nitReceptor
+              ? 'sin-nit'
+              : entsDeLaFactura.length > 1
+                ? 'ambigua'
+                : entsDeLaFactura.length === 1
+                  ? 'encontrada'
+                  : 'no-esta',
+            nombre: entsDeLaFactura[0]?.nombre ?? leida.nombreReceptor,
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TextInput name="fecha" label="Fecha *" type="date" value={v.fecha} onChange={(e) => upd('fecha', e.target.value)} required />
         <Select

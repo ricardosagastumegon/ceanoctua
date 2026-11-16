@@ -1,0 +1,18 @@
+Factura Pequeño Contribuyente
+CEILY YUVIKSA , MORALES ROQUE DE ACEVEDO  NÚMERO DE AUTORIZACIÓN:
+Nit Emisor: 38812088  6320149F-8643-408E-81F2-F5EE382B23C7
+AVENTURA MAYA  Serie: 6320149F Número de DTE: 2252554382
+MANZANA G LOTE 10 RESIDENCIAL PROYECTOS VALLES DE  Numero Acceso:
+SONORA, Zona 4, VILLA NUEVA, GUATEMALA
+NIT Receptor: 7507658  Fecha y hora de emision: 16-nov-2026 10:40:55
+Nombre Receptor: AGRO ATLANTIC, SOCIEDAD ANONIMA  Fecha y hora de certificación: 16-nov-2026 10:40:55
+Dirección comprador: 14AV. 2-60 APTO A ZONA 15 COL. TECUN UMAN  Moneda: GTQ
+.
+#No  B/S  Cantidad  Descripcion  P. Unitario (Q)  Descuentos (Q)  Total (Q)  Impuestos
+1  Servicio  1  Renta de Bus Pullman  5,040.00  0.00  5,040.00
+0.00  5,040.00
+TOTALES:
+* No genera derecho a crédito fiscal
+Datos del certificador
+Superintendencia de Administracion Tributaria NIT: 16693949
+1
